@@ -7305,6 +7305,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stickerPackReorderHint => '长按并拖动以重新排序';
 
   @override
+  String get stickerPackActions => '贴纸包操作';
+
+  @override
+  String get stickerMoveUp => '上移';
+
+  @override
+  String get stickerMoveDown => '下移';
+
+  @override
   String get stickerNoFavorites => '暂无收藏';
 
   @override

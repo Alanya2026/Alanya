@@ -11,6 +11,7 @@ import '../../features/media_editor/media_editor_screen.dart';
 import '../../core/services/stickers/sticker_animated_check.dart';
 import '../../core/services/stickers/sticker_video_check.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
+import '../../core/services/stickers/sticker_order.dart';
 import '../../core/services/stickers/sticker_image_adapter.dart';
 import '../../core/services/stickers/sticker_image_check.dart';
 import '../../core/theme/app_dimens.dart';
@@ -28,7 +29,9 @@ import 'sticker_video_screen.dart';
 typedef StickerImagePicker =
     Future<({Uint8List bytes, String name})?> Function();
 
-Future<({Uint8List bytes, String name})?> _pickFromGallery({bool allowVideo = false}) async {
+Future<({Uint8List bytes, String name})?> _pickFromGallery({
+  bool allowVideo = false,
+}) async {
   // Avec les vidéos ouvertes (§4d), la galerie propose photos ET vidéos.
   final picker = ImagePicker();
   final x = allowVideo
@@ -36,7 +39,9 @@ Future<({Uint8List bytes, String name})?> _pickFromGallery({bool allowVideo = fa
       : await picker.pickImage(source: ImageSource.gallery);
   if (x == null) return null;
   // Taille connue avant de lire : un fichier énorme n'est jamais chargé.
-  final limit = allowVideo && StickerVideoCheck.maxBytes > StickerImageAdapter.maxInputBytes
+  final limit =
+      allowVideo &&
+          StickerVideoCheck.maxBytes > StickerImageAdapter.maxInputBytes
       ? StickerVideoCheck.maxBytes
       : StickerImageAdapter.maxInputBytes;
   if (await x.length() > limit) {
@@ -49,7 +54,9 @@ Future<({Uint8List bytes, String name})?> _pickFromGallery({bool allowVideo = fa
 
 /// Choisit un GIF ou un WebP animé dans la galerie (V1c). Injectable pour les
 /// tests ; le fichier n'est **pas** ré-encodé : il part tel quel au serveur.
-Future<({Uint8List bytes, String name})?> _pickAnimatedFromGallery({bool allowVideo = false}) async {
+Future<({Uint8List bytes, String name})?> _pickAnimatedFromGallery({
+  bool allowVideo = false,
+}) async {
   final picker = ImagePicker();
   final x = allowVideo
       ? await picker.pickMedia()
@@ -57,14 +64,18 @@ Future<({Uint8List bytes, String name})?> _pickAnimatedFromGallery({bool allowVi
   if (x == null) return null;
   // Taille connue avant de lire : un GIF de plus de 3 Mo n'est jamais chargé ;
   // une vidéo peut aller jusqu'à 20 Mo (le format est vérifié après lecture).
-  final limit = allowVideo ? StickerVideoCheck.maxBytes : StickerAnimatedCheck.maxBytes;
+  final limit = allowVideo
+      ? StickerVideoCheck.maxBytes
+      : StickerAnimatedCheck.maxBytes;
   if (await x.length() > limit) {
     throw allowVideo
         ? const StickerVideoRejected(StickerVideoIssue.tooBig)
         : const StickerAnimatedRejected(StickerAnimatedIssue.tooBig);
   }
   final bytes = await x.readAsBytes();
-  if (allowVideo && !StickerVideoCheck.isVideo(bytes) && bytes.length > StickerAnimatedCheck.maxBytes) {
+  if (allowVideo &&
+      !StickerVideoCheck.isVideo(bytes) &&
+      bytes.length > StickerAnimatedCheck.maxBytes) {
     throw const StickerAnimatedRejected(StickerAnimatedIssue.tooBig);
   }
   return (bytes: bytes, name: x.name);
@@ -87,11 +98,8 @@ Future<StickerAnimatedResult?> openStickerAnimatedScreen(
   String filename,
 ) => Navigator.of(context).push<StickerAnimatedResult>(
   MaterialPageRoute(
-    builder: (_) => StickerAnimatedScreen(
-      packId: packId,
-      bytes: bytes,
-      filename: filename,
-    ),
+    builder: (_) =>
+        StickerAnimatedScreen(packId: packId, bytes: bytes, filename: filename),
   ),
 );
 
@@ -112,11 +120,8 @@ Future<StickerAnimatedResult?> openStickerVideoScreen(
   String filename,
 ) => Navigator.of(context).push<StickerAnimatedResult>(
   MaterialPageRoute(
-    builder: (_) => StickerVideoScreen(
-      packId: packId,
-      bytes: bytes,
-      filename: filename,
-    ),
+    builder: (_) =>
+        StickerVideoScreen(packId: packId, bytes: bytes, filename: filename),
   ),
 );
 
@@ -130,7 +135,10 @@ typedef StickerImageAdaptation = Future<Uint8List> Function(Uint8List bytes);
 typedef StickerImageEditor =
     Future<Uint8List?> Function(BuildContext context, Uint8List source);
 
-Future<Uint8List?> openStickerEditor(BuildContext context, Uint8List source) async {
+Future<Uint8List?> openStickerEditor(
+  BuildContext context,
+  Uint8List source,
+) async {
   final r = await MediaEditorScreen.open(
     context,
     source: MediaEditorSource.bytes(source),
@@ -162,6 +170,7 @@ class StickerCreatedPackScreen extends StatefulWidget {
   });
 
   final int packId;
+
   /// `null` : la galerie du téléphone (photos, et vidéos si le serveur les ouvre).
   final StickerImagePicker? pickImage;
   final StickerImagePicker? pickAnimated;
@@ -219,7 +228,9 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
         content: Text(
-          r.upload.reused ? l10n.stickerAlreadyOwned : l10n.stickerAnimatedAdded,
+          r.upload.reused
+              ? l10n.stickerAlreadyOwned
+              : l10n.stickerAnimatedAdded,
         ),
       ),
     );
@@ -249,7 +260,9 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
         content: Text(
-          r.upload.reused ? l10n.stickerAlreadyOwned : l10n.stickerAnimatedAdded,
+          r.upload.reused
+              ? l10n.stickerAlreadyOwned
+              : l10n.stickerAnimatedAdded,
         ),
       ),
     );
@@ -258,15 +271,17 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
   /// Cellule « Sticker animé » : choisit un GIF / WebP animé (ou une vidéo si le
   /// serveur les ouvre) dans la galerie.
   Future<void> _addAnimated() => _run(() async {
-    final picked = await (widget.pickAnimated ??
-        () => _pickAnimatedFromGallery(allowVideo: _videoOpen))();
+    final picked =
+        await (widget.pickAnimated ??
+            () => _pickAnimatedFromGallery(allowVideo: _videoOpen))();
     if (picked == null) return;
     await _animatedFrom(picked);
   });
 
   Future<void> _add() => _run(() async {
-    final picked = await (widget.pickImage ??
-        () => _pickFromGallery(allowVideo: _videoOpen))();
+    final picked =
+        await (widget.pickImage ??
+            () => _pickFromGallery(allowVideo: _videoOpen))();
     if (picked == null) return;
     // Une vidéo choisie par le bouton « image » : écran de découpe.
     if (StickerVideoCheck.isVideo(picked.bytes)) {
@@ -638,14 +653,6 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
       },
     );
   }
-}
-
-/// Nouvel ordre des identifiants après avoir déposé l'élément [from] à la
-/// place de l'élément [to] (les autres se décalent). Pure, testée.
-List<int> reorderedIds(List<int> ids, int from, int to) {
-  final out = [...ids];
-  out.insert(to, out.removeAt(from));
-  return out;
 }
 
 class _StickerCell extends StatelessWidget {

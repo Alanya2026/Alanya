@@ -24,6 +24,7 @@ import 'package:talky_flutter/core/utils/sticker_payload.dart';
 import 'package:talky_flutter/l10n/app_localizations.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 import 'package:talky_flutter/widgets/stickers/sticker_created_pack_screen.dart';
+import 'package:talky_flutter/core/services/stickers/sticker_order.dart';
 import 'package:talky_flutter/widgets/stickers/sticker_creation_flows.dart'
     show kStickerPrivacyAckKey;
 import 'package:talky_flutter/widgets/stickers/sticker_packs_screen.dart';
@@ -315,62 +316,74 @@ void main() {
       ('zh', StickerImageIssue.inputTooBig, '20 MB'),
       ('fr', StickerImageIssue.tooBig, '1 Mo'),
     ]) {
-      testUi('refus d\'adaptation $issue traduit ($lang) : rien n\'est envoyé', (
-        t,
-      ) async {
+      testUi(
+        'refus d\'adaptation $issue traduit ($lang) : rien n\'est envoyé',
+        (t) async {
+          await open(
+            t,
+            41,
+            pick: () async => (bytes: Uint8List(8), name: 'a.jpg'),
+            adapt: (_) => reject(issue),
+            lang: lang,
+          );
+          await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
+          await settle(t);
+          expect(find.textContaining(texte), findsOneWidget);
+          expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
+        },
+      );
+    }
+
+    testUi(
+      'image 400×400 qui passerait l\'adaptation : le contrôle d\'envoi garde',
+      (t) async {
         await open(
           t,
           41,
-          pick: () async => (bytes: Uint8List(8), name: 'a.jpg'),
-          adapt: (_) => reject(issue),
-          lang: lang,
+          pick: () async => (bytes: png(400, 400), name: 'photo.png'),
+          adapt: passThrough,
         );
         await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
         await settle(t);
-        expect(find.textContaining(texte), findsOneWidget);
+        await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
+        await settle(t);
+        expect(find.textContaining('exactement 512 × 512'), findsOneWidget);
         expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
-      });
-    }
+      },
+    );
 
-    testUi('image 400×400 qui passerait l\'adaptation : le contrôle d\'envoi garde', (
-      t,
-    ) async {
-      await open(
-        t,
-        41,
-        pick: () async => (bytes: png(400, 400), name: 'photo.png'),
-        adapt: passThrough,
-      );
-      await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
-      await settle(t);
-      await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
-      await settle(t);
-      expect(find.textContaining('exactement 512 × 512'), findsOneWidget);
-      expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
-    });
-
-    testUi('confirmation : aperçu sur damier, rien n\'est envoyé avant « Ajouter »', (
-      t,
-    ) async {
-      await open(
-        t,
-        41,
-        pick: () async => (bytes: Uint8List(8), name: 'photo.jpg'),
-        adapt: (_) async => png512(),
-      );
-      await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
-      await settle(t);
-      expect(find.text('Aperçu du sticker'), findsOneWidget);
-      expect(find.byKey(const ValueKey('sticker-checkerboard')), findsOneWidget);
-      expect(find.byKey(const ValueKey('sticker-preview-image')), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Ajouter'), findsOneWidget);
-      expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
-      await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
-      await settle(t);
-      // Le nom d'origine (.jpg) devient un .png : c'est un PNG qui part.
-      expect(api.calls.any((c) => c.startsWith('upload:41:sticker.png')), isTrue);
-      expect(find.text('Sticker ajouté au pack.'), findsOneWidget);
-    });
+    testUi(
+      'confirmation : aperçu sur damier, rien n\'est envoyé avant « Ajouter »',
+      (t) async {
+        await open(
+          t,
+          41,
+          pick: () async => (bytes: Uint8List(8), name: 'photo.jpg'),
+          adapt: (_) async => png512(),
+        );
+        await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
+        await settle(t);
+        expect(find.text('Aperçu du sticker'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('sticker-checkerboard')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('sticker-preview-image')),
+          findsOneWidget,
+        );
+        expect(find.widgetWithText(FilledButton, 'Ajouter'), findsOneWidget);
+        expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
+        await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
+        await settle(t);
+        // Le nom d'origine (.jpg) devient un .png : c'est un PNG qui part.
+        expect(
+          api.calls.any((c) => c.startsWith('upload:41:sticker.png')),
+          isTrue,
+        );
+        expect(find.text('Sticker ajouté au pack.'), findsOneWidget);
+      },
+    );
 
     testUi('confirmation : annuler n\'envoie rien', (t) async {
       await open(
@@ -410,66 +423,76 @@ void main() {
     }
 
     group('éditeur d\'image depuis l\'aperçu', () {
-      testUi('aperçu : Annuler · Modifier · Ajouter, « Ajouter » sans modifier', (
+      testUi(
+        'aperçu : Annuler · Modifier · Ajouter, « Ajouter » sans modifier',
+        (t) async {
+          await open(
+            t,
+            41,
+            pick: () async => (bytes: Uint8List(8), name: 'photo.jpg'),
+            adapt: (_) async => png512(),
+            edit: (_, _) async => fail('l\'éditeur ne doit pas s\'ouvrir'),
+          );
+          await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
+          await settle(t);
+          expect(find.widgetWithText(TextButton, 'Annuler'), findsOneWidget);
+          expect(
+            find.widgetWithText(OutlinedButton, 'Modifier'),
+            findsOneWidget,
+          );
+          expect(find.widgetWithText(FilledButton, 'Ajouter'), findsOneWidget);
+          // Le chemin d'origine reste intact : Ajouter envoie l'image adaptée.
+          await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
+          await settle(t);
+          expect(api.calls.any((c) => c.startsWith('upload:41:')), isTrue);
+        },
+      );
+
+      testUi(
+        'Modifier : l\'éditeur reçoit l\'original, puis l\'image retouchée',
+        (t) async {
+          final original = Uint8List.fromList([9, 9, 9, 9, 9, 9, 9, 9]);
+          final retouche1 = png512();
+          final sources = <Uint8List>[];
+          await open(
+            t,
+            41,
+            pick: () async => (bytes: original, name: 'photo.jpg'),
+            adapt: (_) async => png512(),
+            edit: (_, source) async {
+              sources.add(source);
+              return sources.length == 1 ? retouche1 : null;
+            },
+          );
+          await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
+          await settle(t);
+          await t.tap(find.widgetWithText(OutlinedButton, 'Modifier'));
+          await settle(t);
+          expect(sources.single, same(original));
+          // Retour à l'aperçu, sur le résultat de l'éditeur : rien n'est envoyé.
+          expect(find.text('Aperçu du sticker'), findsOneWidget);
+          expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
+
+          // Seconde retouche : elle part de la précédente ; abandon = on garde.
+          await t.tap(find.widgetWithText(OutlinedButton, 'Modifier'));
+          await settle(t);
+          expect(sources, hasLength(2));
+          expect(sources.last, same(retouche1));
+          expect(find.text('Aperçu du sticker'), findsOneWidget);
+
+          await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
+          await settle(t);
+          expect(
+            api.calls.any((c) => c.startsWith('upload:41:sticker.png')),
+            isTrue,
+          );
+          expect(find.text('Sticker ajouté au pack.'), findsOneWidget);
+        },
+      );
+
+      testUi('éditeur abandonné puis aperçu annulé : rien n\'est envoyé', (
         t,
       ) async {
-        await open(
-          t,
-          41,
-          pick: () async => (bytes: Uint8List(8), name: 'photo.jpg'),
-          adapt: (_) async => png512(),
-          edit: (_, _) async => fail('l\'éditeur ne doit pas s\'ouvrir'),
-        );
-        await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
-        await settle(t);
-        expect(find.widgetWithText(TextButton, 'Annuler'), findsOneWidget);
-        expect(find.widgetWithText(OutlinedButton, 'Modifier'), findsOneWidget);
-        expect(find.widgetWithText(FilledButton, 'Ajouter'), findsOneWidget);
-        // Le chemin d'origine reste intact : Ajouter envoie l'image adaptée.
-        await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
-        await settle(t);
-        expect(api.calls.any((c) => c.startsWith('upload:41:')), isTrue);
-      });
-
-      testUi('Modifier : l\'éditeur reçoit l\'original, puis l\'image retouchée', (
-        t,
-      ) async {
-        final original = Uint8List.fromList([9, 9, 9, 9, 9, 9, 9, 9]);
-        final retouche1 = png512();
-        final sources = <Uint8List>[];
-        await open(
-          t,
-          41,
-          pick: () async => (bytes: original, name: 'photo.jpg'),
-          adapt: (_) async => png512(),
-          edit: (_, source) async {
-            sources.add(source);
-            return sources.length == 1 ? retouche1 : null;
-          },
-        );
-        await t.tap(find.byIcon(Icons.add_photo_alternate_outlined));
-        await settle(t);
-        await t.tap(find.widgetWithText(OutlinedButton, 'Modifier'));
-        await settle(t);
-        expect(sources.single, same(original));
-        // Retour à l'aperçu, sur le résultat de l'éditeur : rien n'est envoyé.
-        expect(find.text('Aperçu du sticker'), findsOneWidget);
-        expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
-
-        // Seconde retouche : elle part de la précédente ; abandon = on garde.
-        await t.tap(find.widgetWithText(OutlinedButton, 'Modifier'));
-        await settle(t);
-        expect(sources, hasLength(2));
-        expect(sources.last, same(retouche1));
-        expect(find.text('Aperçu du sticker'), findsOneWidget);
-
-        await t.tap(find.widgetWithText(FilledButton, 'Ajouter'));
-        await settle(t);
-        expect(api.calls.any((c) => c.startsWith('upload:41:sticker.png')), isTrue);
-        expect(find.text('Sticker ajouté au pack.'), findsOneWidget);
-      });
-
-      testUi('éditeur abandonné puis aperçu annulé : rien n\'est envoyé', (t) async {
         await open(
           t,
           41,
@@ -488,7 +511,9 @@ void main() {
         expect(find.text('2/40'), findsOneWidget);
       });
 
-      testUi('éditeur réel : ouvert depuis le pack, fermé sans changement', (t) async {
+      testUi('éditeur réel : ouvert depuis le pack, fermé sans changement', (
+        t,
+      ) async {
         final src = (await t.runAsync(() => solidPng(300, 200)))!;
         await open(
           t,
@@ -509,7 +534,9 @@ void main() {
         expect(api.calls.where((c) => c.startsWith('upload')), isEmpty);
       });
 
-      testUi('éditeur réel : retouche validée, l\'image éditée est envoyée', (t) async {
+      testUi('éditeur réel : retouche validée, l\'image éditée est envoyée', (
+        t,
+      ) async {
         final src = (await t.runAsync(() => solidPng(300, 200)))!;
         await open(
           t,
@@ -524,7 +551,11 @@ void main() {
         await t.tap(find.byKey(const ValueKey('editor-fit-cover')));
         await t.pump();
         await t.tap(find.byKey(const ValueKey('editor-done')));
-        for (var i = 0; i < 40 && find.byType(MediaEditorScreen).evaluate().isNotEmpty; i++) {
+        for (
+          var i = 0;
+          i < 40 && find.byType(MediaEditorScreen).evaluate().isNotEmpty;
+          i++
+        ) {
           await settle(t);
         }
         expect(find.byType(MediaEditorScreen), findsNothing);
@@ -534,7 +565,11 @@ void main() {
         // Un vrai PNG 512×512 avec alpha est parti : le contrôle d'envoi passe.
         final envoi = api.calls.singleWhere((c) => c.startsWith('upload:41:'));
         final octets = int.parse(envoi.split(':').last);
-        expect(octets, greaterThan(100), reason: 'le PNG exporté, pas l\'adaptation factice');
+        expect(
+          octets,
+          greaterThan(100),
+          reason: 'le PNG exporté, pas l\'adaptation factice',
+        );
       });
 
       for (final b in Brightness.values) {
@@ -978,21 +1013,25 @@ void main() {
       expect(find.textContaining('200 stickers'), findsOneWidget);
     });
 
-    testUi('404 STICKER_NOT_FOUND (retiré/inaccessible) : message, pas de crash', (
-      t,
-    ) async {
-      await seedReceived();
-      await openSheet(t);
-      api.failNext = TalkyException('x', 404, code: 'STICKER_NOT_FOUND');
-      await t.tap(find.text('Ajouter à un pack'));
-      await settle(t);
-      await t.tap(find.text('Famille'));
-      await settle(t);
-      expect(find.textContaining("Ce sticker n'existe plus."), findsOneWidget);
-      expect(t.takeException(), isNull);
-      // L'entrée reste utilisable (rien n'est resté « occupé »).
-      expect(find.text('Ajouter à un pack'), findsOneWidget);
-    });
+    testUi(
+      '404 STICKER_NOT_FOUND (retiré/inaccessible) : message, pas de crash',
+      (t) async {
+        await seedReceived();
+        await openSheet(t);
+        api.failNext = TalkyException('x', 404, code: 'STICKER_NOT_FOUND');
+        await t.tap(find.text('Ajouter à un pack'));
+        await settle(t);
+        await t.tap(find.text('Famille'));
+        await settle(t);
+        expect(
+          find.textContaining("Ce sticker n'existe plus."),
+          findsOneWidget,
+        );
+        expect(t.takeException(), isNull);
+        // L'entrée reste utilisable (rien n'est resté « occupé »).
+        expect(find.text('Ajouter à un pack'), findsOneWidget);
+      },
+    );
 
     testUi('signaler un sticker retiré (404 uniforme) : même message', (
       t,

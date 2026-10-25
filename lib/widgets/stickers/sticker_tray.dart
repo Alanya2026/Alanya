@@ -7,6 +7,7 @@ import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
+import '../../core/services/stickers/sticker_order.dart';
 import '../../core/services/stickers/sticker_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -77,40 +78,45 @@ class _EmojiStickerPickerState extends State<EmojiStickerPicker> {
         if (!available) return widget.emojiPicker;
         final l10n = context.l10n;
         final body = Column(
-            children: [
-              SizedBox(
-                height: AppSizes.minTapTarget,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SegmentedButton<bool>(
-                        showSelectedIcon: false,
-                        style: const ButtonStyle(
-                            visualDensity: VisualDensity.compact),
-                        segments: [
-                          ButtonSegment(
-                              value: false, label: Text(l10n.stickerTabEmojis)),
-                          ButtonSegment(
-                              value: true, label: Text(l10n.stickerTabStickers)),
-                        ],
-                        selected: {_stickers},
-                        onSelectionChanged: (s) => _select(s.first),
+          children: [
+            SizedBox(
+              height: AppSizes.minTapTarget,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SegmentedButton<bool>(
+                      showSelectedIcon: false,
+                      style: const ButtonStyle(
+                        visualDensity: VisualDensity.compact,
                       ),
+                      segments: [
+                        ButtonSegment(
+                          value: false,
+                          label: Text(l10n.stickerTabEmojis),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text(l10n.stickerTabStickers),
+                        ),
+                      ],
+                      selected: {_stickers},
+                      onSelectionChanged: (s) => _select(s.first),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: _stickers
-                    ? StickerTray(
-                        repo: repo,
-                        onSend: widget.onSendSticker,
-                        createHooks: widget.createHooks,
-                      )
-                    : widget.emojiPicker,
-              ),
-            ],
-          );
+            ),
+            Expanded(
+              child: _stickers
+                  ? StickerTray(
+                      repo: repo,
+                      onSend: widget.onSendSticker,
+                      createHooks: widget.createHooks,
+                    )
+                  : widget.emojiPicker,
+            ),
+          ],
+        );
         final h = widget.height;
         return h == null ? body : SizedBox(height: h, child: body);
       },
@@ -145,12 +151,8 @@ class StickerTray extends StatefulWidget {
 
 /// Entrée d'onglet : récents, favoris, ou un pack.
 class _Tab {
-  const _Tab.recents()
-      : pack = null,
-        favorites = false;
-  const _Tab.favorites()
-      : pack = null,
-        favorites = true;
+  const _Tab.recents() : pack = null, favorites = false;
+  const _Tab.favorites() : pack = null, favorites = true;
   const _Tab.pack(LocalStickerPack this.pack) : favorites = false;
   final LocalStickerPack? pack;
   final bool favorites;
@@ -217,6 +219,19 @@ class _StickerTrayState extends State<StickerTray> {
               tabs: tabs,
               index: index,
               onSelect: (i) => setState(() => _index = i),
+              onReorder: (ids) {
+                final selectedPackId = tabs[index].pack?.packId;
+                final reordered = reorderedIds(
+                  packs.map((pack) => pack.packId).toList(),
+                  ids.$1,
+                  ids.$2,
+                );
+                final selectedIndex = selectedPackId == null
+                    ? index
+                    : reordered.indexOf(selectedPackId) + 2;
+                setState(() => _index = selectedIndex);
+                unawaited(repo.reorderPacks(reordered));
+              },
               onManage: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const StickerPacksScreen()),
@@ -235,7 +250,9 @@ class _StickerTrayState extends State<StickerTray> {
       final pack = tab.pack!;
       return StreamBuilder<List<LocalSticker>>(
         stream: _packStreams.putIfAbsent(
-            pack.packId, () => repo.watchStickers(pack.packId)),
+          pack.packId,
+          () => repo.watchStickers(pack.packId),
+        ),
         builder: (context, snap) {
           final list = snap.data ?? const <LocalSticker>[];
           return Column(
@@ -244,7 +261,9 @@ class _StickerTrayState extends State<StickerTray> {
               Expanded(
                 child: _Grid(
                   count: list.length,
-                  empty: pack.owned ? l10n.stickerPackEmpty : l10n.stickerLoadError,
+                  empty: pack.owned
+                      ? l10n.stickerPackEmpty
+                      : l10n.stickerLoadError,
                   builder: (i) => StickerEntry(list[i], pack),
                   onSend: widget.onSend,
                   repo: repo,
@@ -261,25 +280,25 @@ class _StickerTrayState extends State<StickerTray> {
       builder: (context, snap) {
         final list = snap.data ?? const <StickerEntry>[];
         Widget grid(bool withCreate) => _Grid(
-              count: list.length,
-              empty: noPacks
-                  ? l10n.stickerNoPacks
-                  : (tab.favorites
-                      ? l10n.stickerEmptyFavorites
-                      : l10n.stickerEmptyRecents),
-              builder: (i) => list[i],
-              onSend: widget.onSend,
-              repo: repo,
-              leading: withCreate
-                  ? StickerCreateTile(
-                      creation: _creation!,
-                      stickers: repo,
-                      onViewPack: _viewPack,
-                      hooks: widget.createHooks,
-                    )
-                  : null,
-              leadingHint: withCreate ? l10n.stickerCreateHint : null,
-            );
+          count: list.length,
+          empty: noPacks
+              ? l10n.stickerNoPacks
+              : (tab.favorites
+                    ? l10n.stickerEmptyFavorites
+                    : l10n.stickerEmptyRecents),
+          builder: (i) => list[i],
+          onSend: widget.onSend,
+          repo: repo,
+          leading: withCreate
+              ? StickerCreateTile(
+                  creation: _creation!,
+                  stickers: repo,
+                  onViewPack: _viewPack,
+                  hooks: widget.createHooks,
+                )
+              : null,
+          leadingHint: withCreate ? l10n.stickerCreateHint : null,
+        );
         final creation = _creation;
         // Le bouton « Créer » n'existe que dans les Récents, et seulement si
         // le serveur ouvre la création (le serveur tranche).
@@ -298,95 +317,49 @@ class _TabStrip extends StatelessWidget {
     required this.tabs,
     required this.index,
     required this.onSelect,
+    required this.onReorder,
     required this.onManage,
   });
 
   final List<_Tab> tabs;
   final int index;
   final ValueChanged<int> onSelect;
+  final ValueChanged<(int, int)> onReorder;
   final VoidCallback onManage;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     return SizedBox(
       height: AppSizes.minTapTarget,
       child: Row(
         children: [
           Expanded(
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: tabs.length,
-              itemBuilder: (context, i) {
-                final t = tabs[i];
-                final selected = i == index;
-                final Widget icon;
-                if (t.pack != null) {
-                  final cover = t.pack!.coverUrl;
-                  icon = Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Opacity(
-                        opacity: t.pack!.locked ? 0.45 : 1,
-                        child: cover == null
-                            ? const Icon(Icons.emoji_emotions_outlined)
-                            : StickerImage(
-                                url: cover,
-                                emoji: '',
-                                size: 28,
-                                showRemovedLabel: false,
-                                staticFrame: true,
-                                semanticLabel: t.pack!.name,
-                              ),
-                      ),
-                      if (t.pack!.locked)
-                        Icon(Icons.lock, size: 14, color: colors.primary),
-                    ],
-                  );
-                } else {
-                  icon = Icon(
-                    t.favorites ? Icons.star_border : Icons.access_time,
-                    size: 24,
-                    semanticLabel: t.favorites
-                        ? context.l10n.stickerFavorites
-                        : context.l10n.stickerRecents,
-                  );
-                }
-                return Semantics(
-                  button: true,
-                  selected: selected,
-                  // Un pack verrouillé s'annonce comme tel : sans quoi le
-                  // lecteur d'écran ne dirait pas pourquoi l'onglet reste
-                  // inerte. L'icône interne est exclue pour éviter un doublon,
-                  // et l'action est reportée ici pour rester activable.
-                  label: _tabLabel(context, t),
-                  excludeSemantics: true,
-                  onTap: () => onSelect(i),
-                  child: InkWell(
-                    onTap: () => onSelect(i),
-                    child: Container(
-                      width: AppSizes.minTapTarget,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color:
-                                selected ? colors.primary : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      child: IconTheme(
-                        data: IconThemeData(
-                            color: selected
-                                ? colors.primary
-                                : colors.onSurfaceVariant),
-                        child: icon,
-                      ),
-                    ),
+            child: Row(
+              children: [
+                for (var i = 0; i < 2 && i < tabs.length; i++)
+                  _tab(context, tabs[i], i, index == i),
+                Expanded(
+                  child: ReorderableListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    buildDefaultDragHandles: false,
+                    itemCount: tabs.length - 2,
+                    onReorderItem: (oldIndex, newIndex) {
+                      onReorder((oldIndex, newIndex));
+                    },
+                    itemBuilder: (context, packIndex) {
+                      final i = packIndex + 2;
+                      return _tab(
+                        context,
+                        tabs[i],
+                        i,
+                        index == i,
+                        key: ValueKey(tabs[i].pack!.packId),
+                        dragIndex: packIndex,
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
           IconButton(
@@ -396,6 +369,88 @@ class _TabStrip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _tab(
+    BuildContext context,
+    _Tab t,
+    int i,
+    bool selected, {
+    Key? key,
+    int? dragIndex,
+  }) {
+    final colors = context.colors;
+    final Widget icon;
+    if (t.pack != null) {
+      final cover = t.pack!.coverUrl;
+      icon = Stack(
+        alignment: Alignment.center,
+        children: [
+          Opacity(
+            opacity: t.pack!.locked ? 0.45 : 1,
+            child: cover == null
+                ? const Icon(Icons.emoji_emotions_outlined)
+                : StickerImage(
+                    url: cover,
+                    emoji: '',
+                    size: 28,
+                    showRemovedLabel: false,
+                    staticFrame: true,
+                    semanticLabel: t.pack!.name,
+                  ),
+          ),
+          if (t.pack!.locked) Icon(Icons.lock, size: 14, color: colors.primary),
+        ],
+      );
+    } else {
+      icon = Icon(
+        t.favorites ? Icons.star_border : Icons.access_time,
+        size: 24,
+        semanticLabel: t.favorites
+            ? context.l10n.stickerFavorites
+            : context.l10n.stickerRecents,
+      );
+    }
+    final child = Semantics(
+      button: true,
+      selected: selected,
+      // Un pack verrouillé s'annonce comme tel : sans quoi le
+      // lecteur d'écran ne dirait pas pourquoi l'onglet reste
+      // inerte. L'icône interne est exclue pour éviter un doublon,
+      // et l'action est reportée ici pour rester activable.
+      label: _tabLabel(context, t),
+      excludeSemantics: true,
+      onTap: () => onSelect(i),
+      child: InkWell(
+        onTap: () => onSelect(i),
+        child: Container(
+          width: AppSizes.minTapTarget,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? colors.primary : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: IconTheme(
+            data: IconThemeData(
+              color: selected ? colors.primary : colors.onSurfaceVariant,
+            ),
+            child: icon,
+          ),
+        ),
+      ),
+    );
+    if (dragIndex == null || t.pack == null) {
+      return KeyedSubtree(key: key, child: child);
+    }
+    return ReorderableDelayedDragStartListener(
+      key: key,
+      index: dragIndex,
+      child: child,
     );
   }
 
@@ -421,24 +476,31 @@ class _LockedBanner extends StatelessWidget {
         onTap: () => openPlusOffer(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             children: [
-              Icon(Icons.lock_outline,
-                  size: 18, color: context.semantic.onBrandContainer),
+              Icon(
+                Icons.lock_outline,
+                size: 18,
+                color: context.semantic.onBrandContainer,
+              ),
               AppSpacing.hGapSm,
               Expanded(
                 child: Text(
                   l10n.stickerLockedBanner,
-                  style: context.text.bodySmall
-                      ?.copyWith(color: context.semantic.onBrandContainer),
+                  style: context.text.bodySmall?.copyWith(
+                    color: context.semantic.onBrandContainer,
+                  ),
                 ),
               ),
               Text(
                 l10n.stickerUnlockCta,
                 style: context.text.labelMedium?.copyWith(
-                    color: context.semantic.onBrandContainer,
-                    fontWeight: FontWeight.w700),
+                  color: context.semantic.onBrandContainer,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -479,10 +541,10 @@ class _Grid extends StatelessWidget {
 
   static const SliverGridDelegate _delegate =
       SliverGridDelegateWithMaxCrossAxisExtent(
-    maxCrossAxisExtent: 84,
-    mainAxisSpacing: AppSpacing.xs,
-    crossAxisSpacing: AppSpacing.xs,
-  );
+        maxCrossAxisExtent: 84,
+        mainAxisSpacing: AppSpacing.xs,
+        crossAxisSpacing: AppSpacing.xs,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -498,8 +560,9 @@ class _Grid extends StatelessWidget {
                 child: Text(
                   empty,
                   textAlign: TextAlign.center,
-                  style: context.text.bodyMedium
-                      ?.copyWith(color: context.colors.onSurfaceVariant),
+                  style: context.text.bodyMedium?.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
@@ -533,12 +596,17 @@ class _Grid extends StatelessWidget {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg, AppSpacing.xs, AppSpacing.lg, AppSpacing.lg),
+                        AppSpacing.lg,
+                        AppSpacing.xs,
+                        AppSpacing.lg,
+                        AppSpacing.lg,
+                      ),
                       child: Text(
                         leadingHint!,
                         key: const ValueKey('sticker-create-hint'),
-                        style: context.text.bodyMedium
-                            ?.copyWith(color: context.colors.onSurfaceVariant),
+                        style: context.text.bodyMedium?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
@@ -561,7 +629,7 @@ class _Grid extends StatelessWidget {
     // l'appui reste sans effet. L'image interne est exclue (doublon).
     final label = entry.locked
         ? '${context.l10n.stickerSemantics(s.emoji)}.'
-            ' ${context.l10n.stickerPackLockedSemantics}'
+              ' ${context.l10n.stickerPackLockedSemantics}'
         : context.l10n.stickerSemantics(s.emoji);
     return Semantics(
       button: true,
@@ -617,13 +685,19 @@ class _Grid extends StatelessWidget {
                   semanticLabel: ctx.l10n.stickerAnimatedSemantics(s.emoji),
                 )
               : StickerImage(
-                  url: s.url, thumbUrl: s.thumbUrl, emoji: s.emoji, size: 200),
+                  url: s.url,
+                  thumbUrl: s.thumbUrl,
+                  emoji: s.emoji,
+                  size: 200,
+                ),
           actions: [
             TextButton.icon(
               icon: Icon(fav ? Icons.star : Icons.star_border),
-              label: Text(fav
-                  ? ctx.l10n.stickerFavoriteRemove
-                  : ctx.l10n.stickerFavoriteAdd),
+              label: Text(
+                fav
+                    ? ctx.l10n.stickerFavoriteRemove
+                    : ctx.l10n.stickerFavoriteAdd,
+              ),
               onPressed: () async {
                 try {
                   await repo.setFavorite(s.stickerId, !fav);

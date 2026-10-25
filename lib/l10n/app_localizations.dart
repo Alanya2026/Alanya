@@ -13198,6 +13198,24 @@ abstract class AppLocalizations {
   /// **'Maintenez et glissez pour réordonner'**
   String get stickerPackReorderHint;
 
+  /// No description provided for @stickerPackActions.
+  ///
+  /// In fr, this message translates to:
+  /// **'Actions du pack'**
+  String get stickerPackActions;
+
+  /// No description provided for @stickerMoveUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Monter'**
+  String get stickerMoveUp;
+
+  /// No description provided for @stickerMoveDown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Descendre'**
+  String get stickerMoveDown;
+
   /// No description provided for @stickerNoFavorites.
   ///
   /// In fr, this message translates to:
