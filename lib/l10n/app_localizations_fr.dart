@@ -7745,6 +7745,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get stickerPackReorderHint => 'Maintenez et glissez pour réordonner';
 
   @override
+  String get stickerPackActions => 'Actions du pack';
+
+  @override
+  String get stickerMoveUp => 'Monter';
+
+  @override
+  String get stickerMoveDown => 'Descendre';
+
+  @override
   String get stickerNoFavorites => 'Aucun favori';
 
   @override

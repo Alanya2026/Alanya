@@ -7,6 +7,7 @@ import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/services/stickers/sticker_creation_repository.dart';
+import '../../core/services/stickers/sticker_order.dart';
 import '../../core/services/stickers/sticker_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
@@ -88,15 +89,19 @@ class _StickerPacksScreenState extends State<StickerPacksScreen> {
               onPressed: () => showOpenStickerLinkDialog(context),
             ),
           ],
-          bottom: TabBar(tabs: [
-            Tab(text: l10n.stickerTabInstalled),
-            Tab(text: l10n.stickerMyCreations),
-          ]),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: l10n.stickerTabInstalled),
+              Tab(text: l10n.stickerMyCreations),
+            ],
+          ),
         ),
-        body: TabBarView(children: [
-          _installedBody(context),
-          StickerCreatedTab(repo: creation),
-        ]),
+        body: TabBarView(
+          children: [
+            _installedBody(context),
+            StickerCreatedTab(repo: creation),
+          ],
+        ),
       ),
     );
   }
@@ -104,94 +109,149 @@ class _StickerPacksScreenState extends State<StickerPacksScreen> {
   Widget _installedBody(BuildContext context) {
     final l10n = context.l10n;
     return StreamBuilder<List<LocalStickerPack>>(
-        stream: _installed,
-        builder: (context, installedSnap) {
-          final installed = installedSnap.data ?? const <LocalStickerPack>[];
-          return StreamBuilder<List<LocalStickerPack>>(
-            stream: _catalog,
-            builder: (context, catalogSnap) {
-              final catalog = (catalogSnap.data ?? const <LocalStickerPack>[])
-                  .where((p) => !p.installed)
-                  .toList();
-              return CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: _Header(l10n.stickerMyPacks)),
-                  if (installed.isEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Text(l10n.stickerNoPacks,
-                            style: context.text.bodyMedium?.copyWith(
-                                color: context.colors.onSurfaceVariant)),
-                      ),
-                    )
-                  else
-                    SliverReorderableList(
-                      itemCount: installed.length,
-                      onReorderItem: (oldIndex, newIndex) {
-                        final ids = installed.map((p) => p.packId).toList();
-                        ids.insert(newIndex, ids.removeAt(oldIndex));
-                        unawaited(_run(() => _repo.reorderPacks(ids)));
-                      },
-                      itemBuilder: (context, i) {
-                        final p = installed[i];
-                        return ReorderableDelayedDragStartListener(
-                          key: ValueKey('mine_${p.packId}'),
-                          index: i,
-                          child: _PackTile(
-                            pack: p,
-                            highlighted: p.code == widget.focusPackCode,
-                            trailing: IconButton(
-                              tooltip: l10n.stickerRemovePack,
-                              icon: const Icon(Icons.remove_circle_outline),
-                              onPressed: () =>
-                                  _run(() => _repo.removePack(p.packId)),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  if (installed.length > 1)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg),
-                        child: Text(l10n.stickerPackReorderHint,
-                            style: context.text.labelSmall?.copyWith(
-                                color: context.colors.onSurfaceVariant)),
+      stream: _installed,
+      builder: (context, installedSnap) {
+        final installed = installedSnap.data ?? const <LocalStickerPack>[];
+        return StreamBuilder<List<LocalStickerPack>>(
+          stream: _catalog,
+          builder: (context, catalogSnap) {
+            final catalog = (catalogSnap.data ?? const <LocalStickerPack>[])
+                .where((p) => !p.installed)
+                .toList();
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _Header(l10n.stickerMyPacks)),
+                if (installed.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Text(
+                        l10n.stickerNoPacks,
+                        style: context.text.bodyMedium?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  SliverToBoxAdapter(child: _Header(l10n.stickerCatalog)),
-                  SliverList.builder(
-                    itemCount: catalog.length,
+                  )
+                else
+                  SliverReorderableList(
+                    itemCount: installed.length,
+                    onReorderItem: (oldIndex, newIndex) {
+                      final ids = installed.map((p) => p.packId).toList();
+                      final reordered = reorderedIds(ids, oldIndex, newIndex);
+                      unawaited(_run(() => _repo.reorderPacks(reordered)));
+                    },
                     itemBuilder: (context, i) {
-                      final p = catalog[i];
-                      return _PackTile(
-                        pack: p,
-                        highlighted: p.code == widget.focusPackCode,
-                        trailing: p.locked
-                            ? IconButton(
-                                tooltip: l10n.stickerUnlockCta,
-                                icon: Icon(Icons.lock_outline,
-                                    color: context.colors.primary),
-                                onPressed: () => openPlusOffer(context),
-                              )
-                            : IconButton(
-                                tooltip: l10n.stickerAddPack,
-                                icon: Icon(Icons.add_circle_outline,
-                                    color: context.colors.primary),
-                                onPressed: () =>
-                                    _run(() => _repo.installPack(p)),
+                      final p = installed[i];
+                      return ReorderableDelayedDragStartListener(
+                        key: ValueKey('mine_${p.packId}'),
+                        index: i,
+                        child: _PackTile(
+                          pack: p,
+                          highlighted: p.code == widget.focusPackCode,
+                          trailing: PopupMenuButton<_PackAction>(
+                            tooltip: l10n.stickerPackActions,
+                            onSelected: (action) {
+                              final index = installed.indexOf(p);
+                              if (action == _PackAction.up && index > 0) {
+                                final ids = installed
+                                    .map((pack) => pack.packId)
+                                    .toList();
+                                unawaited(
+                                  _run(
+                                    () => _repo.reorderPacks(
+                                      movePackBy(ids, index, -1),
+                                    ),
+                                  ),
+                                );
+                              } else if (action == _PackAction.down &&
+                                  index < installed.length - 1) {
+                                final ids = installed
+                                    .map((pack) => pack.packId)
+                                    .toList();
+                                unawaited(
+                                  _run(
+                                    () => _repo.reorderPacks(
+                                      movePackBy(ids, index, 1),
+                                    ),
+                                  ),
+                                );
+                              } else if (action == _PackAction.remove) {
+                                unawaited(
+                                  _run(() => _repo.removePack(p.packId)),
+                                );
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              PopupMenuItem(
+                                value: _PackAction.up,
+                                enabled: installed.indexOf(p) > 0,
+                                child: Text(l10n.stickerMoveUp),
                               ),
+                              PopupMenuItem(
+                                value: _PackAction.down,
+                                enabled:
+                                    installed.indexOf(p) < installed.length - 1,
+                                child: Text(l10n.stickerMoveDown),
+                              ),
+                              PopupMenuItem(
+                                value: _PackAction.remove,
+                                child: Text(l10n.stickerRemovePack),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   ),
-                  const SliverToBoxAdapter(child: AppSpacing.vGapXxl),
-                ],
-              );
-            },
-          );
-        },
+                if (installed.length > 1)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
+                      child: Text(
+                        l10n.stickerPackReorderHint,
+                        style: context.text.labelSmall?.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                SliverToBoxAdapter(child: _Header(l10n.stickerCatalog)),
+                SliverList.builder(
+                  itemCount: catalog.length,
+                  itemBuilder: (context, i) {
+                    final p = catalog[i];
+                    return _PackTile(
+                      pack: p,
+                      highlighted: p.code == widget.focusPackCode,
+                      trailing: p.locked
+                          ? IconButton(
+                              tooltip: l10n.stickerUnlockCta,
+                              icon: Icon(
+                                Icons.lock_outline,
+                                color: context.colors.primary,
+                              ),
+                              onPressed: () => openPlusOffer(context),
+                            )
+                          : IconButton(
+                              tooltip: l10n.stickerAddPack,
+                              icon: Icon(
+                                Icons.add_circle_outline,
+                                color: context.colors.primary,
+                              ),
+                              onPressed: () => _run(() => _repo.installPack(p)),
+                            ),
+                    );
+                  },
+                ),
+                const SliverToBoxAdapter(child: AppSpacing.vGapXxl),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -202,13 +262,20 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.xs),
-        child: Text(text,
-            style: context.text.titleSmall
-                ?.copyWith(color: context.colors.primary)),
-      );
+    padding: const EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.lg,
+      AppSpacing.lg,
+      AppSpacing.xs,
+    ),
+    child: Text(
+      text,
+      style: context.text.titleSmall?.copyWith(color: context.colors.primary),
+    ),
+  );
 }
+
+enum _PackAction { up, down, remove }
 
 class _PackTile extends StatelessWidget {
   const _PackTile({
@@ -262,10 +329,12 @@ class _PackTile extends StatelessWidget {
         ),
       ),
       title: Text(pack.name),
-      subtitle: Text([
-        l10n.stickerPackCount(pack.stickerCount),
-        if (pack.isPremium) l10n.stickerBadgePlus,
-      ].join(' · ')),
+      subtitle: Text(
+        [
+          l10n.stickerPackCount(pack.stickerCount),
+          if (pack.isPremium) l10n.stickerBadgePlus,
+        ].join(' · '),
+      ),
       trailing: trailing,
     );
   }

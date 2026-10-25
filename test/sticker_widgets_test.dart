@@ -221,9 +221,9 @@ void main() {
       expect(find.text('Touchez ★ dans la fiche d\'un sticker pour l\'ajouter à vos favoris.'),
           findsOneWidget);
       // Onglet royal : bandeau du verrou.
-      final tabs = find.descendant(
-          of: find.byType(ListView), matching: find.byType(InkWell));
-      await t.tap(tabs.at(3));
+      final packTabs = find.descendant(
+          of: find.byType(ReorderableListView), matching: find.byType(InkWell));
+      await t.tap(packTabs.at(1));
       await t.pump();
       await t.pump(const Duration(milliseconds: 100));
       expect(find.text('Ce pack est réservé à Alanya Plus.'), findsOneWidget);
@@ -238,7 +238,7 @@ void main() {
       expect(sent.single.sticker.stickerId, 71);
 
       // Onglet alanya : envoi normal.
-      await t.tap(tabs.at(2));
+      await t.tap(packTabs.at(0));
       await t.pump();
       await t.pump(const Duration(milliseconds: 100));
       await t.tap(find.descendant(
@@ -276,9 +276,9 @@ void main() {
         findsWidgets);
 
     // Onglet royal : sa vignette est un bouton, nommé et verrouillé.
-    final tabs = find.descendant(
-        of: find.byType(ListView), matching: find.byType(InkWell));
-    await t.tap(tabs.at(3));
+    final packTabs = find.descendant(
+        of: find.byType(ReorderableListView), matching: find.byType(InkWell));
+    await t.tap(packTabs.at(1));
     await t.pump();
     await t.pump(const Duration(milliseconds: 100));
 
