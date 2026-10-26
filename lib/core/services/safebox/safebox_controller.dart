@@ -8,6 +8,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:battery_plus/battery_plus.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,7 +21,11 @@ import '../image_thumbnail_service.dart';
 import '../video_codec_policy.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
+import '../connectivity_service.dart';
+import 'safebox_backup.dart';
+import 'safebox_backup_background.dart';
 import 'safebox_cipher.dart';
+import 'safebox_device_media.dart';
 import 'safebox_download_manager.dart';
 import 'safebox_export.dart';
 import 'safebox_foreground.dart';
@@ -94,7 +100,12 @@ class SafeboxController extends ChangeNotifier {
     SafeboxForeground? foreground,
     Future<void> Function(int level)? quotaAlert,
     @visibleForTesting SafeboxUploadManager? uploadManager,
+    @visibleForTesting SafeboxDeviceSource? deviceSource,
+    @visibleForTesting SafeboxBackupStore? backupStore,
+    @visibleForTesting Future<bool> Function()? charging,
   })  : _api = api,
+        device = deviceSource ?? PhoneSafeboxDeviceSource(),
+        _enCharge = charging ?? _batterieEnCharge,
         _premierPlan = foreground ?? SafeboxForeground(),
         _alertes = SafeboxQuotaAlerter(quotaAlert ?? _notifierEspace),
         uploads = uploadManager ?? SafeboxUploadManager(transport: ApiSafeboxTransport(api)),
@@ -113,7 +124,18 @@ class SafeboxController extends ChangeNotifier {
     downloads.addListener(notifyListeners);
     exports.addListener(notifyListeners);
     _abonnement = uploads.completed.listen((_) => unawaited(refreshOverview()));
+    backup = SafeboxBackupEngine(
+      device: device,
+      api: _ApiSauvegarde(api),
+      enqueue: _envoyerSauvegarde,
+      freeSpace: _espaceLibre,
+      maxFileBytes: () => _overview?.limits.maxFileBytes ?? (1 << 30),
+      charging: _enCharge,
+      store: backupStore,
+    );
     _abonnementPartages = uploads.completedJobs.listen((e) {
+      final cle = e.job.backupKey;
+      if (cle != null) unawaited(backup.markSaved(cle));
       final conv = e.job.shareConversationId;
       if (conv == null) return;
       final groupe = e.job.shareGroup;
@@ -172,13 +194,56 @@ class SafeboxController extends ChangeNotifier {
   void ensureStarted() {
     if (_demarre) return;
     _demarre = true;
-    unawaited(uploads.resumeAll());
-    unawaited(_lireGroupes().then((_) => _verifierGroupes()));
+    // L'application ouverte envoie ; la tâche de fond s'efface (lot 10).
+    _battement = Timer.periodic(const Duration(minutes: 1), (_) {
+      unawaited(SafeboxRunLock.beat(SafeboxRunLock.app));
+    });
+    unawaited(() async {
+      await SafeboxRunLock.beat(SafeboxRunLock.app);
+      // Un passage de fond en cours s'arrête dans les secondes qui suivent.
+      for (var i = 0; i < 20 && await SafeboxRunLock.held(SafeboxRunLock.background); i += 1) {
+        await Future<void>.delayed(const Duration(seconds: 3));
+      }
+      await uploads.reload();
+      unawaited(uploads.resumeAll());
+      // Déjà en Wi-Fi à l'ouverture : Android ne signale que les changements.
+      if (await _surWifi()) unawaited(uploads.resumeWaitingWifi());
+      unawaited(_lireGroupes().then((_) => _verifierGroupes()));
+      // Sauvegarde automatique : un passage au démarrage, au retour du Wi-Fi,
+      // et toutes les 30 minutes tant que l'application est ouverte.
+      await loadBackupSettings();
+      unawaited(scheduleSafeboxBackgroundBackup(_reglages));
+      unawaited(runBackup());
+    }());
+    _reseau = Connectivity().onConnectivityChanged.listen((r) {
+      if (r.any((x) => x == ConnectivityResult.wifi || x == ConnectivityResult.ethernet)) {
+        unawaited(uploads.resumeWaitingWifi());
+        unawaited(runBackup());
+      }
+    }, onError: (Object e) => debugPrint('[Sauvegarde] réseau illisible : $e'));
+    _minuterie = Timer.periodic(const Duration(minutes: 30), (_) => unawaited(runBackup()));
   }
+
+  static Future<bool> _surWifi() async {
+    try {
+      return await ConnectivityService().currentIsUnmetered;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  StreamSubscription<List<ConnectivityResult>>? _reseau;
+  Timer? _minuterie;
+  Timer? _battement;
 
   /// Le réseau revient : les envois qui l'attendaient repartent.
   void onNetworkBack() {
-    if (_demarre) unawaited(uploads.resumeAll());
+    if (!_demarre) return;
+    unawaited(uploads.resumeAll());
+    unawaited(() async {
+      if (await _surWifi()) await uploads.resumeWaitingWifi();
+    }());
+    unawaited(runBackup());
   }
 
   Future<SafeboxOverview?> refreshOverview() async {
@@ -394,59 +459,206 @@ class SafeboxController extends ChangeNotifier {
     String? shareGroup,
   }) async {
     for (final pick in picks) {
+      // L'empreinte de l'original : la sauvegarde automatique ne renverra pas
+      // une photo déjà ajoutée à la main (lot 10).
+      String? empreinte;
       try {
-        var source = pick.path;
-        var nom = pick.name;
-        var possede = false;
-        final famille = familyOf(pick.name);
-        final c = await prep.compress(pick.path, pick.name, famille, quality, hevc: hevc);
-        if (c != null) {
-          source = c.path;
-          nom = c.name;
-          possede = true;
-        }
-        final st = await File(source).stat();
-        if (st.size <= 0) continue;
-        final cle = safeboxNewFileKey();
-        String? cheminApercu;
-        var tailleApercu = 0;
-        final apercu = await prep.preview(source, famille, nom);
-        if (apercu != null && apercu.isNotEmpty && apercu.length <= maxApercu) {
-          final chiffre = safeboxEncryptPreviewSync(cle, Uint8List.fromList(apercu));
-          cheminApercu = '${prep.workDir.path}/apercu_${DateTime.now().microsecondsSinceEpoch}.sbx';
-          await File(cheminApercu).writeAsBytes(chiffre, flush: true);
-          tailleApercu = chiffre.length;
-        }
-        final details = await prep.meta(source, famille, nom);
-        await uploads.enqueue(
-          SafeboxUploadJob(
-            id: '${DateTime.now().microsecondsSinceEpoch}_${pick.name.hashCode}',
-            folderId: folder.id,
-            name: nom,
-            mime: null,
-            sourcePath: source,
-            sourceSize: st.size,
-            sourceModifiedMs: st.modified.millisecondsSinceEpoch,
-            ownsSource: possede,
-            plainSize: st.size,
-            originalSize: possede ? pick.size : null,
-            compressed: possede,
-            // Un fichier déjà plus léger que le format part tel quel : il
-            // reste un original (utile pour « Libérer la mémoire du téléphone »).
-            quality: (possede ? quality : SafeboxQuality.original).name,
-            previewPath: cheminApercu,
-            previewSize: tailleApercu,
-            shareConversationId: shareConversationId,
-            shareGroup: shareGroup,
-            meta: details?.toJson(),
-          ),
-          cle,
-        );
+        empreinte = await safeboxSourceFingerprint(pick.path);
       } catch (e) {
-        debugPrint('[Coffre] préparation de ${pick.name} impossible : $e');
+        debugPrint('[Coffre] empreinte de ${pick.name} impossible : $e');
       }
+      await _preparerUn(
+        pick,
+        folder,
+        prep,
+        quality: quality,
+        hevc: hevc,
+        maxApercu: maxApercu,
+        shareConversationId: shareConversationId,
+        shareGroup: shareGroup,
+        sourceFp: empreinte,
+      );
     }
   }
+
+  /// Prépare un fichier (compression, aperçu chiffré, détails) et le confie
+  /// au gestionnaire d'envoi ; rend l'identifiant de l'envoi, ou null.
+  Future<String?> _preparerUn(
+    SafeboxPick pick,
+    SafeboxFolder folder,
+    SafeboxMediaPrep prep, {
+    required SafeboxQuality quality,
+    required bool hevc,
+    required int maxApercu,
+    int? shareConversationId,
+    String? shareGroup,
+    String? sourceFp,
+    bool wifiOnly = false,
+    String? backupKey,
+    String? source,
+  }) async {
+    try {
+      var chemin = pick.path;
+      var nom = pick.name;
+      var possede = false;
+      final famille = familyOf(pick.name);
+      final c = await prep.compress(pick.path, pick.name, famille, quality, hevc: hevc);
+      if (c != null) {
+        chemin = c.path;
+        nom = c.name;
+        possede = true;
+      }
+      final st = await File(chemin).stat();
+      if (st.size <= 0) return null;
+      final cle = safeboxNewFileKey();
+      String? cheminApercu;
+      var tailleApercu = 0;
+      final apercu = await prep.preview(chemin, famille, nom);
+      if (apercu != null && apercu.isNotEmpty && apercu.length <= maxApercu) {
+        final chiffre = safeboxEncryptPreviewSync(cle, Uint8List.fromList(apercu));
+        cheminApercu = '${prep.workDir.path}/apercu_${DateTime.now().microsecondsSinceEpoch}.sbx';
+        await File(cheminApercu).writeAsBytes(chiffre, flush: true);
+        tailleApercu = chiffre.length;
+      }
+      final details = await prep.meta(chemin, famille, nom);
+      final id = '${DateTime.now().microsecondsSinceEpoch}_${pick.name.hashCode}';
+      await uploads.enqueue(
+        SafeboxUploadJob(
+          id: id,
+          folderId: folder.id,
+          name: nom,
+          mime: null,
+          sourcePath: chemin,
+          sourceSize: st.size,
+          sourceModifiedMs: st.modified.millisecondsSinceEpoch,
+          ownsSource: possede,
+          plainSize: st.size,
+          originalSize: possede ? pick.size : null,
+          compressed: possede,
+          // Un fichier déjà plus léger que le format part tel quel : il
+          // reste un original (utile pour « Libérer la mémoire du téléphone »).
+          quality: (possede ? quality : SafeboxQuality.original).name,
+          previewPath: cheminApercu,
+          previewSize: tailleApercu,
+          shareConversationId: shareConversationId,
+          shareGroup: shareGroup,
+          meta: {...?details?.toJson(), 'source': ?source},
+          sourceFp: sourceFp,
+          wifiOnly: wifiOnly,
+          backupKey: backupKey,
+        ),
+        cle,
+      );
+      return id;
+    } catch (e) {
+      debugPrint('[Coffre] préparation de ${pick.name} impossible : $e');
+      return null;
+    }
+  }
+
+  // ── Sauvegarde automatique (lot 10) ──────────────────────────────────────
+
+  /// La galerie, les dossiers de documents et la mémoire du téléphone.
+  final SafeboxDeviceSource device;
+  late final SafeboxBackupEngine backup;
+  final Future<bool> Function() _enCharge;
+
+  static Future<bool> _batterieEnCharge() async {
+    try {
+      final etat = await Battery().batteryState;
+      return etat == BatteryState.charging || etat == BatteryState.full;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  SafeboxBackupSettings _reglages = const SafeboxBackupSettings();
+  SafeboxBackupSettings get backupSettings => _reglages;
+  SafeboxBackupReport? _dernierPassage;
+
+  /// Ce qu'a fait le dernier passage (espace plein, attente de la charge…).
+  SafeboxBackupReport? get lastBackup => _dernierPassage;
+  int _restants = 0;
+
+  /// Fichiers du téléphone retenus que la sauvegarde n'a pas encore pris.
+  int get backupRemaining => _restants;
+  SafeboxMediaAccess? _acces;
+  SafeboxMediaAccess? get mediaAccess => _acces;
+
+  Future<void> loadBackupSettings() async {
+    _reglages = await SafeboxBackupSettings.load();
+    notifyListeners();
+  }
+
+  /// Enregistre les réglages (écrans d'activation, réglages) et lance un passage.
+  Future<void> saveBackupSettings(SafeboxBackupSettings s) async {
+    _reglages = s;
+    await s.save();
+    notifyListeners();
+    unawaited(scheduleSafeboxBackgroundBackup(s));
+    unawaited(runBackup());
+  }
+
+  /// Un passage de sauvegarde, si elle est activée.
+  Future<SafeboxBackupReport?> runBackup() async {
+    if (!_reglages.enabled) return null;
+    try {
+      _acces = await device.access();
+      if (_overview == null) await refreshOverview();
+      final r = await backup.run(_reglages);
+      if (r.stop == SafeboxBackupStop.busy) return r;
+      _dernierPassage = r;
+      _restants = (await backup.pending(_reglages)).length;
+      notifyListeners();
+      return r;
+    } catch (e) {
+      debugPrint('[Sauvegarde] passage impossible : $e');
+      return null;
+    }
+  }
+
+  /// Envois de la sauvegarde qui attendent le Wi-Fi.
+  int get backupWaitingWifi => uploads.jobs.where((j) => j.backupKey != null && j.state == SafeboxUploadState.waitingWifi).length;
+
+  /// Envois de la sauvegarde en route.
+  int get backupUploading => uploads.jobs.where((j) => j.backupKey != null && _envoiActif(j)).length;
+
+  /// Espace libre du coffre, envois pas encore réservés déduits.
+  Future<int?> _espaceLibre() async {
+    final q = _overview?.quota;
+    if (q == null) return null;
+    final enAttente = uploads.jobs
+        .where((j) => j.fileId == null && _envoiActif(j))
+        .fold<int>(0, (s, j) => s + j.storedSize);
+    return q.quotaBytes - q.usedBytes - enAttente;
+  }
+
+  /// Un fichier choisi par la sauvegarde part vers le dossier de son type.
+  Future<String?> _envoyerSauvegarde(SafeboxBackupUpload u) async {
+    final famille = familyOf(u.item.name);
+    final racine = _overview?.rootIds[famille.root];
+    if (racine == null) return null;
+    final dossier = SafeboxFolder(id: racine, parentId: null, root: famille.root, name: null, depth: 0);
+    final prep = await _prep();
+    await prep.workDir.create(recursive: true);
+    final maxApercu = (_overview?.limits.maxPreviewBytes ?? 256 * 1024) - kSafeboxTagBytes;
+    final hevc = u.quality == SafeboxQuality.original ? false : await _hevcPermis(dossier, null);
+    return _preparerUn(
+      SafeboxPick(path: u.file.path, name: u.item.name, size: u.item.size),
+      dossier,
+      prep,
+      quality: u.quality,
+      hevc: hevc,
+      maxApercu: maxApercu,
+      sourceFp: u.fp,
+      wifiOnly: _reglages.wifiOnly,
+      backupKey: u.item.key,
+      source: u.item.folder,
+    );
+  }
+
+  /// « Envoyer avec les données mobiles ».
+  Future<void> allowMobileData() => uploads.allowMobileData();
 
   // ── Un même contenu à plusieurs endroits (décision du 24/10/2026) ───────
 
@@ -673,6 +885,7 @@ class SafeboxController extends ChangeNotifier {
         SafeboxUploadState.queued ||
         SafeboxUploadState.running ||
         SafeboxUploadState.waitingNetwork ||
+        SafeboxUploadState.waitingWifi ||
         SafeboxUploadState.paused =>
           true,
         SafeboxUploadState.failed || SafeboxUploadState.completed => false,
@@ -892,6 +1105,9 @@ class SafeboxController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _reseau?.cancel();
+    _minuterie?.cancel();
+    _battement?.cancel();
     uploads.removeListener(_surveillerGroupes);
     _abonnementPartages.cancel();
     _abonnement.cancel();
@@ -906,6 +1122,30 @@ class SafeboxController extends ChangeNotifier {
     downloads.dispose();
     super.dispose();
   }
+}
+
+/// Le serveur vu par la sauvegarde automatique.
+class _ApiSauvegarde implements SafeboxBackupApi {
+  _ApiSauvegarde(this._api);
+  final TalkyApiClient _api;
+
+  @override
+  Future<Map<String, SafeboxBackupCheck>> check(List<String> fps, {bool link = true}) async {
+    final r = await _api.checkSafeboxBackup(fps, link: link);
+    return {
+      for (final e in r.entries)
+        e.key: switch (e.value) {
+          'saved' => SafeboxBackupCheck.saved,
+          'elsewhere' => SafeboxBackupCheck.elsewhere,
+          'uploading' => SafeboxBackupCheck.uploading,
+          'skip' => SafeboxBackupCheck.skip,
+          _ => SafeboxBackupCheck.unknown,
+        },
+    };
+  }
+
+  @override
+  Future<void> skip(List<String> fps) => _api.skipSafeboxBackup(fps);
 }
 
 /// Plusieurs fichiers du téléphone en route vers une même discussion : la

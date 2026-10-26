@@ -143,6 +143,7 @@ extension SafeboxApi on TalkyApiClient {
     String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
+    String? sourceFp,
   }) async =>
       SafeboxUploadTicket.fromJson(await _safeboxJson(() => _client.post(
             _safebox('/uploads'),
@@ -159,6 +160,7 @@ extension SafeboxApi on TalkyApiClient {
               if (quality != null) 'quality': quality,
               'previewSize': previewSize,
               if (meta != null && meta.isNotEmpty) 'meta': meta,
+              'sourceFp': ?sourceFp,
             }),
           )));
 
@@ -291,6 +293,27 @@ extension SafeboxApi on TalkyApiClient {
   /// « Retirer le partage » : la carte dira « retiré par l'expéditeur ».
   Future<void> revokeSafeboxShare(int shareId) =>
       _safeboxJson(() => _client.post(_safebox('/shares/$shareId/revoke'), headers: _headers, body: '{}'));
+
+  // ── Sauvegarde automatique (lot 10) ──────────────────────────────────────
+
+  /// Ce que le coffre a de ces originaux (empreintes) ; `link` ajoute sans
+  /// copie au dossier de son type ce qui n'est qu'ailleurs.
+  Future<Map<String, String>> checkSafeboxBackup(List<String> fps, {bool link = true}) async {
+    final r = await _safeboxJson(() => _client.post(
+          _safebox('/backup/check'),
+          headers: _headers,
+          body: jsonEncode({'fps': fps, 'link': link}),
+        ));
+    final res = r['results'] is Map ? r['results'] as Map : const {};
+    return {
+      for (final e in res.entries)
+        if (e.value is Map) '${e.key}': '${(e.value as Map)['state']}',
+    };
+  }
+
+  /// « Ne plus sauvegarder » ces originaux.
+  Future<void> skipSafeboxBackup(List<String> fps) =>
+      _safeboxJson(() => _client.post(_safebox('/backup/skip'), headers: _headers, body: jsonEncode({'fps': fps})));
 
   // ── Transferts directs chez MEGA ─────────────────────────────────────────
   //

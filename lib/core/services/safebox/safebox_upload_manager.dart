@@ -24,6 +24,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../talky_api_client.dart';
+import '../connectivity_service.dart';
 import '../secure_storage_guard.dart';
 import 'safebox_cipher.dart';
 import 'safebox_models.dart';
@@ -45,6 +46,7 @@ abstract class SafeboxTransport {
     String? quality,
     int previewSize,
     Map<String, dynamic>? meta,
+    String? sourceFp,
   });
 
   Future<SafeboxUploadStatus> status(int fileId);
@@ -80,6 +82,7 @@ class ApiSafeboxTransport implements SafeboxTransport {
     String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
+    String? sourceFp,
   }) =>
       api.reserveSafeboxUpload(
         folderId: folderId,
@@ -91,6 +94,7 @@ class ApiSafeboxTransport implements SafeboxTransport {
         originalSize: originalSize,
         compressed: compressed,
         quality: quality,
+        sourceFp: sourceFp,
         previewSize: previewSize,
         meta: meta,
       );
@@ -120,8 +124,10 @@ class ApiSafeboxTransport implements SafeboxTransport {
 // ── Un envoi ───────────────────────────────────────────────────────────────
 
 /// `paused` : mis en pause par l'inscrit ; il le reste après un redémarrage,
-/// jusqu'à ce qu'il le relance.
-enum SafeboxUploadState { queued, running, waitingNetwork, paused, failed, completed }
+/// jusqu'à ce qu'il le relance. `waitingWifi` : « Seulement en Wi-Fi » (lot
+/// 10), sur des données mobiles ; repart au retour du Wi-Fi, ou quand
+/// l'inscrit accepte les données mobiles.
+enum SafeboxUploadState { queued, running, waitingNetwork, waitingWifi, paused, failed, completed }
 
 class SafeboxUploadJob {
   SafeboxUploadJob({
@@ -149,6 +155,9 @@ class SafeboxUploadJob {
     this.shareConversationId,
     this.shareGroup,
     this.meta,
+    this.sourceFp,
+    this.wifiOnly = false,
+    this.backupKey,
     DateTime? createdAt,
   })  : done = done ?? <int>{},
         createdAt = createdAt ?? DateTime.now();
@@ -180,6 +189,9 @@ class SafeboxUploadJob {
         errorCode: j['errorCode'] as String?,
         shareConversationId: j['shareConversationId'] as int?,
         shareGroup: j['shareGroup'] as String?,
+        sourceFp: j['sourceFp'] as String?,
+        wifiOnly: j['wifiOnly'] == true,
+        backupKey: j['backupKey'] as String?,
         meta: j['meta'] is Map ? Map<String, dynamic>.from(j['meta'] as Map) : null,
         createdAt: DateTime.tryParse('${j['createdAt']}'),
       );
@@ -227,6 +239,15 @@ class SafeboxUploadJob {
 
   /// Durée, définition, pages… relevés avant l'envoi ([SafeboxMeta.toJson]).
   final Map<String, dynamic>? meta;
+
+  /// Empreinte de l'original (lot 10) : le coffre ne le reprendra pas deux fois.
+  final String? sourceFp;
+
+  /// « Seulement en Wi-Fi » ; levé quand l'inscrit accepte les données mobiles.
+  bool wifiOnly;
+
+  /// Le fichier du téléphone que la sauvegarde automatique envoie, ou null.
+  final String? backupKey;
   final DateTime createdAt;
 
   /// Octets envoyés pendant le bloc en cours (non gardé).
@@ -270,6 +291,9 @@ class SafeboxUploadJob {
         'shareConversationId': shareConversationId,
         if (shareGroup != null) 'shareGroup': shareGroup,
         if (meta != null) 'meta': meta,
+        if (sourceFp != null) 'sourceFp': sourceFp,
+        if (wifiOnly) 'wifiOnly': true,
+        if (backupKey != null) 'backupKey': backupKey,
         'createdAt': createdAt.toIso8601String(),
       };
 }
@@ -297,6 +321,8 @@ class PrefsSafeboxJobStore implements SafeboxJobStore {
   @override
   Future<List<SafeboxUploadJob>> loadJobs() async {
     final prefs = await SharedPreferences.getInstance();
+    // La tâche de fond de la sauvegarde automatique a pu écrire (lot 10).
+    await prefs.reload();
     final brut = prefs.getString(_cle);
     if (brut == null) return [];
     try {
@@ -346,14 +372,19 @@ class SafeboxUploadManager extends ChangeNotifier {
     SafeboxJobStore? store,
     Future<void> Function(Duration)? sleep,
     Future<Uint8List> Function(List<int> key, Uint8List plain, SafeboxBlockPlan plan)? encrypt,
+    Future<bool> Function()? unmetered,
     this.networkRetries = const [Duration(seconds: 2), Duration(seconds: 5), Duration(seconds: 15), Duration(seconds: 30)],
   })  : _transport = transport,
         _store = store ?? PrefsSafeboxJobStore(),
         _sleep = sleep ?? Future<void>.delayed,
-        _encrypt = encrypt ?? safeboxEncryptBlock;
+        _encrypt = encrypt ?? safeboxEncryptBlock,
+        _surWifi = unmetered ?? (() => ConnectivityService().currentIsUnmetered);
 
   final SafeboxTransport _transport;
   final SafeboxJobStore _store;
+
+  /// La connexion actuelle ne se paie pas au volume (Wi-Fi, Ethernet).
+  final Future<bool> Function() _surWifi;
   final Future<void> Function(Duration) _sleep;
   final Future<Uint8List> Function(List<int>, Uint8List, SafeboxBlockPlan) _encrypt;
 
@@ -460,6 +491,48 @@ class SafeboxUploadManager extends ChangeNotifier {
     }
   }
 
+  /// Relit les envois gardés : ceux ajoutés par la tâche de fond de la
+  /// sauvegarde automatique pendant que l'application était fermée.
+  Future<void> reload() async {
+    if (!_charge) return _chargerUneFois();
+    final gardes = await _store.loadJobs();
+    var nouveaux = false;
+    for (final j in gardes) {
+      if (_jobs.any((x) => x.id == j.id)) continue;
+      if (j.state == SafeboxUploadState.running) j.state = SafeboxUploadState.queued;
+      _jobs.add(j);
+      nouveaux = true;
+    }
+    if (nouveaux) notifyListeners();
+  }
+
+  /// Le Wi-Fi est revenu : les envois qui l'attendaient repartent.
+  Future<void> resumeWaitingWifi() async {
+    await _chargerUneFois();
+    var repris = false;
+    for (final j in _jobs.where((x) => x.state == SafeboxUploadState.waitingWifi)) {
+      j.state = SafeboxUploadState.queued;
+      repris = true;
+    }
+    if (!repris) return;
+    notifyListeners();
+    await _pomper();
+  }
+
+  /// « Envoyer avec les données mobiles » : l'inscrit lève « Seulement en
+  /// Wi-Fi » pour ce qui attend.
+  Future<void> allowMobileData() async {
+    await _chargerUneFois();
+    for (final j in _jobs.where((x) => x.state == SafeboxUploadState.waitingWifi || (x.wifiOnly && x.state == SafeboxUploadState.queued))) {
+      j
+        ..wifiOnly = false
+        ..state = SafeboxUploadState.queued;
+    }
+    await _sauver();
+    notifyListeners();
+    await _pomper();
+  }
+
   /// Réessaie un envoi en échec.
   Future<void> retry(String jobId) async {
     final j = _jobs.where((x) => x.id == jobId).firstOrNull;
@@ -547,6 +620,12 @@ class SafeboxUploadManager extends ChangeNotifier {
         ..inFlightBytes = 0;
       await _sauver();
       notifyListeners();
+    } on _AttendreWifi {
+      job
+        ..state = SafeboxUploadState.waitingWifi
+        ..inFlightBytes = 0;
+      await _sauver();
+      notifyListeners();
     } on _Pause {
       _pauses.remove(job.id);
       job
@@ -579,8 +658,14 @@ class SafeboxUploadManager extends ChangeNotifier {
     }
   }
 
+  /// « Seulement en Wi-Fi » sur des données mobiles : l'envoi attend.
+  Future<void> _verifierWifi(SafeboxUploadJob job) async {
+    if (job.wifiOnly && !await _surWifi()) throw _AttendreWifi();
+  }
+
   Future<SafeboxFile> _envoyer(SafeboxUploadJob job, Uint8List cle) async {
     await _verifierSource(job);
+    await _verifierWifi(job);
     final adresses = <int, String>{};
     String? adresseApercu;
 
@@ -597,6 +682,7 @@ class SafeboxUploadManager extends ChangeNotifier {
             quality: job.quality,
             previewSize: job.previewSize,
             meta: job.meta,
+            sourceFp: job.sourceFp,
           ));
       if (ticket.size != job.storedSize
           || ticket.blockCount != safeboxBlockCount(job.plainSize, ticket.blockSize)) {
@@ -672,6 +758,7 @@ class SafeboxUploadManager extends ChangeNotifier {
       for (var i = 0; i < manquants.length; i += 1) {
         if (_annules.contains(job.id)) throw SafeboxUploadFailure('CANCELLED');
         if (_pauses.contains(job.id)) throw _Pause();
+        await _verifierWifi(job);
         final n = manquants[i];
         if (!adresses.containsKey(n)) {
           final lot = manquants.skip(i).take(64).toList();
@@ -760,3 +847,6 @@ class SafeboxUploadManager extends ChangeNotifier {
 class _AttendreReseau implements Exception {}
 
 class _Pause implements Exception {}
+
+/// « Seulement en Wi-Fi », sur des données mobiles.
+class _AttendreWifi implements Exception {}

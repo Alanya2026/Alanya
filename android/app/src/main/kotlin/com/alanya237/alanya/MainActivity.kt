@@ -31,6 +31,11 @@ class MainActivity : FlutterFragmentActivity() {
     private val screenshotChannel = "com.alanya/screenshot"
     private var screenshotDetector: ScreenshotDetector? = null
 
+    // Dossiers de documents de la sauvegarde automatique du coffre. Créé avec
+    // l'activité : son sélecteur de dossier doit être enregistré avant
+    // qu'elle démarre.
+    private val safeboxDocuments = SafeboxDocumentFolders(this)
+
     private var notificationOpenChannel: MethodChannel? = null
     private var pendingNotificationOpen: Map<String, String>? = null
     /** True une fois que Dart a appelé getInitialOpen (handler onOpen prêt). */
@@ -182,6 +187,8 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        safeboxDocuments.attach(flutterEngine.dartExecutor.binaryMessenger)
 
         // Capture d'écran d'une discussion : Dart démarre/arrête l'écoute selon
         // l'écran ouvert, Android répond par `onScreenshot`.

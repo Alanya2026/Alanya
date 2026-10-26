@@ -8116,6 +8116,253 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxYesterday => 'Hier';
 
   @override
+  String safeboxFilesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers',
+      one: '1 fichier',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxUploadWaitingWifi => 'En attente de Wi-Fi';
+
+  @override
+  String get safeboxBackupTitle => 'Sauvegarde automatique';
+
+  @override
+  String get safeboxBackupPitch =>
+      'Vos photos, vidéos et documents copiés dans le coffre, sans y penser. Rien n\'est supprimé du téléphone.';
+
+  @override
+  String get safeboxBackupActivate => 'Activer';
+
+  @override
+  String get safeboxBackupUpToDate => 'À jour';
+
+  @override
+  String safeboxBackupRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers à sauvegarder',
+      one: '1 fichier à sauvegarder',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxBackupWaitingWifi(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers en attente de Wi-Fi',
+      one: '1 fichier en attente de Wi-Fi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupUseMobile => 'Envoyer avec les données mobiles';
+
+  @override
+  String safeboxBackupWaitingCharge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers attendent la charge pour être compressés',
+      one: '1 fichier attend la charge pour être compressé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupSpaceFull =>
+      'Espace plein : la sauvegarde est arrêtée';
+
+  @override
+  String get safeboxBackupNoAccess => 'Accès aux photos refusé';
+
+  @override
+  String get safeboxBackupAllow => 'Autoriser';
+
+  @override
+  String get safeboxBackupLimited => 'Accès limité à quelques photos';
+
+  @override
+  String get safeboxBackupWiden => 'Élargir l\'accès';
+
+  @override
+  String get safeboxBackupPermissionTitle =>
+      'Autoriser l\'accès à vos photos, vidéos et musique';
+
+  @override
+  String get safeboxBackupPermissionBody =>
+      'Le coffre copie vos fichiers chiffrés, dans un seul sens : rien n\'est supprimé du téléphone, et ce que vous supprimez du coffre n\'y revient pas.';
+
+  @override
+  String get safeboxBackupPermissionDenied =>
+      'Sans cet accès, seuls les dossiers de documents choisis peuvent être sauvegardés. Vous pouvez l\'autoriser dans les réglages d\'Android.';
+
+  @override
+  String get safeboxBackupOpenSettings => 'Ouvrir les réglages';
+
+  @override
+  String get safeboxBackupStep1 => 'Étape 1 sur 2 · Que sauvegarder ?';
+
+  @override
+  String get safeboxBackupStep2 => 'Étape 2 sur 2 · Qualité';
+
+  @override
+  String get safeboxBackupGranted =>
+      'Accès aux photos, vidéos et musique autorisé. Vos fichiers sont copiés chiffrés ; rien n\'est supprimé du téléphone.';
+
+  @override
+  String get safeboxBackupWhat => 'Quoi ?';
+
+  @override
+  String safeboxBackupPhotosDesc(int count, String size) {
+    return '$count photos · $size en Original';
+  }
+
+  @override
+  String safeboxBackupVideosDesc(int count, String size) {
+    return '$count vidéos · $size en Original';
+  }
+
+  @override
+  String safeboxBackupAudiosDesc(int count) {
+    return 'Musique et enregistrements · $count fichiers';
+  }
+
+  @override
+  String safeboxBackupDocsDesc(String size) {
+    return 'Dossiers choisis ci-dessous · $size';
+  }
+
+  @override
+  String get safeboxBackupGalleryFolders => 'Dossiers de photos et vidéos';
+
+  @override
+  String get safeboxBackupDocFolders => 'Dossiers de documents';
+
+  @override
+  String get safeboxBackupAddFolder => 'Ajouter un dossier';
+
+  @override
+  String get safeboxBackupRemoveFolder => 'Retirer le dossier';
+
+  @override
+  String get safeboxBackupDownloadsWarning =>
+      'Android ne permet pas de sauvegarder le dossier Téléchargements automatiquement. Ajoutez ces fichiers à la main.';
+
+  @override
+  String get safeboxBackupSince => 'Depuis quand ?';
+
+  @override
+  String get safeboxBackupAllHistory => 'Tout l\'historique';
+
+  @override
+  String get safeboxBackupFromToday => 'À partir d\'aujourd\'hui';
+
+  @override
+  String get safeboxBackupContinue => 'Continuer';
+
+  @override
+  String get safeboxBackupSelection => 'Votre sélection';
+
+  @override
+  String safeboxBackupFree(String size) {
+    return '$size libres';
+  }
+
+  @override
+  String safeboxBackupFits(String size) {
+    return 'Tout tient dans votre espace. Il restera $size.';
+  }
+
+  @override
+  String safeboxBackupOverflows(String size) {
+    return 'Dépasse de $size : la sauvegarde s\'arrêtera quand l\'espace sera plein.';
+  }
+
+  @override
+  String safeboxBackupHdPreselected(String size) {
+    return 'HD est présélectionné : en Original, votre sélection ($size) dépasse votre espace libre.';
+  }
+
+  @override
+  String safeboxBackupDocsAlways(String size) {
+    return 'Documents : toujours tels quels · $size';
+  }
+
+  @override
+  String get safeboxBackupWifiOnly => 'Seulement en Wi-Fi';
+
+  @override
+  String get safeboxBackupChargingOnly =>
+      'Compresser seulement pendant la charge';
+
+  @override
+  String get safeboxBackupRulesNote =>
+      'Une vidéo de plus de 1 Go en Original passe en HD. Changer la qualité plus tard ne touche que les fichiers suivants.';
+
+  @override
+  String get safeboxBackupEnable => 'Activer la sauvegarde';
+
+  @override
+  String get safeboxBackupSave => 'Enregistrer';
+
+  @override
+  String get safeboxBackupDisable => 'Désactiver la sauvegarde';
+
+  @override
+  String get safeboxBackupDisableConfirm =>
+      'La sauvegarde s\'arrête. Ce qui est déjà dans le coffre y reste.';
+
+  @override
+  String get safeboxBackupEnabledToast => 'Sauvegarde automatique activée';
+
+  @override
+  String get safeboxBackupSettings => 'Réglages de la sauvegarde';
+
+  @override
+  String get safeboxBackupScanning => 'Recherche des fichiers du téléphone…';
+
+  @override
+  String get safeboxFreePhoneTitle => 'Libérer la mémoire du téléphone';
+
+  @override
+  String safeboxFreePhoneBody(int photos, int videos, String size) {
+    return '$photos photos et $videos vidéos sont déjà dans le coffre en qualité Original. Les retirer du téléphone libère $size.';
+  }
+
+  @override
+  String get safeboxFreePhoneAction => 'Retirer du téléphone';
+
+  @override
+  String safeboxFreePhoneDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers retirés du téléphone',
+      one: '1 fichier retiré du téléphone',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxFolderCamera => 'Appareil photo';
+
+  @override
+  String get safeboxFolderScreenshots => 'Captures d\'écran';
+
+  @override
+  String get safeboxFolderDownloads => 'Images téléchargées';
+
+  @override
   String get safeboxShareBadge => 'Coffre-fort';
 
   @override

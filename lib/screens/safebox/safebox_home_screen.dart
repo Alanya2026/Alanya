@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/safebox/safebox_backup.dart';
 import '../../core/services/safebox/safebox_controller.dart';
 import '../../core/services/safebox/safebox_models.dart';
 import '../../core/services/safebox/safebox_upload_manager.dart';
@@ -23,6 +24,7 @@ import '../../core/utils/byte_format.dart';
 import '../../talky_api_client.dart';
 import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
+import 'safebox_backup_screens.dart';
 import 'safebox_folder_screen.dart';
 import 'safebox_free_up_screen.dart';
 import 'safebox_transfers_screen.dart';
@@ -185,6 +187,8 @@ class _Accueil extends StatelessWidget {
             else ...[
               _CarteEspace(quota: vue.quota),
               _CarteEtat(onOpen: () => onTab(3)),
+              const _CarteSauvegarde(),
+              const _CarteMemoire(),
               _Carte(
                 padding: EdgeInsets.zero,
                 child: ListTile(
@@ -357,6 +361,171 @@ class _CarteEtat extends StatelessWidget {
         subtitle: Text(detail),
         trailing: const Icon(Icons.chevron_right),
         onTap: onOpen,
+      ),
+    );
+  }
+}
+
+/// La sauvegarde automatique (lot 10) : « Activer », ou son état — à jour,
+/// fichiers en route, en attente de Wi-Fi (« Envoyer avec les données
+/// mobiles »), de la charge, espace plein, accès refusé.
+class _CarteSauvegarde extends StatelessWidget {
+  const _CarteSauvegarde();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final c = context.watch<SafeboxController>();
+    final r = c.backupSettings;
+    Widget petitBouton(String label, VoidCallback onPressed) => FilledButton.tonal(
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 36), padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md)),
+          onPressed: onPressed,
+          child: Text(label),
+        );
+    if (!r.enabled) {
+      return _Carte(
+        padding: EdgeInsets.zero,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: context.semantic.brandContainer,
+            child: Icon(Icons.cloud_sync_outlined, color: context.colors.primary),
+          ),
+          title: Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
+          subtitle: Text(l10n.safeboxBackupPitch),
+          trailing: petitBouton(l10n.safeboxBackupActivate, () => showSafeboxBackupSetup(context)),
+          onTap: () => showSafeboxBackupSetup(context),
+        ),
+      );
+    }
+    final dernier = c.lastBackup;
+    final wifi = c.backupWaitingWifi;
+    final enRoute = c.backupUploading;
+    final restants = c.backupRemaining;
+    final (IconData icone, Color couleur, String detail, (String, VoidCallback)? action) =
+        c.mediaAccess == SafeboxMediaAccess.denied && r.documentFolders.isEmpty
+            ? (Icons.block, context.colors.error, l10n.safeboxBackupNoAccess,
+                (l10n.safeboxBackupAllow, () => showSafeboxBackupSetup(context)))
+            : dernier?.stop == SafeboxBackupStop.spaceFull
+                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull,
+                    (l10n.safeboxGoPlus, () => showPaywall(context, null)))
+                : wifi > 0
+                    ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
+                        (l10n.safeboxBackupUseMobile, c.allowMobileData))
+                    : enRoute + restants > 0
+                        ? (Icons.cloud_upload_outlined, context.colors.primary,
+                            l10n.safeboxBackupRemaining(enRoute + restants), null)
+                        : (dernier?.waitingCharge ?? 0) > 0
+                            ? (Icons.battery_charging_full, context.semantic.warning,
+                                l10n.safeboxBackupWaitingCharge(dernier!.waitingCharge), null)
+                            : c.mediaAccess == SafeboxMediaAccess.limited
+                                ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
+                                    (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
+                                : (Icons.check, context.semantic.success, l10n.safeboxBackupUpToDate, null);
+    return _Carte(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
+      child: InkWell(
+        onTap: () => showSafeboxBackupSetup(context),
+        child: Row(
+          children: [
+            Icon(icone, color: couleur),
+            AppSpacing.hGapMd,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
+                  Text(detail, style: context.text.bodySmall?.copyWith(color: couleur)),
+                ],
+              ),
+            ),
+            if (action != null) petitBouton(action.$1, action.$2) else const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// « Libérer la mémoire du téléphone » (lot 10) : quand elle est presque
+/// pleine, les photos et vidéos déjà dans le coffre en Original peuvent
+/// quitter le téléphone. Android demande lui-même la confirmation.
+class _CarteMemoire extends StatefulWidget {
+  const _CarteMemoire();
+
+  @override
+  State<_CarteMemoire> createState() => _CarteMemoireState();
+}
+
+class _CarteMemoireState extends State<_CarteMemoire> {
+  List<SafeboxDeviceItem> _liberables = const [];
+  bool _occupe = false;
+
+  /// Presque pleine : moins de 15 % ou moins de 2 Go libres.
+  static bool _presquePleine(({int free, int total}) m) => m.free < 2 * (1 << 30) || m.free < m.total * 0.15;
+
+  @override
+  void initState() {
+    super.initState();
+    _charger();
+  }
+
+  Future<void> _charger() async {
+    final c = context.read<SafeboxController>();
+    if (!c.backupSettings.enabled) return;
+    try {
+      final memoire = await c.device.storage();
+      if (memoire == null || !_presquePleine(memoire)) return;
+      final l = await c.backup.freeable(c.backupSettings);
+      if (mounted) setState(() => _liberables = l);
+    } catch (_) {}
+  }
+
+  Future<void> _liberer() async {
+    final c = context.read<SafeboxController>();
+    setState(() => _occupe = true);
+    try {
+      final retires = await c.backup.free(_liberables);
+      if (!mounted) return;
+      if (retires.isNotEmpty) safeboxSnack(context, context.l10n.safeboxFreePhoneDone(retires.length));
+      await _charger();
+      if (mounted) setState(() => _liberables = _liberables.where((i) => !retires.contains(i.key)).toList());
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    } finally {
+      if (mounted) setState(() => _occupe = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_liberables.isEmpty) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final photos = _liberables.where((i) => i.family == SafeboxFamily.photos).length;
+    final videos = _liberables.where((i) => i.family == SafeboxFamily.videos).length;
+    final taille = _liberables.fold<int>(0, (s, i) => s + (i.size > 0 ? i.size : 0));
+    return _Carte(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.phone_android, color: context.semantic.warning),
+              AppSpacing.hGapSm,
+              Expanded(child: Text(l10n.safeboxFreePhoneTitle, style: context.text.titleSmall)),
+            ],
+          ),
+          AppSpacing.vGapSm,
+          Text(l10n.safeboxFreePhoneBody(photos, videos, formatBytes(taille, l10n)), style: context.text.bodySmall),
+          AppSpacing.vGapSm,
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.tonal(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 36)),
+              onPressed: _occupe ? null : _liberer,
+              child: Text(l10n.safeboxFreePhoneAction),
+            ),
+          ),
+        ],
       ),
     );
   }

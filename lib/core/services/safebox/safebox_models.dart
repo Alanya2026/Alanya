@@ -276,7 +276,16 @@ class SafeboxFolder {
 /// durée et définition d'une vidéo, pages d'un PDF, titre, artiste et durée
 /// d'un audio. Ils décorent la carte d'un fichier partagé, rien de plus.
 class SafeboxMeta {
-  const SafeboxMeta({this.durationMs, this.width, this.height, this.pages, this.title, this.artist, this.codec});
+  const SafeboxMeta({
+    this.durationMs,
+    this.width,
+    this.height,
+    this.pages,
+    this.title,
+    this.artist,
+    this.codec,
+    this.source,
+  });
 
   /// Null quand il n'y a rien d'utile.
   static SafeboxMeta? fromJson(dynamic j) {
@@ -291,6 +300,7 @@ class SafeboxMeta {
       title: texte(j['title']),
       artist: texte(j['artist']),
       codec: j['codec'] == 'hevc' || j['codec'] == 'avc' ? j['codec'] as String : null,
+      source: texte(j['source']),
     );
     return m.isEmpty ? null : m;
   }
@@ -305,6 +315,10 @@ class SafeboxMeta {
   /// Format d'une vidéo : « hevc » (H.265) ou « avc » (H.264).
   final String? codec;
 
+  /// Le dossier du téléphone d'où vient le fichier (« Camera », « WhatsApp
+  /// Images »), posé par la sauvegarde automatique (lot 10).
+  final String? source;
+
   bool get isHevc => codec == 'hevc';
 
   bool get isEmpty =>
@@ -313,7 +327,8 @@ class SafeboxMeta {
       pages == null &&
       title == null &&
       artist == null &&
-      codec == null;
+      codec == null &&
+      source == null;
 
   Map<String, dynamic> toJson() => {
         if (durationMs != null) 'durationMs': durationMs,
@@ -322,6 +337,7 @@ class SafeboxMeta {
         if (title != null) 'title': title,
         if (artist != null) 'artist': artist,
         if (codec != null) 'codec': codec,
+        if (source != null) 'source': source,
       };
 
   /// « 12:47 », « 1:02:03 ».

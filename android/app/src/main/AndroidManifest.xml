@@ -46,6 +46,18 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"
         tools:replace="android:maxSdkVersion" />
+    <!-- Coffre-fort, sauvegarde automatique (lot 10) : lire les photos, les
+         vidéos et la musique du téléphone, une fois que l'inscrit l'a activée
+         (READ_EXTERNAL_STORAGE jusqu'à Android 12, déclaré par photo_manager).
+         Android 14 : l'inscrit peut n'autoriser que quelques photos.
+         ACCESS_MEDIA_LOCATION : l'original garde sa localisation (sans elle,
+         Android la retire du fichier lu). À justifier dans la console Google
+         Play (règle sur les autorisations photos et vidéos). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION"/>
 
     <application
         android:label="Alanya"

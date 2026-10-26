@@ -34,6 +34,7 @@ import 'core/services/translation/translation_settings.dart';
 // import 'core/network/cert_pinning.dart'; // réactiver avec le bloc certificate pinning
 import 'core/navigation/app_navigator.dart';
 import 'core/utils/app_log.dart';
+import 'core/services/safebox/safebox_backup_background.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
@@ -241,6 +242,9 @@ void main() async {
     // en place reste utilisable, et l'écran de restauration reproposera.
     debugPrint('[Main] ** Mise en place de la base restaurée échouée: $e');
   }
+
+  // Sauvegarde automatique du coffre (lot 10) : la tâche de fond d'Android.
+  unawaited(initSafeboxBackgroundBackup());
 
   runApp(TalkyApp(biometricLock: biometricLock));
 }

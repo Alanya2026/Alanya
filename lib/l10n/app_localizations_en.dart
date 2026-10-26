@@ -8021,6 +8021,251 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxYesterday => 'Yesterday';
 
   @override
+  String safeboxFilesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files',
+      one: '1 file',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxUploadWaitingWifi => 'Waiting for Wi-Fi';
+
+  @override
+  String get safeboxBackupTitle => 'Automatic backup';
+
+  @override
+  String get safeboxBackupPitch =>
+      'Your photos, videos and documents copied to the safe automatically. Nothing is deleted from your phone.';
+
+  @override
+  String get safeboxBackupActivate => 'Turn on';
+
+  @override
+  String get safeboxBackupUpToDate => 'Up to date';
+
+  @override
+  String safeboxBackupRemaining(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files to back up',
+      one: '1 file to back up',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxBackupWaitingWifi(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files waiting for Wi-Fi',
+      one: '1 file waiting for Wi-Fi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupUseMobile => 'Use mobile data';
+
+  @override
+  String safeboxBackupWaitingCharge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files wait for charging to be compressed',
+      one: '1 file waits for charging to be compressed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupSpaceFull => 'Space full: backup stopped';
+
+  @override
+  String get safeboxBackupNoAccess => 'Photo access denied';
+
+  @override
+  String get safeboxBackupAllow => 'Allow';
+
+  @override
+  String get safeboxBackupLimited => 'Access limited to some photos';
+
+  @override
+  String get safeboxBackupWiden => 'Allow more';
+
+  @override
+  String get safeboxBackupPermissionTitle =>
+      'Allow access to your photos, videos and music';
+
+  @override
+  String get safeboxBackupPermissionBody =>
+      'The safe copies your files encrypted, one way only: nothing is deleted from your phone, and what you delete from the safe doesn\'t come back.';
+
+  @override
+  String get safeboxBackupPermissionDenied =>
+      'Without this access, only the document folders you choose can be backed up. You can allow it in Android settings.';
+
+  @override
+  String get safeboxBackupOpenSettings => 'Open settings';
+
+  @override
+  String get safeboxBackupStep1 => 'Step 1 of 2 · What to back up?';
+
+  @override
+  String get safeboxBackupStep2 => 'Step 2 of 2 · Quality';
+
+  @override
+  String get safeboxBackupGranted =>
+      'Access to photos, videos and music granted. Your files are copied encrypted; nothing is deleted from your phone.';
+
+  @override
+  String get safeboxBackupWhat => 'What?';
+
+  @override
+  String safeboxBackupPhotosDesc(int count, String size) {
+    return '$count photos · $size in Original';
+  }
+
+  @override
+  String safeboxBackupVideosDesc(int count, String size) {
+    return '$count videos · $size in Original';
+  }
+
+  @override
+  String safeboxBackupAudiosDesc(int count) {
+    return 'Music and recordings · $count files';
+  }
+
+  @override
+  String safeboxBackupDocsDesc(String size) {
+    return 'Folders chosen below · $size';
+  }
+
+  @override
+  String get safeboxBackupGalleryFolders => 'Photo and video folders';
+
+  @override
+  String get safeboxBackupDocFolders => 'Document folders';
+
+  @override
+  String get safeboxBackupAddFolder => 'Add a folder';
+
+  @override
+  String get safeboxBackupRemoveFolder => 'Remove folder';
+
+  @override
+  String get safeboxBackupDownloadsWarning =>
+      'Android doesn\'t allow the Downloads folder to be backed up automatically. Add those files manually.';
+
+  @override
+  String get safeboxBackupSince => 'Since when?';
+
+  @override
+  String get safeboxBackupAllHistory => 'All history';
+
+  @override
+  String get safeboxBackupFromToday => 'From today';
+
+  @override
+  String get safeboxBackupContinue => 'Continue';
+
+  @override
+  String get safeboxBackupSelection => 'Your selection';
+
+  @override
+  String safeboxBackupFree(String size) {
+    return '$size free';
+  }
+
+  @override
+  String safeboxBackupFits(String size) {
+    return 'Everything fits in your space. $size will remain.';
+  }
+
+  @override
+  String safeboxBackupOverflows(String size) {
+    return '$size over: backup will stop when your space is full.';
+  }
+
+  @override
+  String safeboxBackupHdPreselected(String size) {
+    return 'HD is preselected: in Original, your selection ($size) exceeds your free space.';
+  }
+
+  @override
+  String safeboxBackupDocsAlways(String size) {
+    return 'Documents: always as is · $size';
+  }
+
+  @override
+  String get safeboxBackupWifiOnly => 'Wi-Fi only';
+
+  @override
+  String get safeboxBackupChargingOnly => 'Compress only while charging';
+
+  @override
+  String get safeboxBackupRulesNote =>
+      'A video over 1 GB in Original goes in HD. Changing quality later only affects the next files.';
+
+  @override
+  String get safeboxBackupEnable => 'Turn on backup';
+
+  @override
+  String get safeboxBackupSave => 'Save';
+
+  @override
+  String get safeboxBackupDisable => 'Turn off backup';
+
+  @override
+  String get safeboxBackupDisableConfirm =>
+      'Backup stops. What\'s already in the safe stays there.';
+
+  @override
+  String get safeboxBackupEnabledToast => 'Automatic backup on';
+
+  @override
+  String get safeboxBackupSettings => 'Backup settings';
+
+  @override
+  String get safeboxBackupScanning => 'Looking for files on your phone…';
+
+  @override
+  String get safeboxFreePhoneTitle => 'Free up phone storage';
+
+  @override
+  String safeboxFreePhoneBody(int photos, int videos, String size) {
+    return '$photos photos and $videos videos are already in the safe in Original quality. Removing them from your phone frees $size.';
+  }
+
+  @override
+  String get safeboxFreePhoneAction => 'Remove from phone';
+
+  @override
+  String safeboxFreePhoneDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files removed from your phone',
+      one: '1 file removed from your phone',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxFolderCamera => 'Camera';
+
+  @override
+  String get safeboxFolderScreenshots => 'Screenshots';
+
+  @override
+  String get safeboxFolderDownloads => 'Downloaded images';
+
+  @override
   String get safeboxShareBadge => 'Safe';
 
   @override

@@ -13630,6 +13630,360 @@ abstract class AppLocalizations {
   /// **'Hier'**
   String get safeboxYesterday;
 
+  /// No description provided for @safeboxFilesCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier} other{{count} fichiers}}'**
+  String safeboxFilesCount(int count);
+
+  /// No description provided for @safeboxUploadWaitingWifi.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente de Wi-Fi'**
+  String get safeboxUploadWaitingWifi;
+
+  /// No description provided for @safeboxBackupTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde automatique'**
+  String get safeboxBackupTitle;
+
+  /// No description provided for @safeboxBackupPitch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos photos, vidéos et documents copiés dans le coffre, sans y penser. Rien n\'est supprimé du téléphone.'**
+  String get safeboxBackupPitch;
+
+  /// No description provided for @safeboxBackupActivate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer'**
+  String get safeboxBackupActivate;
+
+  /// No description provided for @safeboxBackupUpToDate.
+  ///
+  /// In fr, this message translates to:
+  /// **'À jour'**
+  String get safeboxBackupUpToDate;
+
+  /// No description provided for @safeboxBackupRemaining.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier à sauvegarder} other{{count} fichiers à sauvegarder}}'**
+  String safeboxBackupRemaining(int count);
+
+  /// No description provided for @safeboxBackupWaitingWifi.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier en attente de Wi-Fi} other{{count} fichiers en attente de Wi-Fi}}'**
+  String safeboxBackupWaitingWifi(int count);
+
+  /// No description provided for @safeboxBackupUseMobile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer avec les données mobiles'**
+  String get safeboxBackupUseMobile;
+
+  /// No description provided for @safeboxBackupWaitingCharge.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier attend la charge pour être compressé} other{{count} fichiers attendent la charge pour être compressés}}'**
+  String safeboxBackupWaitingCharge(int count);
+
+  /// No description provided for @safeboxBackupSpaceFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espace plein : la sauvegarde est arrêtée'**
+  String get safeboxBackupSpaceFull;
+
+  /// No description provided for @safeboxBackupNoAccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès aux photos refusé'**
+  String get safeboxBackupNoAccess;
+
+  /// No description provided for @safeboxBackupAllow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser'**
+  String get safeboxBackupAllow;
+
+  /// No description provided for @safeboxBackupLimited.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès limité à quelques photos'**
+  String get safeboxBackupLimited;
+
+  /// No description provided for @safeboxBackupWiden.
+  ///
+  /// In fr, this message translates to:
+  /// **'Élargir l\'accès'**
+  String get safeboxBackupWiden;
+
+  /// No description provided for @safeboxBackupPermissionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser l\'accès à vos photos, vidéos et musique'**
+  String get safeboxBackupPermissionTitle;
+
+  /// No description provided for @safeboxBackupPermissionBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le coffre copie vos fichiers chiffrés, dans un seul sens : rien n\'est supprimé du téléphone, et ce que vous supprimez du coffre n\'y revient pas.'**
+  String get safeboxBackupPermissionBody;
+
+  /// No description provided for @safeboxBackupPermissionDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans cet accès, seuls les dossiers de documents choisis peuvent être sauvegardés. Vous pouvez l\'autoriser dans les réglages d\'Android.'**
+  String get safeboxBackupPermissionDenied;
+
+  /// No description provided for @safeboxBackupOpenSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir les réglages'**
+  String get safeboxBackupOpenSettings;
+
+  /// No description provided for @safeboxBackupStep1.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 1 sur 2 · Que sauvegarder ?'**
+  String get safeboxBackupStep1;
+
+  /// No description provided for @safeboxBackupStep2.
+  ///
+  /// In fr, this message translates to:
+  /// **'Étape 2 sur 2 · Qualité'**
+  String get safeboxBackupStep2;
+
+  /// No description provided for @safeboxBackupGranted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès aux photos, vidéos et musique autorisé. Vos fichiers sont copiés chiffrés ; rien n\'est supprimé du téléphone.'**
+  String get safeboxBackupGranted;
+
+  /// No description provided for @safeboxBackupWhat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quoi ?'**
+  String get safeboxBackupWhat;
+
+  /// No description provided for @safeboxBackupPhotosDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} photos · {size} en Original'**
+  String safeboxBackupPhotosDesc(int count, String size);
+
+  /// No description provided for @safeboxBackupVideosDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} vidéos · {size} en Original'**
+  String safeboxBackupVideosDesc(int count, String size);
+
+  /// No description provided for @safeboxBackupAudiosDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Musique et enregistrements · {count} fichiers'**
+  String safeboxBackupAudiosDesc(int count);
+
+  /// No description provided for @safeboxBackupDocsDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dossiers choisis ci-dessous · {size}'**
+  String safeboxBackupDocsDesc(String size);
+
+  /// No description provided for @safeboxBackupGalleryFolders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dossiers de photos et vidéos'**
+  String get safeboxBackupGalleryFolders;
+
+  /// No description provided for @safeboxBackupDocFolders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dossiers de documents'**
+  String get safeboxBackupDocFolders;
+
+  /// No description provided for @safeboxBackupAddFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un dossier'**
+  String get safeboxBackupAddFolder;
+
+  /// No description provided for @safeboxBackupRemoveFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le dossier'**
+  String get safeboxBackupRemoveFolder;
+
+  /// No description provided for @safeboxBackupDownloadsWarning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Android ne permet pas de sauvegarder le dossier Téléchargements automatiquement. Ajoutez ces fichiers à la main.'**
+  String get safeboxBackupDownloadsWarning;
+
+  /// No description provided for @safeboxBackupSince.
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis quand ?'**
+  String get safeboxBackupSince;
+
+  /// No description provided for @safeboxBackupAllHistory.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout l\'historique'**
+  String get safeboxBackupAllHistory;
+
+  /// No description provided for @safeboxBackupFromToday.
+  ///
+  /// In fr, this message translates to:
+  /// **'À partir d\'aujourd\'hui'**
+  String get safeboxBackupFromToday;
+
+  /// No description provided for @safeboxBackupContinue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer'**
+  String get safeboxBackupContinue;
+
+  /// No description provided for @safeboxBackupSelection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre sélection'**
+  String get safeboxBackupSelection;
+
+  /// No description provided for @safeboxBackupFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} libres'**
+  String safeboxBackupFree(String size);
+
+  /// No description provided for @safeboxBackupFits.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout tient dans votre espace. Il restera {size}.'**
+  String safeboxBackupFits(String size);
+
+  /// No description provided for @safeboxBackupOverflows.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dépasse de {size} : la sauvegarde s\'arrêtera quand l\'espace sera plein.'**
+  String safeboxBackupOverflows(String size);
+
+  /// No description provided for @safeboxBackupHdPreselected.
+  ///
+  /// In fr, this message translates to:
+  /// **'HD est présélectionné : en Original, votre sélection ({size}) dépasse votre espace libre.'**
+  String safeboxBackupHdPreselected(String size);
+
+  /// No description provided for @safeboxBackupDocsAlways.
+  ///
+  /// In fr, this message translates to:
+  /// **'Documents : toujours tels quels · {size}'**
+  String safeboxBackupDocsAlways(String size);
+
+  /// No description provided for @safeboxBackupWifiOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seulement en Wi-Fi'**
+  String get safeboxBackupWifiOnly;
+
+  /// No description provided for @safeboxBackupChargingOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compresser seulement pendant la charge'**
+  String get safeboxBackupChargingOnly;
+
+  /// No description provided for @safeboxBackupRulesNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Une vidéo de plus de 1 Go en Original passe en HD. Changer la qualité plus tard ne touche que les fichiers suivants.'**
+  String get safeboxBackupRulesNote;
+
+  /// No description provided for @safeboxBackupEnable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activer la sauvegarde'**
+  String get safeboxBackupEnable;
+
+  /// No description provided for @safeboxBackupSave.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get safeboxBackupSave;
+
+  /// No description provided for @safeboxBackupDisable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désactiver la sauvegarde'**
+  String get safeboxBackupDisable;
+
+  /// No description provided for @safeboxBackupDisableConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'La sauvegarde s\'arrête. Ce qui est déjà dans le coffre y reste.'**
+  String get safeboxBackupDisableConfirm;
+
+  /// No description provided for @safeboxBackupEnabledToast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde automatique activée'**
+  String get safeboxBackupEnabledToast;
+
+  /// No description provided for @safeboxBackupSettings.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages de la sauvegarde'**
+  String get safeboxBackupSettings;
+
+  /// No description provided for @safeboxBackupScanning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche des fichiers du téléphone…'**
+  String get safeboxBackupScanning;
+
+  /// No description provided for @safeboxFreePhoneTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer la mémoire du téléphone'**
+  String get safeboxFreePhoneTitle;
+
+  /// No description provided for @safeboxFreePhoneBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{photos} photos et {videos} vidéos sont déjà dans le coffre en qualité Original. Les retirer du téléphone libère {size}.'**
+  String safeboxFreePhoneBody(int photos, int videos, String size);
+
+  /// No description provided for @safeboxFreePhoneAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du téléphone'**
+  String get safeboxFreePhoneAction;
+
+  /// No description provided for @safeboxFreePhoneDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier retiré du téléphone} other{{count} fichiers retirés du téléphone}}'**
+  String safeboxFreePhoneDone(int count);
+
+  /// No description provided for @safeboxFolderCamera.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil photo'**
+  String get safeboxFolderCamera;
+
+  /// No description provided for @safeboxFolderScreenshots.
+  ///
+  /// In fr, this message translates to:
+  /// **'Captures d\'écran'**
+  String get safeboxFolderScreenshots;
+
+  /// No description provided for @safeboxFolderDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Images téléchargées'**
+  String get safeboxFolderDownloads;
+
   /// No description provided for @safeboxShareBadge.
   ///
   /// In fr, this message translates to:

@@ -157,6 +157,7 @@ class _LigneEnvoi extends StatelessWidget {
           context.colors.primary
         ),
       SafeboxUploadState.waitingNetwork => (l10n.safeboxUploadWaitingNetwork, context.semantic.warning),
+      SafeboxUploadState.waitingWifi => (l10n.safeboxUploadWaitingWifi, context.semantic.warning),
       SafeboxUploadState.paused => (l10n.safeboxUploadPaused, null),
       SafeboxUploadState.failed => (safeboxUploadErrorText(context, job.errorCode), context.colors.error),
       SafeboxUploadState.completed => (
@@ -195,7 +196,11 @@ class _LigneEnvoi extends StatelessWidget {
         ],
       ),
       trailing: switch (job.state) {
-        SafeboxUploadState.running || SafeboxUploadState.queued || SafeboxUploadState.waitingNetwork => IconButton(
+        SafeboxUploadState.running ||
+        SafeboxUploadState.queued ||
+        SafeboxUploadState.waitingNetwork ||
+        SafeboxUploadState.waitingWifi =>
+          IconButton(
             tooltip: l10n.safeboxPause,
             icon: const Icon(Icons.pause_circle_outline),
             onPressed: () => c.uploads.pause(job.id),

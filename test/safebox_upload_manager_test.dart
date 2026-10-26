@@ -25,6 +25,7 @@ class _FauxServeur implements SafeboxTransport {
   int incompletUneFois = 0;
   bool annule = false;
   Map<String, dynamic>? derniereMeta;
+  String? derniereEmpreinte;
   String? derniereQualite;
 
   @override
@@ -40,9 +41,11 @@ class _FauxServeur implements SafeboxTransport {
     String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
+    String? sourceFp,
   }) async {
     appels.add('reserve');
     derniereMeta = meta;
+    derniereEmpreinte = sourceFp;
     derniereQualite = quality;
     if (erreurReserve != null) throw erreurReserve!;
     final id = prochainId++;
@@ -371,5 +374,60 @@ void main() {
     await m.resumePaused();
     await fin;
   });
-}
 
+  group('« Seulement en Wi-Fi » et empreinte de l\'original (lot 10)', () {
+    var wifi = false;
+    SafeboxUploadManager avecReseau() => SafeboxUploadManager(
+          transport: serveur,
+          store: store,
+          sleep: (d) async => attentes.add(d),
+          encrypt: _fauxChiffrement,
+          unmetered: () async => wifi,
+        );
+
+    Future<SafeboxUploadJob> sauvegarde() async {
+      final j = await travail();
+      return SafeboxUploadJob(
+        id: j.id, folderId: j.folderId, name: j.name, mime: j.mime, sourcePath: j.sourcePath,
+        sourceSize: j.sourceSize, sourceModifiedMs: j.sourceModifiedMs, ownsSource: false,
+        plainSize: j.plainSize, originalSize: null, compressed: false, quality: 'original',
+        sourceFp: 'ab' * 32, wifiOnly: true, backupKey: 'g:42',
+      );
+    }
+
+    test('sur données mobiles : attend le Wi-Fi, repart à son retour, avec l\'empreinte', () async {
+      wifi = false;
+      final m = avecReseau();
+      await m.enqueue(await sauvegarde(), _cle);
+      await attendreEtat(m, SafeboxUploadState.waitingWifi);
+      expect(serveur.appels, isEmpty, reason: 'rien ne part sur les données mobiles');
+      final gardes = store.gardes.single;
+      expect([gardes.wifiOnly, gardes.backupKey, gardes.sourceFp], [true, 'g:42', 'ab' * 32]);
+      wifi = true;
+      final fin = attendreFin(m);
+      await m.resumeWaitingWifi();
+      await fin;
+      expect(serveur.derniereEmpreinte, 'ab' * 32);
+    });
+
+    test('« Envoyer avec les données mobiles » lève la règle', () async {
+      wifi = false;
+      final m = avecReseau();
+      await m.enqueue(await sauvegarde(), _cle);
+      await attendreEtat(m, SafeboxUploadState.waitingWifi);
+      final fin = attendreFin(m);
+      await m.allowMobileData();
+      await fin;
+      expect(m.jobs.single.wifiOnly, isFalse);
+    });
+
+    test('un envoi ajouté par la tâche de fond apparaît en relisant', () async {
+      final m = gestionnaire();
+      await m.resumeAll();
+      expect(m.jobs, isEmpty);
+      store.gardes = [await sauvegarde()];
+      await m.reload();
+      expect(m.jobs.single.backupKey, 'g:42');
+    });
+  });
+}

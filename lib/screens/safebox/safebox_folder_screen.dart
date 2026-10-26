@@ -28,6 +28,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
+import 'safebox_backup_screens.dart';
 import 'safebox_chat_picker.dart';
 import 'safebox_download_sheet.dart';
 import 'safebox_grid.dart';
@@ -66,6 +67,10 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
 
   /// Filtre par type, dans Albums et Partager ; null : tout.
   SafeboxFamily? _filtre;
+
+  /// Filtre par dossier d'origine du téléphone, dans Photos et Vidéos (lot
+  /// 10) ; null : tout.
+  String? _filtreSource;
   bool _choixOuvert = false;
 
   /// Racine Partager : « Mes envois » et « Reçus » (lot 9).
@@ -80,7 +85,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   bool get _parJour => widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos;
 
   bool get _selection => _choisis.isNotEmpty;
-  List<SafeboxFile> get _visibles => _filtre == null ? _fichiers : _fichiers.where((f) => f.family == _filtre).toList();
+  List<SafeboxFile> get _visibles => _fichiers
+      .where((f) => (_filtre == null || f.family == _filtre) && (_filtreSource == null || f.meta?.source == _filtreSource))
+      .toList();
   List<SafeboxFile> get _selectionnes => _fichiers.where((f) => _choisis.contains(f.id)).toList();
 
   @override
@@ -759,8 +766,41 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     ];
   }
 
+  /// Filtre par dossier d'origine, quand Photos ou Vidéos en mélange
+  /// plusieurs (« Appareil photo · 912 », « WhatsApp · 328 »).
+  Widget? _filtresSource(AppLocalizations l10n) {
+    if (!_parJour) return null;
+    final parSource = <String, int>{};
+    for (final f in _fichiers) {
+      final src = f.meta?.source;
+      if (src != null) parSource[src] = (parSource[src] ?? 0) + 1;
+    }
+    if (parSource.isEmpty || (parSource.length < 2 && parSource.values.first == _fichiers.length)) return null;
+    final sources = parSource.keys.toList()..sort((a, b) => parSource[b]!.compareTo(parSource[a]!));
+    Widget puce(String? src, String label) => Padding(
+          padding: const EdgeInsets.only(right: AppSpacing.sm),
+          child: ChoiceChip(
+            label: Text(label),
+            selected: _filtreSource == src,
+            onSelected: (_) => setState(() => _filtreSource = src),
+          ),
+        );
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+        children: [
+          puce(null, l10n.safeboxFilterAll),
+          for (final src in sources) puce(src, '${safeboxPhoneFolderLabel(l10n, src)} · ${parSource[src]}'),
+        ],
+      ),
+    );
+  }
+
   /// Filtre par type, quand le dossier en mélange plusieurs (Albums, Partager).
   Widget? _filtres(AppLocalizations l10n) {
+    if (_parJour) return _filtresSource(l10n);
     if (widget.root != SafeboxRoot.albums && widget.root != SafeboxRoot.partager) return null;
     final familles = _fichiers.map((f) => f.family).toSet();
     if (familles.length < 2) return null;

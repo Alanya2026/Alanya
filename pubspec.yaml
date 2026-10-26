@@ -153,6 +153,13 @@ dependencies:
   # AVFoundation, pas par ML Kit).
   google_mlkit_translation: ^0.14.0
   google_mlkit_language_id: ^0.14.0
+  # ── Coffre-fort : sauvegarde automatique (lot 10) ──────────────────
+  # Lire la galerie (photos, vidéos, audio) par dossier, l'original avec sa
+  # localisation (ACCESS_MEDIA_LOCATION), et retirer du téléphone ce qui est
+  # déjà dans le coffre (« Libérer la mémoire du téléphone »).
+  photo_manager: ^3.12.0
+  # Un passage de sauvegarde en tâche de fond (WorkManager d'Android).
+  workmanager: ^0.10.10
 
 # record_linux 0.7.2 (dernière du range <1.0.0 exigé par record) n'implémente
 # pas record_platform_interface 1.5.0 → casse la compilation. On force la

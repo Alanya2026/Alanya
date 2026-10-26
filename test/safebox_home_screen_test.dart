@@ -68,7 +68,14 @@ void main() {
     return json({'error': 'inconnu', 'code': 'NOT_FOUND'}, 404);
   });
 
-  Future<void> monter(WidgetTester tester) async {
+  /// Démonte l'écran puis ferme le contrôleur : ses minuteries (sauvegarde
+  /// automatique, présence de l'application) s'arrêtent avec lui.
+  Future<void> demonter(WidgetTester tester, SafeboxController c) async {
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  }
+
+  Future<SafeboxController> monter(WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
@@ -85,20 +92,24 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    return c;
   }
 
-  testWidgets('accueil : espace, état des envois, Partager, dossiers, albums récents', (tester) async {
-    await monter(tester);
+  testWidgets('accueil : espace, état des envois, sauvegarde, Partager, dossiers, albums récents', (tester) async {
+    final c = await monter(tester);
     expect(find.text(fr.safeboxSpaceTitle), findsOneWidget);
     expect(find.text(fr.safeboxStatusSafe), findsOneWidget);
+    expect(find.text(fr.safeboxBackupTitle), findsOneWidget);
+    expect(find.text(fr.safeboxBackupActivate), findsOneWidget);
+    await tester.scrollUntilVisible(find.text(fr.safeboxNewAlbum), 300);
     expect(find.text(fr.safeboxMyFolders.toUpperCase()), findsOneWidget);
     expect(find.text('Kribi 2026'), findsOneWidget);
-    expect(find.text(fr.safeboxNewAlbum), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await demonter(tester, c);
   });
 
   testWidgets('onglets Fichiers, Partager et Transferts', (tester) async {
-    await monter(tester);
+    final c = await monter(tester);
     await tester.tap(find.text(fr.safeboxTabFiles));
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxRootAlbums), findsWidgets);
@@ -110,5 +121,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxFolderEmpty), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await demonter(tester, c);
   });
 }

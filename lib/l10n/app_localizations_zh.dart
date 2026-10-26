@@ -7653,6 +7653,216 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxYesterday => '昨天';
 
   @override
+  String safeboxFilesCount(int count) {
+    return '$count 个文件';
+  }
+
+  @override
+  String get safeboxUploadWaitingWifi => '等待 Wi-Fi';
+
+  @override
+  String get safeboxBackupTitle => '自动备份';
+
+  @override
+  String get safeboxBackupPitch => '照片、视频和文档自动复制到保险箱。手机上的文件不会被删除。';
+
+  @override
+  String get safeboxBackupActivate => '开启';
+
+  @override
+  String get safeboxBackupUpToDate => '已是最新';
+
+  @override
+  String safeboxBackupRemaining(int count) {
+    return '$count 个文件待备份';
+  }
+
+  @override
+  String safeboxBackupWaitingWifi(int count) {
+    return '$count 个文件等待 Wi-Fi';
+  }
+
+  @override
+  String get safeboxBackupUseMobile => '使用移动数据发送';
+
+  @override
+  String safeboxBackupWaitingCharge(int count) {
+    return '$count 个文件等待充电时压缩';
+  }
+
+  @override
+  String get safeboxBackupSpaceFull => '空间已满：备份已停止';
+
+  @override
+  String get safeboxBackupNoAccess => '照片访问被拒绝';
+
+  @override
+  String get safeboxBackupAllow => '允许';
+
+  @override
+  String get safeboxBackupLimited => '仅可访问部分照片';
+
+  @override
+  String get safeboxBackupWiden => '扩大访问权限';
+
+  @override
+  String get safeboxBackupPermissionTitle => '允许访问您的照片、视频和音乐';
+
+  @override
+  String get safeboxBackupPermissionBody =>
+      '保险箱以加密方式单向复制您的文件：手机上的文件不会被删除，您从保险箱删除的内容也不会再次备份。';
+
+  @override
+  String get safeboxBackupPermissionDenied =>
+      '没有此权限，只能备份您选择的文档文件夹。您可以在 Android 设置中允许。';
+
+  @override
+  String get safeboxBackupOpenSettings => '打开设置';
+
+  @override
+  String get safeboxBackupStep1 => '第 1 步，共 2 步 · 备份什么？';
+
+  @override
+  String get safeboxBackupStep2 => '第 2 步，共 2 步 · 质量';
+
+  @override
+  String get safeboxBackupGranted => '已允许访问照片、视频和音乐。文件以加密方式复制，手机上的文件不会被删除。';
+
+  @override
+  String get safeboxBackupWhat => '备份什么？';
+
+  @override
+  String safeboxBackupPhotosDesc(int count, String size) {
+    return '$count 张照片 · 原始质量 $size';
+  }
+
+  @override
+  String safeboxBackupVideosDesc(int count, String size) {
+    return '$count 个视频 · 原始质量 $size';
+  }
+
+  @override
+  String safeboxBackupAudiosDesc(int count) {
+    return '音乐和录音 · $count 个文件';
+  }
+
+  @override
+  String safeboxBackupDocsDesc(String size) {
+    return '下方选择的文件夹 · $size';
+  }
+
+  @override
+  String get safeboxBackupGalleryFolders => '照片和视频文件夹';
+
+  @override
+  String get safeboxBackupDocFolders => '文档文件夹';
+
+  @override
+  String get safeboxBackupAddFolder => '添加文件夹';
+
+  @override
+  String get safeboxBackupRemoveFolder => '移除文件夹';
+
+  @override
+  String get safeboxBackupDownloadsWarning =>
+      'Android 不允许自动备份“下载”文件夹。请手动添加这些文件。';
+
+  @override
+  String get safeboxBackupSince => '从何时开始？';
+
+  @override
+  String get safeboxBackupAllHistory => '全部历史';
+
+  @override
+  String get safeboxBackupFromToday => '从今天开始';
+
+  @override
+  String get safeboxBackupContinue => '继续';
+
+  @override
+  String get safeboxBackupSelection => '您的选择';
+
+  @override
+  String safeboxBackupFree(String size) {
+    return '剩余 $size';
+  }
+
+  @override
+  String safeboxBackupFits(String size) {
+    return '全部可放入您的空间，将剩余 $size。';
+  }
+
+  @override
+  String safeboxBackupOverflows(String size) {
+    return '超出 $size：空间满时备份将停止。';
+  }
+
+  @override
+  String safeboxBackupHdPreselected(String size) {
+    return '已预选 HD：原始质量下，您的选择（$size）超出剩余空间。';
+  }
+
+  @override
+  String safeboxBackupDocsAlways(String size) {
+    return '文档：始终保持原样 · $size';
+  }
+
+  @override
+  String get safeboxBackupWifiOnly => '仅限 Wi-Fi';
+
+  @override
+  String get safeboxBackupChargingOnly => '仅在充电时压缩';
+
+  @override
+  String get safeboxBackupRulesNote => '原始质量超过 1 GB 的视频将以 HD 上传。之后更改质量只影响后续文件。';
+
+  @override
+  String get safeboxBackupEnable => '开启备份';
+
+  @override
+  String get safeboxBackupSave => '保存';
+
+  @override
+  String get safeboxBackupDisable => '关闭备份';
+
+  @override
+  String get safeboxBackupDisableConfirm => '备份将停止。已在保险箱中的内容会保留。';
+
+  @override
+  String get safeboxBackupEnabledToast => '自动备份已开启';
+
+  @override
+  String get safeboxBackupSettings => '备份设置';
+
+  @override
+  String get safeboxBackupScanning => '正在查找手机上的文件…';
+
+  @override
+  String get safeboxFreePhoneTitle => '释放手机空间';
+
+  @override
+  String safeboxFreePhoneBody(int photos, int videos, String size) {
+    return '$photos 张照片和 $videos 个视频已以原始质量存入保险箱。从手机移除可释放 $size。';
+  }
+
+  @override
+  String get safeboxFreePhoneAction => '从手机移除';
+
+  @override
+  String safeboxFreePhoneDone(int count) {
+    return '已从手机移除 $count 个文件';
+  }
+
+  @override
+  String get safeboxFolderCamera => '相机';
+
+  @override
+  String get safeboxFolderScreenshots => '截图';
+
+  @override
+  String get safeboxFolderDownloads => '下载的图片';
+
+  @override
   String get safeboxShareBadge => '保险箱';
 
   @override

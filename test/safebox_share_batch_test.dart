@@ -264,6 +264,7 @@ class _FauxTransport implements SafeboxTransport {
     String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
+    String? sourceFp,
   }) async {
     if (refuser.contains(name)) throw TalkyException('refusé', 400, code: 'SAFEBOX_WRONG_FAMILY');
     final id = prochainId++;
