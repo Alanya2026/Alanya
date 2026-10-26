@@ -124,4 +124,19 @@ class AppColors {
   static const Color darkNavGlassBorder = Color(0x14FFFFFF);
   /// Anneau des badges en sombre (couleur du panneau, opaque).
   static const Color darkNavGlassBadgeBorder = Color(0xFF242832);
+
+  // ── Coffre-fort : répartition de l'espace par dossier ─────────────────
+  // Une échelle d'indigo pour les dossiers remplis depuis le téléphone, du
+  // plus foncé au plus clair, puis deux teintes à part pour Albums et
+  // Partager (maquettes du 24/10/2026). Elles diffèrent aussi en clarté :
+  // la légende reste lisible sans distinguer les teintes.
+  static const Color safeboxPhotos = Color(0xFF283593);
+  static const Color safeboxVideos = Color(0xFF5C6BC0);
+  static const Color safeboxAudios = Color(0xFF9FA8DA);
+  static const Color safeboxDocuments = Color(0xFFC5CAE9);
+  static const Color safeboxAlbums = Color(0xFFB197FC);
+  static const Color safeboxShare = Color(0xFF0C8599);
+
+  /// Fond de l'icône de Partager (teinte très claire de [safeboxShare]).
+  static const Color safeboxShareContainer = Color(0xFFE3F4F7);
 }

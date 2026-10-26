@@ -101,6 +101,11 @@ class SafeboxReceivedFiles {
 
   Future<bool> open(String location, String? mime) => _ouvrir(location, mime ?? 'application/octet-stream');
 
+  /// Copie un fichier dans Téléchargements/[subdir] ; rend son emplacement,
+  /// ou null. Sert aussi aux téléchargements depuis le coffre (lot 8).
+  static Future<String?> saveToDownloads(String path, String name, String mime, String subdir) =>
+      _publierSurLeTelephone(path, name, mime, subdir);
+
   // ── Sur le téléphone ─────────────────────────────────────────────────────
 
   static Future<String?> _publierSurLeTelephone(String path, String name, String mime, String subdir) async {

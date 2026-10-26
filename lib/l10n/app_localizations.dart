@@ -13294,6 +13294,342 @@ abstract class AppLocalizations {
   /// **'Envoyer quand même'**
   String get safeboxHevcWarningSend;
 
+  /// No description provided for @safeboxTabHome.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accueil'**
+  String get safeboxTabHome;
+
+  /// No description provided for @safeboxTabFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers'**
+  String get safeboxTabFiles;
+
+  /// No description provided for @safeboxTabTransfers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transferts'**
+  String get safeboxTabTransfers;
+
+  /// No description provided for @safeboxSpaceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Espace utilisé'**
+  String get safeboxSpaceTitle;
+
+  /// No description provided for @safeboxPlanFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gratuit · {size}'**
+  String safeboxPlanFree(String size);
+
+  /// No description provided for @safeboxPlanPlus.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus · {size}'**
+  String safeboxPlanPlus(String size);
+
+  /// No description provided for @safeboxQuotaOutOf.
+  ///
+  /// In fr, this message translates to:
+  /// **'sur {total}'**
+  String safeboxQuotaOutOf(String total);
+
+  /// No description provided for @safeboxStatusSafe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous vos fichiers sont en sécurité'**
+  String get safeboxStatusSafe;
+
+  /// No description provided for @safeboxStatusSafeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien en attente d\'envoi'**
+  String get safeboxStatusSafeHint;
+
+  /// No description provided for @safeboxStatusWaiting.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier attend le réseau} other{{count} fichiers attendent le réseau}}'**
+  String safeboxStatusWaiting(int count);
+
+  /// No description provided for @safeboxStatusPaused.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 envoi en pause} other{{count} envois en pause}}'**
+  String safeboxStatusPaused(int count);
+
+  /// No description provided for @safeboxStatusFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 envoi a échoué} other{{count} envois ont échoué}}'**
+  String safeboxStatusFailed(int count);
+
+  /// No description provided for @safeboxStatusOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir les transferts'**
+  String get safeboxStatusOpen;
+
+  /// No description provided for @safeboxShareCardHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Aucun fichier · jusqu\'à {max} par fichier} =1{1 fichier · jusqu\'à {max} par fichier} other{{count} fichiers · jusqu\'à {max} par fichier}}'**
+  String safeboxShareCardHint(int count, String max);
+
+  /// No description provided for @safeboxMyFolders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes dossiers'**
+  String get safeboxMyFolders;
+
+  /// No description provided for @safeboxRecentAlbums.
+  ///
+  /// In fr, this message translates to:
+  /// **'Albums récents'**
+  String get safeboxRecentAlbums;
+
+  /// No description provided for @safeboxSeeAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout voir'**
+  String get safeboxSeeAll;
+
+  /// No description provided for @safeboxAlbumItems.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Vide pour l\'instant} =1{1 élément} other{{count} éléments}}'**
+  String safeboxAlbumItems(int count);
+
+  /// No description provided for @safeboxAlbumItemsMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus de {count} éléments'**
+  String safeboxAlbumItemsMore(int count);
+
+  /// No description provided for @safeboxNewAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvel album'**
+  String get safeboxNewAlbum;
+
+  /// No description provided for @safeboxAddTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter dans…'**
+  String get safeboxAddTo;
+
+  /// No description provided for @safeboxUploadsTab.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envois'**
+  String get safeboxUploadsTab;
+
+  /// No description provided for @safeboxDownloadsTab.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargements'**
+  String get safeboxDownloadsTab;
+
+  /// No description provided for @safeboxPauseAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout mettre en pause'**
+  String get safeboxPauseAll;
+
+  /// No description provided for @safeboxResumeAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout reprendre'**
+  String get safeboxResumeAll;
+
+  /// No description provided for @safeboxUploadPaused.
+  ///
+  /// In fr, this message translates to:
+  /// **'En pause'**
+  String get safeboxUploadPaused;
+
+  /// No description provided for @safeboxPause.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre en pause'**
+  String get safeboxPause;
+
+  /// No description provided for @safeboxResume.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reprendre'**
+  String get safeboxResume;
+
+  /// No description provided for @safeboxInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'En cours'**
+  String get safeboxInProgress;
+
+  /// No description provided for @safeboxFinished.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terminés'**
+  String get safeboxFinished;
+
+  /// No description provided for @safeboxBytesOf.
+  ///
+  /// In fr, this message translates to:
+  /// **'{done} sur {total}'**
+  String safeboxBytesOf(String done, String total);
+
+  /// No description provided for @safeboxNoDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun téléchargement'**
+  String get safeboxNoDownloads;
+
+  /// No description provided for @safeboxExportProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'{done} sur {total} fichiers'**
+  String safeboxExportProgress(int done, int total);
+
+  /// No description provided for @safeboxExportDoneGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans la galerie, album « Alanya »'**
+  String get safeboxExportDoneGallery;
+
+  /// No description provided for @safeboxExportDoneZip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans Téléchargements/Alanya'**
+  String get safeboxExportDoneZip;
+
+  /// No description provided for @safeboxExportFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échec du téléchargement'**
+  String get safeboxExportFailed;
+
+  /// No description provided for @safeboxExportCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annulé'**
+  String get safeboxExportCancelled;
+
+  /// No description provided for @safeboxExportSkipped.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier n\'a pas pu être copié} other{{count} fichiers n\'ont pas pu être copiés}}'**
+  String safeboxExportSkipped(int count);
+
+  /// No description provided for @safeboxSelectedCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 sélectionné} other{{count} sélectionnés}}'**
+  String safeboxSelectedCount(int count);
+
+  /// No description provided for @safeboxSelectAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout sélectionner'**
+  String get safeboxSelectAll;
+
+  /// No description provided for @safeboxFilterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout'**
+  String get safeboxFilterAll;
+
+  /// No description provided for @safeboxDownload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get safeboxDownload;
+
+  /// No description provided for @safeboxDownloadWhat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quoi ?'**
+  String get safeboxDownloadWhat;
+
+  /// No description provided for @safeboxDownloadWhere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Où ?'**
+  String get safeboxDownloadWhere;
+
+  /// No description provided for @safeboxDownloadSelection.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Le fichier sélectionné · {size}} other{Les {count} fichiers sélectionnés · {size}}}'**
+  String safeboxDownloadSelection(int count, String size);
+
+  /// No description provided for @safeboxDownloadFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout le dossier « {name} »'**
+  String safeboxDownloadFolder(String name);
+
+  /// No description provided for @safeboxDownloadGallery.
+  ///
+  /// In fr, this message translates to:
+  /// **'Galerie du téléphone'**
+  String get safeboxDownloadGallery;
+
+  /// No description provided for @safeboxDownloadZip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier ZIP'**
+  String get safeboxDownloadZip;
+
+  /// No description provided for @safeboxDownloadGalleryHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Photos et vidéos dans l\'album « Alanya » de la galerie ; les autres fichiers dans Téléchargements/Alanya.'**
+  String get safeboxDownloadGalleryHint;
+
+  /// No description provided for @safeboxDownloadZipHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un seul fichier dans Téléchargements/Alanya.'**
+  String get safeboxDownloadZipHint;
+
+  /// No description provided for @safeboxDownloadDecryptHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers sont déchiffrés sur votre téléphone.'**
+  String get safeboxDownloadDecryptHint;
+
+  /// No description provided for @safeboxDownloadAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger · {size}'**
+  String safeboxDownloadAction(String size);
+
+  /// No description provided for @safeboxDownloadStarted.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement lancé : suivez-le dans Transferts.'**
+  String get safeboxDownloadStarted;
+
+  /// No description provided for @safeboxDownloadFolderAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger le dossier'**
+  String get safeboxDownloadFolderAction;
+
+  /// No description provided for @safeboxToday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aujourd\'hui'**
+  String get safeboxToday;
+
+  /// No description provided for @safeboxYesterday.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hier'**
+  String get safeboxYesterday;
+
   /// No description provided for @safeboxRootVideos.
   ///
   /// In fr, this message translates to:

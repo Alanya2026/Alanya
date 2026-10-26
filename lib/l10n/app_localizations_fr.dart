@@ -7862,6 +7862,260 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxHevcWarningSend => 'Envoyer quand même';
 
   @override
+  String get safeboxTabHome => 'Accueil';
+
+  @override
+  String get safeboxTabFiles => 'Fichiers';
+
+  @override
+  String get safeboxTabTransfers => 'Transferts';
+
+  @override
+  String get safeboxSpaceTitle => 'Espace utilisé';
+
+  @override
+  String safeboxPlanFree(String size) {
+    return 'Gratuit · $size';
+  }
+
+  @override
+  String safeboxPlanPlus(String size) {
+    return 'Alanya Plus · $size';
+  }
+
+  @override
+  String safeboxQuotaOutOf(String total) {
+    return 'sur $total';
+  }
+
+  @override
+  String get safeboxStatusSafe => 'Tous vos fichiers sont en sécurité';
+
+  @override
+  String get safeboxStatusSafeHint => 'Rien en attente d\'envoi';
+
+  @override
+  String safeboxStatusWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers attendent le réseau',
+      one: '1 fichier attend le réseau',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxStatusPaused(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count envois en pause',
+      one: '1 envoi en pause',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxStatusFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count envois ont échoué',
+      one: '1 envoi a échoué',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxStatusOpen => 'Voir les transferts';
+
+  @override
+  String safeboxShareCardHint(int count, String max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers · jusqu\'à $max par fichier',
+      one: '1 fichier · jusqu\'à $max par fichier',
+      zero: 'Aucun fichier · jusqu\'à $max par fichier',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxMyFolders => 'Mes dossiers';
+
+  @override
+  String get safeboxRecentAlbums => 'Albums récents';
+
+  @override
+  String get safeboxSeeAll => 'Tout voir';
+
+  @override
+  String safeboxAlbumItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments',
+      one: '1 élément',
+      zero: 'Vide pour l\'instant',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxAlbumItemsMore(int count) {
+    return 'Plus de $count éléments';
+  }
+
+  @override
+  String get safeboxNewAlbum => 'Nouvel album';
+
+  @override
+  String get safeboxAddTo => 'Ajouter dans…';
+
+  @override
+  String get safeboxUploadsTab => 'Envois';
+
+  @override
+  String get safeboxDownloadsTab => 'Téléchargements';
+
+  @override
+  String get safeboxPauseAll => 'Tout mettre en pause';
+
+  @override
+  String get safeboxResumeAll => 'Tout reprendre';
+
+  @override
+  String get safeboxUploadPaused => 'En pause';
+
+  @override
+  String get safeboxPause => 'Mettre en pause';
+
+  @override
+  String get safeboxResume => 'Reprendre';
+
+  @override
+  String get safeboxInProgress => 'En cours';
+
+  @override
+  String get safeboxFinished => 'Terminés';
+
+  @override
+  String safeboxBytesOf(String done, String total) {
+    return '$done sur $total';
+  }
+
+  @override
+  String get safeboxNoDownloads => 'Aucun téléchargement';
+
+  @override
+  String safeboxExportProgress(int done, int total) {
+    return '$done sur $total fichiers';
+  }
+
+  @override
+  String get safeboxExportDoneGallery => 'Dans la galerie, album « Alanya »';
+
+  @override
+  String get safeboxExportDoneZip => 'Dans Téléchargements/Alanya';
+
+  @override
+  String get safeboxExportFailed => 'Échec du téléchargement';
+
+  @override
+  String get safeboxExportCancelled => 'Annulé';
+
+  @override
+  String safeboxExportSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers n\'ont pas pu être copiés',
+      one: '1 fichier n\'a pas pu être copié',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sélectionnés',
+      one: '1 sélectionné',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxSelectAll => 'Tout sélectionner';
+
+  @override
+  String get safeboxFilterAll => 'Tout';
+
+  @override
+  String get safeboxDownload => 'Télécharger';
+
+  @override
+  String get safeboxDownloadWhat => 'Quoi ?';
+
+  @override
+  String get safeboxDownloadWhere => 'Où ?';
+
+  @override
+  String safeboxDownloadSelection(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Les $count fichiers sélectionnés · $size',
+      one: 'Le fichier sélectionné · $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxDownloadFolder(String name) {
+    return 'Tout le dossier « $name »';
+  }
+
+  @override
+  String get safeboxDownloadGallery => 'Galerie du téléphone';
+
+  @override
+  String get safeboxDownloadZip => 'Fichier ZIP';
+
+  @override
+  String get safeboxDownloadGalleryHint =>
+      'Photos et vidéos dans l\'album « Alanya » de la galerie ; les autres fichiers dans Téléchargements/Alanya.';
+
+  @override
+  String get safeboxDownloadZipHint =>
+      'Un seul fichier dans Téléchargements/Alanya.';
+
+  @override
+  String get safeboxDownloadDecryptHint =>
+      'Les fichiers sont déchiffrés sur votre téléphone.';
+
+  @override
+  String safeboxDownloadAction(String size) {
+    return 'Télécharger · $size';
+  }
+
+  @override
+  String get safeboxDownloadStarted =>
+      'Téléchargement lancé : suivez-le dans Transferts.';
+
+  @override
+  String get safeboxDownloadFolderAction => 'Télécharger le dossier';
+
+  @override
+  String get safeboxToday => 'Aujourd\'hui';
+
+  @override
+  String get safeboxYesterday => 'Hier';
+
+  @override
   String get safeboxRootVideos => 'Vidéos';
 
   @override

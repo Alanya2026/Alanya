@@ -20,6 +20,7 @@ import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
 import 'safebox_cipher.dart';
 import 'safebox_download_manager.dart';
+import 'safebox_export.dart';
 import 'safebox_foreground.dart';
 import 'safebox_media_prep.dart';
 import 'safebox_models.dart';
@@ -97,9 +98,18 @@ class SafeboxController extends ChangeNotifier {
         uploads = SafeboxUploadManager(transport: ApiSafeboxTransport(api)),
         downloads = SafeboxDownloadManager(transport: ApiSafeboxDownloadTransport(api)),
         previews = SafeboxPreviewCache(transport: ApiSafeboxDownloadTransport(api)) {
+    exports = SafeboxExporter(
+      fetch: downloads.fetch,
+      cached: downloads.cached,
+      evict: downloads.evict,
+      progressOf: downloads.progressOf,
+    );
     uploads.addListener(notifyListeners);
     uploads.addListener(_suivrePremierPlan);
+    // Le progrès d'un téléchargement groupé suit celui du fichier en cours.
+    downloads.addListener(exports.refresh);
     downloads.addListener(notifyListeners);
+    exports.addListener(notifyListeners);
     _abonnement = uploads.completed.listen((_) => unawaited(refreshOverview()));
     _abonnementPartages = uploads.completedJobs.listen((e) {
       final conv = e.job.shareConversationId;
@@ -136,6 +146,9 @@ class SafeboxController extends ChangeNotifier {
   final TalkyApiClient _api;
   final SafeboxUploadManager uploads;
   final SafeboxDownloadManager downloads;
+
+  /// Téléchargements groupés vers la galerie ou un ZIP (lot 8).
+  late final SafeboxExporter exports;
   final SafeboxPreviewCache previews;
 
   /// Fichiers reçus, enregistrés dans Téléchargements/Alanya.
@@ -609,7 +622,10 @@ class SafeboxController extends ChangeNotifier {
     uploads.removeListener(notifyListeners);
     uploads.removeListener(_suivrePremierPlan);
     unawaited(_premierPlan.stop());
+    downloads.removeListener(exports.refresh);
     downloads.removeListener(notifyListeners);
+    exports.removeListener(notifyListeners);
+    exports.dispose();
     uploads.dispose();
     downloads.dispose();
     super.dispose();

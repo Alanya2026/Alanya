@@ -17,15 +17,17 @@ import '../../widgets/common/common.dart';
 import 'safebox_widgets.dart';
 
 /// Les discussions choisies, ou null si l'inscrit renonce.
-Future<List<int>?> pickSafeboxConversations(BuildContext context, {required SafeboxFile file}) =>
+/// [others] : nombre de fichiers envoyés en plus de [file] (sélection).
+Future<List<int>?> pickSafeboxConversations(BuildContext context, {required SafeboxFile file, int others = 0}) =>
     Navigator.push<List<int>>(
       context,
-      MaterialPageRoute(builder: (_) => SafeboxChatPickerScreen(file: file)),
+      MaterialPageRoute(builder: (_) => SafeboxChatPickerScreen(file: file, others: others)),
     );
 
 class SafeboxChatPickerScreen extends StatefulWidget {
-  const SafeboxChatPickerScreen({super.key, required this.file});
+  const SafeboxChatPickerScreen({super.key, required this.file, this.others = 0});
   final SafeboxFile file;
+  final int others;
 
   @override
   State<SafeboxChatPickerScreen> createState() => _SafeboxChatPickerScreenState();
@@ -63,7 +65,7 @@ class _SafeboxChatPickerScreenState extends State<SafeboxChatPickerScreen> {
           ListTile(
             leading: SafeboxFileThumb(file: f, size: 44),
             title: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(formatBytes(f.plainBytes, l10n)),
+            subtitle: Text(widget.others > 0 ? '${formatBytes(f.plainBytes, l10n)} · +${widget.others}' : formatBytes(f.plainBytes, l10n)),
           ),
           Padding(
             padding: AppSpacing.screenH,

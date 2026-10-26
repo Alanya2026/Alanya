@@ -7412,6 +7412,247 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxHevcWarningSend => '仍然发送';
 
   @override
+  String get safeboxTabHome => '首页';
+
+  @override
+  String get safeboxTabFiles => '文件';
+
+  @override
+  String get safeboxTabTransfers => '传输';
+
+  @override
+  String get safeboxSpaceTitle => '已用空间';
+
+  @override
+  String safeboxPlanFree(String size) {
+    return '免费 · $size';
+  }
+
+  @override
+  String safeboxPlanPlus(String size) {
+    return 'Alanya Plus · $size';
+  }
+
+  @override
+  String safeboxQuotaOutOf(String total) {
+    return '共 $total';
+  }
+
+  @override
+  String get safeboxStatusSafe => '您的所有文件都很安全';
+
+  @override
+  String get safeboxStatusSafeHint => '没有等待上传的文件';
+
+  @override
+  String safeboxStatusWaiting(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文件等待网络',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxStatusPaused(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个上传已暂停',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxStatusFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个上传失败',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxStatusOpen => '查看传输';
+
+  @override
+  String safeboxShareCardHint(int count, String max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文件 · 每个文件最多 $max',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxMyFolders => '我的文件夹';
+
+  @override
+  String get safeboxRecentAlbums => '最近的相册';
+
+  @override
+  String get safeboxSeeAll => '查看全部';
+
+  @override
+  String safeboxAlbumItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxAlbumItemsMore(int count) {
+    return '超过 $count 项';
+  }
+
+  @override
+  String get safeboxNewAlbum => '新建相册';
+
+  @override
+  String get safeboxAddTo => '添加到…';
+
+  @override
+  String get safeboxUploadsTab => '上传';
+
+  @override
+  String get safeboxDownloadsTab => '下载';
+
+  @override
+  String get safeboxPauseAll => '全部暂停';
+
+  @override
+  String get safeboxResumeAll => '全部继续';
+
+  @override
+  String get safeboxUploadPaused => '已暂停';
+
+  @override
+  String get safeboxPause => '暂停';
+
+  @override
+  String get safeboxResume => '继续';
+
+  @override
+  String get safeboxInProgress => '进行中';
+
+  @override
+  String get safeboxFinished => '已完成';
+
+  @override
+  String safeboxBytesOf(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String get safeboxNoDownloads => '没有下载';
+
+  @override
+  String safeboxExportProgress(int done, int total) {
+    return '$done/$total 个文件';
+  }
+
+  @override
+  String get safeboxExportDoneGallery => '已存入相册“Alanya”';
+
+  @override
+  String get safeboxExportDoneZip => '已存入 下载/Alanya';
+
+  @override
+  String get safeboxExportFailed => '下载失败';
+
+  @override
+  String get safeboxExportCancelled => '已取消';
+
+  @override
+  String safeboxExportSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文件无法复制',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxSelectedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已选 $count 项',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxSelectAll => '全选';
+
+  @override
+  String get safeboxFilterAll => '全部';
+
+  @override
+  String get safeboxDownload => '下载';
+
+  @override
+  String get safeboxDownloadWhat => '下载什么？';
+
+  @override
+  String get safeboxDownloadWhere => '保存到哪里？';
+
+  @override
+  String safeboxDownloadSelection(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '所选的 $count 个文件 · $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxDownloadFolder(String name) {
+    return '整个文件夹“$name”';
+  }
+
+  @override
+  String get safeboxDownloadGallery => '手机相册';
+
+  @override
+  String get safeboxDownloadZip => 'ZIP 文件';
+
+  @override
+  String get safeboxDownloadGalleryHint =>
+      '照片和视频存入相册“Alanya”；其他文件存入 下载/Alanya。';
+
+  @override
+  String get safeboxDownloadZipHint => '在 下载/Alanya 中生成一个文件。';
+
+  @override
+  String get safeboxDownloadDecryptHint => '文件在您的手机上解密。';
+
+  @override
+  String safeboxDownloadAction(String size) {
+    return '下载 · $size';
+  }
+
+  @override
+  String get safeboxDownloadStarted => '下载已开始：可在“传输”中查看。';
+
+  @override
+  String get safeboxDownloadFolderAction => '下载此文件夹';
+
+  @override
+  String get safeboxToday => '今天';
+
+  @override
+  String get safeboxYesterday => '昨天';
+
+  @override
   String get safeboxRootVideos => '视频';
 
   @override

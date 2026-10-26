@@ -342,4 +342,34 @@ void main() {
     // Un envoi préparé avant le 24/10/2026 n'en avait pas.
     expect(SafeboxUploadJob.fromJson(j.toJson()..remove('quality')).quality, isNull);
   });
+
+  test('pause : arrêt entre deux blocs, rien de perdu, puis reprise sans nouvelle réservation', () async {
+    final m = gestionnaire();
+    await m.enqueue(await travail(), _cle);
+    await m.pause(m.jobs.single.id);
+    await attendreEtat(m, SafeboxUploadState.paused);
+    expect(serveur.appels.where((a) => a.startsWith('put blk')).length, lessThan(3));
+    expect(m.busy, isFalse, reason: 'le service de premier plan peut s\'arrêter');
+    final fin = attendreFin(m);
+    await m.resume(m.jobs.single.id);
+    await fin;
+    expect(serveur.recus[100], {1, 2, 3});
+    expect(serveur.appels.where((a) => a == 'reserve').length, 1);
+  });
+
+  test('pause d\'un envoi en attente : tout de suite ; gardée au redémarrage ; « tout reprendre »', () async {
+    final m = gestionnaire();
+    await m.pauseAll(); // rien à mettre en pause : sans effet
+    final j = await travail();
+    await m.enqueue(j, _cle);
+    await m.pauseAll();
+    await attendreEtat(m, SafeboxUploadState.paused);
+    // Un redémarrage (resumeAll) ne relance pas ce que l'inscrit a mis en pause.
+    await m.resumeAll();
+    expect(m.jobs.single.state, SafeboxUploadState.paused);
+    final fin = attendreFin(m);
+    await m.resumePaused();
+    await fin;
+  });
 }
+

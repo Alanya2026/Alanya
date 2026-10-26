@@ -119,7 +119,9 @@ class ApiSafeboxTransport implements SafeboxTransport {
 
 // ── Un envoi ───────────────────────────────────────────────────────────────
 
-enum SafeboxUploadState { queued, running, waitingNetwork, failed, completed }
+/// `paused` : mis en pause par l'inscrit ; il le reste après un redémarrage,
+/// jusqu'à ce qu'il le relance.
+enum SafeboxUploadState { queued, running, waitingNetwork, paused, failed, completed }
 
 class SafeboxUploadJob {
   SafeboxUploadJob({
@@ -360,6 +362,10 @@ class SafeboxUploadManager extends ChangeNotifier {
   bool _enCours = false;
   final Set<String> _annules = {};
 
+  /// Envois en cours dont la pause est demandée : elle prend effet entre deux
+  /// blocs, sans rien perdre de ce qui est déjà chez MEGA.
+  final Set<String> _pauses = {};
+
   /// Les envois connus, du plus ancien au plus récent.
   List<SafeboxUploadJob> get jobs => List.unmodifiable(_jobs);
 
@@ -402,6 +408,48 @@ class SafeboxUploadManager extends ChangeNotifier {
     }
     notifyListeners();
     await _pomper();
+  }
+
+  /// Met un envoi en pause. En cours, il s'arrête à la fin du bloc qui part ;
+  /// en attente, tout de suite.
+  Future<void> pause(String jobId) async {
+    final j = _jobs.where((x) => x.id == jobId).firstOrNull;
+    if (j == null) return;
+    switch (j.state) {
+      case SafeboxUploadState.running:
+        _pauses.add(jobId);
+      case SafeboxUploadState.queued || SafeboxUploadState.waitingNetwork:
+        j.state = SafeboxUploadState.paused;
+        await _sauver();
+        notifyListeners();
+      default:
+        break;
+    }
+  }
+
+  /// Relance un envoi mis en pause.
+  Future<void> resume(String jobId) async {
+    _pauses.remove(jobId);
+    final j = _jobs.where((x) => x.id == jobId).firstOrNull;
+    if (j == null || j.state != SafeboxUploadState.paused) return;
+    j.state = SafeboxUploadState.queued;
+    await _sauver();
+    notifyListeners();
+    unawaited(_pomper());
+  }
+
+  /// « Tout mettre en pause ».
+  Future<void> pauseAll() async {
+    for (final j in List.of(_jobs)) {
+      await pause(j.id);
+    }
+  }
+
+  /// « Tout reprendre » : les envois en pause repartent, dans l'ordre.
+  Future<void> resumePaused() async {
+    for (final j in _jobs.where((x) => x.state == SafeboxUploadState.paused).toList()) {
+      await resume(j.id);
+    }
   }
 
   /// Réessaie un envoi en échec.
@@ -488,6 +536,13 @@ class SafeboxUploadManager extends ChangeNotifier {
       job
         ..state = SafeboxUploadState.waitingNetwork
         ..errorCode = 'NETWORK'
+        ..inFlightBytes = 0;
+      await _sauver();
+      notifyListeners();
+    } on _Pause {
+      _pauses.remove(job.id);
+      job
+        ..state = SafeboxUploadState.paused
         ..inFlightBytes = 0;
       await _sauver();
       notifyListeners();
@@ -608,6 +663,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     try {
       for (var i = 0; i < manquants.length; i += 1) {
         if (_annules.contains(job.id)) throw SafeboxUploadFailure('CANCELLED');
+        if (_pauses.contains(job.id)) throw _Pause();
         final n = manquants[i];
         if (!adresses.containsKey(n)) {
           final lot = manquants.skip(i).take(64).toList();
@@ -694,3 +750,5 @@ class SafeboxUploadManager extends ChangeNotifier {
 }
 
 class _AttendreReseau implements Exception {}
+
+class _Pause implements Exception {}

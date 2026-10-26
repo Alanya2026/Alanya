@@ -14,11 +14,12 @@ import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_widgets.dart';
 
 /// Destination d'un fichier : d'abord la racine (celle de son type, Albums ou
-/// Partager), puis le dossier dans cette racine. Rend l'identifiant du
-/// dossier choisi, ou null.
+/// Partager), puis le dossier dans cette racine. [family] nul : plusieurs
+/// fichiers de types différents, seuls Albums et Partager les acceptent tous.
+/// Rend l'identifiant du dossier choisi, ou null.
 Future<int?> pickSafeboxFileDestination(
   BuildContext context, {
-  required SafeboxFamily family,
+  required SafeboxFamily? family,
   required int currentParentId,
 }) async {
   final c = context.read<SafeboxController>();
@@ -33,7 +34,7 @@ Future<int?> pickSafeboxFileDestination(
         children: [
           ListTile(title: Text(l10n.safeboxMoveToRoot, style: ctx.text.titleSmall)),
           const Divider(height: 1),
-          for (final r in [family.root, SafeboxRoot.albums, SafeboxRoot.partager])
+          for (final r in [if (family != null) family.root, SafeboxRoot.albums, SafeboxRoot.partager])
             if (vue.rootIds[r] != null)
               ListTile(
                 leading: Icon(safeboxRootIcon(r), color: ctx.colors.primary),
