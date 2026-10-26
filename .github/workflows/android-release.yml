@@ -86,6 +86,10 @@ jobs:
       # secondes de 1000 × ABI : on ne peut pas repasser de l'une à
       # l'universelle sans désinstaller, d'où l'avertissement dans les notes.
       - name: Build APK
+        env:
+          # Lu par android/app/build.gradle.kts : sans lui, Gradle signe avec
+          # une clé jetable au lieu de celle déposée ci-dessus.
+          ALANYA_DEBUG_KEYSTORE: ${{ runner.temp }}/debug.keystore
         run: |
           args="--release --build-name=${{ steps.version.outputs.name }} --build-number=${{ steps.version.outputs.code }}"
           mkdir -p dist

@@ -48,6 +48,15 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // La CI désigne explicitement la clé des APK déjà installées : sur
+            // le runner, Gradle ignorait ~/.android/debug.keystore et signait
+            // avec une clé jetable, différente à chaque build.
+            System.getenv("ALANYA_DEBUG_KEYSTORE")?.let { storeFile = file(it) }
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
