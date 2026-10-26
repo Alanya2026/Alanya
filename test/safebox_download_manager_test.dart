@@ -46,7 +46,7 @@ class _FauxMega implements SafeboxDownloadTransport {
   }
 
   @override
-  Future<SafeboxDownloadPlan> sharePlan(int shareId) => plan(shareId);
+  Future<SafeboxDownloadPlan> sharePlan(int shareId, {int itemId = 0}) => plan(shareId);
 
   @override
   Future<void> getBlock(String url, {int from = 0, required void Function(List<int> bytes) onBytes}) async {

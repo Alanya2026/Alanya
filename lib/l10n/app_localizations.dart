@@ -13630,6 +13630,324 @@ abstract class AppLocalizations {
   /// **'Hier'**
   String get safeboxYesterday;
 
+  /// No description provided for @safeboxShareBadge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coffre-fort'**
+  String get safeboxShareBadge;
+
+  /// No description provided for @safeboxShareSeeAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir l\'album'**
+  String get safeboxShareSeeAlbum;
+
+  /// No description provided for @safeboxShareItems.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 élément} other{{count} éléments}}'**
+  String safeboxShareItems(int count);
+
+  /// No description provided for @safeboxShareFamilyPhotos.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 photo} other{{count} photos}}'**
+  String safeboxShareFamilyPhotos(int count);
+
+  /// No description provided for @safeboxShareFamilyVideos.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 vidéo} other{{count} vidéos}}'**
+  String safeboxShareFamilyVideos(int count);
+
+  /// No description provided for @safeboxShareFamilyAudios.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 audio} other{{count} audios}}'**
+  String safeboxShareFamilyAudios(int count);
+
+  /// No description provided for @safeboxShareFamilyDocuments.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 document} other{{count} documents}}'**
+  String safeboxShareFamilyDocuments(int count);
+
+  /// No description provided for @safeboxShareDownloadedBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargé par {count} sur {total}'**
+  String safeboxShareDownloadedBy(int count, int total);
+
+  /// No description provided for @safeboxShareSeeTracking.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le suivi'**
+  String get safeboxShareSeeTracking;
+
+  /// No description provided for @safeboxShareUploading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi vers le coffre-fort · {percent} %'**
+  String safeboxShareUploading(int percent);
+
+  /// No description provided for @safeboxShareUploadingHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres le verront à la fin de l\'envoi.'**
+  String get safeboxShareUploadingHint;
+
+  /// No description provided for @safeboxShareBatchTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} fichiers'**
+  String safeboxShareBatchTitle(int count);
+
+  /// No description provided for @safeboxSharedFileTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichier partagé'**
+  String get safeboxSharedFileTitle;
+
+  /// No description provided for @safeboxSharedBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyé par {name}'**
+  String safeboxSharedBy(String name);
+
+  /// No description provided for @safeboxSharedFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'De {name}'**
+  String safeboxSharedFrom(String name);
+
+  /// No description provided for @safeboxSharedSender.
+  ///
+  /// In fr, this message translates to:
+  /// **'l\'expéditeur'**
+  String get safeboxSharedSender;
+
+  /// No description provided for @safeboxSharedAvailableWhile.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chiffré. Disponible tant que {name} le garde dans son coffre-fort.'**
+  String safeboxSharedAvailableWhile(String name);
+
+  /// No description provided for @safeboxSharedDownloadPlay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger et lire'**
+  String get safeboxSharedDownloadPlay;
+
+  /// No description provided for @safeboxSharedWifiAdvised.
+  ///
+  /// In fr, this message translates to:
+  /// **'Wi-Fi conseillé ({size}).'**
+  String safeboxSharedWifiAdvised(String size);
+
+  /// No description provided for @safeboxSharedDownloadAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout télécharger'**
+  String get safeboxSharedDownloadAll;
+
+  /// No description provided for @safeboxSharedKeepAlbumHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'« Garder » l\'ajoute à vos Albums ({size} de votre espace).'**
+  String safeboxSharedKeepAlbumHint(String size);
+
+  /// No description provided for @safeboxSharedAlbumKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Album « {name} » ajouté à vos Albums'**
+  String safeboxSharedAlbumKept(String name);
+
+  /// No description provided for @safeboxSharedAllKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout est dans votre coffre'**
+  String get safeboxSharedAllKept;
+
+  /// No description provided for @safeboxSharedUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus disponible : l\'expéditeur l\'a supprimé'**
+  String get safeboxSharedUnavailable;
+
+  /// No description provided for @safeboxTrackingOutOf.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} sur {total}'**
+  String safeboxTrackingOutOf(int count, int total);
+
+  /// No description provided for @safeboxTrackingReceivedLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'membres l\'ont téléchargé ou gardé'**
+  String get safeboxTrackingReceivedLabel;
+
+  /// No description provided for @safeboxTrackingSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =0{Personne ne l\'a encore gardé dans son coffre-fort} =1{1 l\'a gardé dans son coffre-fort} other{{count} l\'ont gardé dans leur coffre-fort}}'**
+  String safeboxTrackingSaved(int count);
+
+  /// No description provided for @safeboxTrackingSentAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'envoyé {date}'**
+  String safeboxTrackingSentAt(String date);
+
+  /// No description provided for @safeboxTrackingMembers.
+  ///
+  /// In fr, this message translates to:
+  /// **'Membres'**
+  String get safeboxTrackingMembers;
+
+  /// No description provided for @safeboxTrackingDownloadedAt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargé · {date}'**
+  String safeboxTrackingDownloadedAt(String date);
+
+  /// No description provided for @safeboxTrackingSavedState.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gardé dans son coffre-fort'**
+  String get safeboxTrackingSavedState;
+
+  /// No description provided for @safeboxTrackingPending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore'**
+  String get safeboxTrackingPending;
+
+  /// No description provided for @safeboxTrackingNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier reste dans votre dossier Partager. Si vous le supprimez, il ne sera plus disponible dans la discussion.'**
+  String get safeboxTrackingNote;
+
+  /// No description provided for @safeboxTrackingSendElsewhere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer ailleurs'**
+  String get safeboxTrackingSendElsewhere;
+
+  /// No description provided for @safeboxTrackingRevoke.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer le partage'**
+  String get safeboxTrackingRevoke;
+
+  /// No description provided for @safeboxTrackingRevokeConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres ne pourront plus le télécharger. Le fichier reste dans votre coffre.'**
+  String get safeboxTrackingRevokeConfirm;
+
+  /// No description provided for @safeboxTrackingRevoked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage retiré'**
+  String get safeboxTrackingRevoked;
+
+  /// No description provided for @safeboxShareTabSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mes envois · {count}'**
+  String safeboxShareTabSent(int count);
+
+  /// No description provided for @safeboxShareTabReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçus · {count}'**
+  String safeboxShareTabReceived(int count);
+
+  /// No description provided for @safeboxShareTabReceivedPlain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reçus'**
+  String get safeboxShareTabReceivedPlain;
+
+  /// No description provided for @safeboxShareSentInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces fichiers restent ici jusqu\'à ce que vous les supprimiez. Ils comptent dans votre espace.'**
+  String get safeboxShareSentInfo;
+
+  /// No description provided for @safeboxShareReceivedInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers que l\'on vous envoie par le coffre, toutes discussions confondues. Ils restent disponibles tant que l\'expéditeur les garde.'**
+  String get safeboxShareReceivedInfo;
+
+  /// No description provided for @safeboxShareAllReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier téléchargé par tous} other{{count} fichiers téléchargés par tous}}'**
+  String safeboxShareAllReceived(int count);
+
+  /// No description provided for @safeboxShareToFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} à libérer'**
+  String safeboxShareToFree(String size);
+
+  /// No description provided for @safeboxShareDeleteAllReceived.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Supprimer ce fichier de Partager ? Tout le monde l\'a déjà.} other{Supprimer ces {count} fichiers de Partager ? Tout le monde les a déjà.}}'**
+  String safeboxShareDeleteAllReceived(int count);
+
+  /// No description provided for @safeboxShareNotSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore envoyé'**
+  String get safeboxShareNotSent;
+
+  /// No description provided for @safeboxShareStatusAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} · téléchargé par tous'**
+  String safeboxShareStatusAll(String name);
+
+  /// No description provided for @safeboxShareStatusNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} · personne n\'a encore téléchargé'**
+  String safeboxShareStatusNone(String name);
+
+  /// No description provided for @safeboxShareStatusSome.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} · téléchargé par {count} sur {total}'**
+  String safeboxShareStatusSome(String name, int count, int total);
+
+  /// No description provided for @safeboxShareConvFallback.
+  ///
+  /// In fr, this message translates to:
+  /// **'une discussion'**
+  String get safeboxShareConvFallback;
+
+  /// No description provided for @safeboxReceivedEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien reçu par le coffre pour l\'instant'**
+  String get safeboxReceivedEmpty;
+
+  /// No description provided for @safeboxReceivedInDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans Téléchargements/Alanya'**
+  String get safeboxReceivedInDownloads;
+
+  /// No description provided for @safeboxReceivedKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Gardé dans votre coffre'**
+  String get safeboxReceivedKept;
+
   /// No description provided for @safeboxRootVideos.
   ///
   /// In fr, this message translates to:
@@ -14149,7 +14467,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxShareSave.
   ///
   /// In fr, this message translates to:
-  /// **'Enregistrer dans mon coffre'**
+  /// **'Garder dans mon coffre'**
   String get safeboxShareSave;
 
   /// No description provided for @safeboxShareSaved.
@@ -14161,7 +14479,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxShareSavedToast.
   ///
   /// In fr, this message translates to:
-  /// **'Enregistré dans votre coffre'**
+  /// **'Gardé dans votre coffre'**
   String get safeboxShareSavedToast;
 
   /// No description provided for @safeboxShareRevoked.

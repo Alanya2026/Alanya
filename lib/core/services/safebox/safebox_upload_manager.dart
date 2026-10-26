@@ -147,6 +147,7 @@ class SafeboxUploadJob {
     this.state = SafeboxUploadState.queued,
     this.errorCode,
     this.shareConversationId,
+    this.shareGroup,
     this.meta,
     DateTime? createdAt,
   })  : done = done ?? <int>{},
@@ -178,6 +179,7 @@ class SafeboxUploadJob {
         ),
         errorCode: j['errorCode'] as String?,
         shareConversationId: j['shareConversationId'] as int?,
+        shareGroup: j['shareGroup'] as String?,
         meta: j['meta'] is Map ? Map<String, dynamic>.from(j['meta'] as Map) : null,
         createdAt: DateTime.tryParse('${j['createdAt']}'),
       );
@@ -217,6 +219,11 @@ class SafeboxUploadJob {
   /// Discussion où partager le fichier dès qu'il est dans le coffre (envoi
   /// d'un gros fichier depuis une discussion), ou null.
   final int? shareConversationId;
+
+  /// Plusieurs fichiers du téléphone envoyés ensemble dans une discussion :
+  /// ils partent en un seul message (un lot) quand le dernier est dans le
+  /// coffre (lot 9). Null pour un fichier seul.
+  final String? shareGroup;
 
   /// Durée, définition, pages… relevés avant l'envoi ([SafeboxMeta.toJson]).
   final Map<String, dynamic>? meta;
@@ -261,6 +268,7 @@ class SafeboxUploadJob {
         'state': state.name,
         'errorCode': errorCode,
         'shareConversationId': shareConversationId,
+        if (shareGroup != null) 'shareGroup': shareGroup,
         if (meta != null) 'meta': meta,
         'createdAt': createdAt.toIso8601String(),
       };

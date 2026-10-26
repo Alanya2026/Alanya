@@ -1,15 +1,14 @@
-//  Carte d'un fichier du coffre-fort dans une discussion (message de type 11).
+//  Carte d'un partage du coffre-fort dans une discussion (message de type 11).
 //
-//  Ce que voit le destinataire avant de télécharger quoi que ce soit
-//  (conception, section 07) : la mini-image floue du message tout de suite,
-//  puis l'aperçu net, le nom, la taille, et deux boutons — télécharger, ou
-//  enregistrer dans son coffre. Quand l'expéditeur supprime le fichier de son
-//  coffre, la carte le dit.
-
-import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
+//  Maquettes « Envoi dans les discussions » (24/10/2026, lot 9) : pas de lien,
+//  un bouton qui ouvre un écran dans Alanya. Chez le destinataire, un fichier
+//  montre sa vignette, sa durée, son nom, sa taille et son format, avec
+//  « Ouvrir » ; un lot (album, sélection) montre une mosaïque de quatre
+//  vignettes, son titre, son contenu, avec « Voir l'album ». Chez
+//  l'expéditeur : « Depuis votre coffre-fort », « Téléchargé par 2 sur 7 » et
+//  « Voir le suivi ». La mini-image floue du message s'affiche tout de suite,
+//  même hors connexion, avant l'aperçu net. Quand le fichier est retiré, la
+//  carte le dit.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -20,8 +19,9 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../core/utils/safebox_share_payload.dart';
-import '../../talky_api_client.dart';
-import '../../widgets/billing/paywall_sheet.dart';
+import 'safebox_share_tracking_screen.dart';
+import 'safebox_share_widgets.dart';
+import 'safebox_shared_screens.dart';
 import 'safebox_widgets.dart';
 
 class SafeboxShareCard extends StatefulWidget {
@@ -46,8 +46,6 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
   SafeboxShareInfo? _info;
   bool _charge = false;
   bool _introuvable = false;
-  bool _ouvrable = false;
-  bool _occupe = false;
 
   SafeboxController get _c => context.read<SafeboxController>();
 
@@ -62,12 +60,9 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
     try {
       final info = await _c.shareInfo(widget.payload.share, refresh: refresh);
       if (!mounted) return;
-      final local = info != null && await _c.hasReceived(info);
-      if (!mounted) return;
       setState(() {
         _info = info;
         _introuvable = info == null;
-        _ouvrable = local;
         _charge = true;
       });
     } catch (_) {
@@ -75,59 +70,17 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
     }
   }
 
+  /// Le bouton de la carte : l'écran du fichier ou de l'album, ou le suivi
+  /// chez l'expéditeur. La carte se relit au retour (téléchargé, gardé…).
   Future<void> _ouvrir() async {
-    final info = _info;
-    if (info == null) return;
-    setState(() => _occupe = true);
-    try {
-      final r = await _c.fetchReceived(info);
-      if (!mounted) return;
-      setState(() => _ouvrable = true);
-      if (r.published) safeboxSnack(context, context.l10n.safeboxSavedToDownloads);
-      if (r.saveFailed) safeboxSnack(context, context.l10n.safeboxSaveToDownloadsFailed, error: true);
-      final ouvert = await _c.received.open(r.location, info.mime);
-      if (!ouvert && mounted) safeboxSnack(context, context.l10n.safeboxOpenFailed, error: true);
-    } on TalkyException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'SAFEBOX_DOWNLOAD_LIMIT') {
-        final limite = (e.details?['limit'] as num?)?.toInt() ?? 3;
-        safeboxSnack(context, context.l10n.safeboxShareDownloadLimit(limite), error: true);
-      } else if (e.code == 'SAFEBOX_SHARE_REVOKED') {
-        await _charger(refresh: true);
-      } else {
-        safeboxShowError(context, e);
-      }
-    } catch (e) {
-      if (mounted) safeboxShowError(context, e);
-    } finally {
-      if (mounted) setState(() => _occupe = false);
-    }
-  }
-
-  Future<void> _enregistrer() async {
-    setState(() => _occupe = true);
-    try {
-      await _c.saveShare(widget.payload.share);
-      if (!mounted) return;
-      await _charger();
-      if (mounted) safeboxSnack(context, context.l10n.safeboxShareSavedToast);
-    } on TalkyException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.l10n.safeboxQuotaExceeded),
-          action: SnackBarAction(label: context.l10n.safeboxGoPlus, onPressed: () => showPaywall(context, null)),
-        ));
-      } else if (e.code == 'SAFEBOX_SHARE_REVOKED') {
-        await _charger(refresh: true);
-      } else {
-        safeboxShowError(context, e);
-      }
-    } catch (e) {
-      if (mounted) safeboxShowError(context, e);
-    } finally {
-      if (mounted) setState(() => _occupe = false);
-    }
+    final p = widget.payload;
+    final Widget ecran = widget.isMe
+        ? SafeboxShareTrackingScreen(shareId: p.share, title: p.name)
+        : p.isBatch
+            ? SafeboxSharedAlbumScreen(shareId: p.share, title: p.name)
+            : SafeboxSharedFileScreen(shareId: p.share, title: p.name, blur: p.blur);
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => ecran));
+    if (mounted) await _charger(refresh: true);
   }
 
   /// Durée d'une vidéo ou d'un audio, sinon pages d'un PDF.
@@ -138,67 +91,117 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
     return null;
   }
 
-  /// La carte peut-elle montrer une image (mini-image floue ou aperçu net) ?
+  /// La carte d'un fichier peut-elle montrer une image (mini-image floue ou aperçu net) ?
   bool _avecImage(SafeboxShareInfo? info) =>
-      (widget.payload.blur != null && _decode(widget.payload.blur!) != null) ||
-      (info?.previewUrl != null && info!.available);
+      safeboxDecodeBlur(widget.payload.blur) != null || (info?.previewUrl != null && info!.available);
 
-  Widget _visuel(SafeboxShareInfo? info, SafeboxMeta? meta) {
+  Widget _image(SafeboxShareInfo? info, SafeboxMeta? meta) {
     final p = widget.payload;
-    final flou = p.blur == null ? null : _decode(p.blur!);
-    final avecImage = _avecImage(info);
-    if (!avecImage) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Icon(safeboxRootIcon(p.family.root), size: 36, color: widget.mutedColor),
-      );
-    }
+    final flou = safeboxDecodeBlur(p.blur);
+    final basDroite = _basDroite(meta);
     return ClipRRect(
-      borderRadius: AppRadius.brSm,
-      child: AspectRatio(
-        aspectRatio: 4 / 3,
+      borderRadius: AppRadius.brMd,
+      child: SizedBox(
+        height: 152,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (flou != null)
-              ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                child: Image.memory(flou, fit: BoxFit.cover, gaplessPlayback: true),
-              )
-            else
-              ColoredBox(color: context.semantic.brandContainer),
+            if (flou != null) SafeboxBlur(bytes: flou) else ColoredBox(color: context.semantic.brandContainer),
             if (info != null && info.available && info.previewUrl != null)
               SafeboxFileThumb(file: info.asFile(), fill: true),
             if (p.family == SafeboxFamily.videos)
-              const Center(
+              Center(
                 child: DecoratedBox(
-                  decoration: BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
-                  child: Padding(
-                    padding: EdgeInsets.all(AppSpacing.sm),
-                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.55), shape: BoxShape.circle),
+                  child: const Padding(
+                    padding: EdgeInsets.all(AppSpacing.sm + 2),
+                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 26),
                   ),
                 ),
               ),
+            if (!widget.isMe) const Positioned(left: AppSpacing.sm, top: AppSpacing.sm, child: SafeboxVaultBadge()),
             if (meta?.definitionLabel != null)
-              Positioned(top: AppSpacing.xs, left: AppSpacing.xs, child: _Pastille(meta!.definitionLabel!)),
-            if (_basDroite(meta) != null)
-              Positioned(bottom: AppSpacing.xs, right: AppSpacing.xs, child: _Pastille(_basDroite(meta)!)),
+              Positioned(top: AppSpacing.sm, right: AppSpacing.sm, child: SafeboxImageLabel(meta!.definitionLabel!)),
+            if (basDroite != null)
+              Positioned(bottom: AppSpacing.sm, right: AppSpacing.sm, child: SafeboxImageLabel(basDroite)),
           ],
         ),
       ),
     );
   }
 
-  /// Mini-images décodées, pour ne pas refaire le travail à chaque image.
-  static final Map<String, Uint8List?> _flous = {};
-  Uint8List? _decode(String b64) {
-    return _flous.putIfAbsent(b64, () {
-      try {
-        return base64Decode(b64);
-      } catch (_) {
-        return null;
-      }
-    });
+  /// Un fichier sans image : son type dans une case, son nom et sa taille.
+  Widget _ligneFichier(SafeboxShareInfo? info, String detail) {
+    final p = widget.payload;
+    final ext = safeboxExtensionOf(p.name).toUpperCase();
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: widget.isMe ? Colors.white.withValues(alpha: 0.12) : context.semantic.brandContainer.withValues(alpha: 0.5),
+        borderRadius: AppRadius.brMd,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: widget.isMe ? Colors.white : context.semantic.brandContainer,
+              borderRadius: AppRadius.brSm,
+            ),
+            child: ext.isEmpty || ext.length > 4
+                ? Icon(safeboxRootIcon(p.family.root), color: context.colors.primary)
+                : Text(ext,
+                    style: context.text.labelSmall?.copyWith(color: context.colors.primary, fontWeight: FontWeight.w700)),
+          ),
+          AppSpacing.hGapSm,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(p.name.isEmpty ? context.l10n.safeboxShareFallback : p.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.titleSmall?.copyWith(color: widget.textColor, fontWeight: FontWeight.w500)),
+                Text(detail, style: context.text.bodySmall?.copyWith(color: widget.mutedColor)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _etat(IconData icone, String texte, {Color? couleur}) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        child: Row(
+          children: [
+            Icon(icone, size: 16, color: couleur ?? widget.mutedColor),
+            AppSpacing.hGapXs,
+            Flexible(
+              child: Text(texte,
+                  style: context.text.bodySmall?.copyWith(
+                    color: couleur ?? widget.mutedColor,
+                    fontStyle: couleur == null ? FontStyle.italic : null,
+                  )),
+            ),
+          ],
+        ),
+      );
+
+  Widget _bouton(IconData icone, String label) {
+    final style = widget.isMe
+        ? FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: context.colors.primary)
+        : null;
+    return FilledButton.icon(
+      style: (style ?? const ButtonStyle()).merge(
+        FilledButton.styleFrom(minimumSize: const Size.fromHeight(44), shape: RoundedRectangleBorder(borderRadius: AppRadius.brSm)),
+      ),
+      onPressed: _ouvrir,
+      icon: Icon(icone, size: 18),
+      label: Text(label),
+    );
   }
 
   @override
@@ -207,111 +210,97 @@ class _SafeboxShareCardState extends State<SafeboxShareCard> {
     final p = widget.payload;
     final info = _info;
     final retire = info != null && !info.available;
-    final progres = info == null ? null : context.watch<SafeboxController>().downloads.progressOf(info.localId);
-    final dejaChezMoi = info?.savedFileId != null;
     final meta = p.meta ?? info?.meta;
     final morceau = [meta?.artist, meta?.title].whereType<String>().join(' — ');
+    final taille = formatBytes(p.size, l10n);
+    final detail = p.isBatch
+        ? '${l10n.safeboxShareItems(p.count)} · $taille'
+        : safeboxSizeAndQuality(l10n, taille, info?.quality ?? SafeboxQuality.original);
+    final titreStyle = context.text.titleSmall?.copyWith(color: widget.textColor, fontWeight: FontWeight.w500);
+    final detailStyle = context.text.bodySmall?.copyWith(color: widget.mutedColor);
+    final avecImage = !p.isBatch && _avecImage(info);
 
-    final sousTitre = <String>[
-      formatBytes(p.size, l10n),
-      // Sans image, la durée ou les pages passent dans la ligne de détails.
-      if (!_avecImage(info) && _basDroite(meta) != null) _basDroite(meta)!,
-      if (widget.isMe) l10n.safeboxShareFromVault,
-      if (!widget.isMe && info?.downloadsLeft != null && !_ouvrable && !retire)
-        l10n.safeboxShareDownloadsLeft(info!.downloadsLeft!),
-    ].join(' · ');
+    final etat = <Widget>[
+      if (_introuvable)
+        _etat(Icons.info_outline, l10n.safeboxShareUnavailableHere)
+      else if (info != null && info.available && info.lost)
+        _etat(Icons.broken_image_outlined, l10n.safeboxShareLost, couleur: context.colors.error)
+      else if (retire)
+        _etat(Icons.block, info.removedByModeration ? l10n.safeboxShareRemovedByModeration : l10n.safeboxShareRevoked)
+      else if (!_charge)
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: SizedBox(height: 4, child: LinearProgressIndicator()),
+        )
+      else ...[
+        if (widget.isMe && info?.tracking != null)
+          _etat(
+            Icons.download_rounded,
+            l10n.safeboxShareDownloadedBy(info!.tracking!.received, info.tracking!.members),
+            couleur: widget.textColor,
+          ),
+        if (widget.isMe)
+          _bouton(Icons.people_outline, l10n.safeboxShareSeeTracking)
+        else if (p.isBatch)
+          _bouton(Icons.grid_view_rounded, l10n.safeboxShareSeeAlbum)
+        else
+          _bouton(Icons.play_arrow_rounded, l10n.safeboxOpen),
+      ],
+    ];
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 260),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _visuel(info, meta),
-          AppSpacing.vGapSm,
-          Text(p.name.isEmpty ? l10n.safeboxShareFallback : p.name,
-              maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: context.text.bodyLarge?.copyWith(color: widget.textColor, fontWeight: FontWeight.w600)),
-          if (morceau.isNotEmpty)
-            Text(morceau, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: context.text.bodyMedium?.copyWith(color: widget.textColor)),
-          Text(sousTitre, style: context.text.bodySmall?.copyWith(color: widget.mutedColor)),
-          AppSpacing.vGapSm,
-          if (_introuvable)
-            Text(l10n.safeboxShareUnavailableHere, style: context.text.bodySmall?.copyWith(color: widget.mutedColor))
-          else if (info != null && info.available && info.lost)
-            Row(
-              children: [
-                Icon(Icons.broken_image_outlined, size: 16, color: context.colors.error),
-                AppSpacing.hGapXs,
-                Flexible(
-                  child: Text(l10n.safeboxShareLost,
-                      style: context.text.bodySmall?.copyWith(color: context.colors.error)),
+      constraints: const BoxConstraints(maxWidth: 272),
+      child: InkWell(
+        onTap: _introuvable || retire ? null : _ouvrir,
+        borderRadius: AppRadius.brMd,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.isMe)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.xs, 0, AppSpacing.xs, AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_outline, size: 12, color: widget.mutedColor),
+                    const SizedBox(width: 5),
+                    Text(l10n.safeboxShareFromVault, style: detailStyle),
+                  ],
                 ),
-              ],
-            )
-          else if (retire)
-            Row(
-              children: [
-                Icon(Icons.block, size: 16, color: widget.mutedColor),
-                AppSpacing.hGapXs,
-                Flexible(
-                  child: Text(info.removedByModeration ? l10n.safeboxShareRemovedByModeration : l10n.safeboxShareRevoked,
-                      style: context.text.bodySmall?.copyWith(color: widget.mutedColor, fontStyle: FontStyle.italic)),
+              ),
+            if (p.isBatch)
+              SafeboxShareMosaic(
+                count: p.count,
+                blurs: p.mosaic,
+                items: retire ? const [] : info?.cover ?? const [],
+                height: widget.isMe ? 100 : 112,
+              )
+            else if (avecImage)
+              _image(info, meta)
+            else
+              _ligneFichier(info, detail),
+            if (p.isBatch || avecImage) ...[
+              AppSpacing.vGapSm,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p.name.isEmpty ? l10n.safeboxShareFallback : p.name,
+                        maxLines: 2, overflow: TextOverflow.ellipsis, style: titreStyle),
+                    if (morceau.isNotEmpty)
+                      Text(morceau, maxLines: 1, overflow: TextOverflow.ellipsis, style: detailStyle),
+                    Text(detail, style: detailStyle),
+                    if (p.isBatch && p.families.isNotEmpty)
+                      Text(safeboxFamiliesLabel(l10n, p.families), style: detailStyle),
+                  ],
                 ),
-              ],
-            )
-          else if (!_charge)
-            const SizedBox(height: 4, child: LinearProgressIndicator())
-          else ...[
-            if (progres != null) ...[
-              LinearProgressIndicator(value: progres),
-              AppSpacing.vGapXs,
+              ),
             ],
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xs,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: _occupe ? null : _ouvrir,
-                  icon: Icon(_ouvrable ? Icons.open_in_new : Icons.download, size: 18),
-                  label: Text(_ouvrable ? l10n.safeboxOpen : l10n.safeboxShareDownload(formatBytes(p.size, l10n))),
-                ),
-                if (!widget.isMe)
-                  dejaChezMoi
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.check_circle, size: 16, color: context.semantic.success),
-                            AppSpacing.hGapXs,
-                            Text(l10n.safeboxShareSaved, style: context.text.bodySmall?.copyWith(color: widget.mutedColor)),
-                          ]),
-                        )
-                      : TextButton.icon(
-                          onPressed: _occupe ? null : _enregistrer,
-                          icon: const Icon(Icons.lock_outline, size: 18),
-                          label: Text(l10n.safeboxShareSave),
-                        ),
-              ],
-            ),
+            for (final w in etat) ...[AppSpacing.vGapSm, w],
           ],
-        ],
+        ),
       ),
     );
   }
-}
-
-/// Petite étiquette sur l'image : « 1080p », « 12:47 », « 4 pages ».
-class _Pastille extends StatelessWidget {
-  const _Pastille(this.texte);
-  final String texte;
-
-  @override
-  Widget build(BuildContext context) => DecoratedBox(
-        decoration: BoxDecoration(color: Colors.black54, borderRadius: AppRadius.brSm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs + 2, vertical: 2),
-          child: Text(texte, style: context.text.labelSmall?.copyWith(color: Colors.white)),
-        ),
-      );
 }

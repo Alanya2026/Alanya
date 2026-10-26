@@ -65,7 +65,14 @@ Future<bool> sendPhoneFilesViaSafebox(
     send: true,
   );
   if (qualite == null) return false;
-  await c.addFiles(tri.ok, partager, quality: qualite, shareConversationId: conversationId);
+  // Plusieurs fichiers partent en un seul message, à la fin du dernier envoi (lot 9).
+  await c.addFiles(
+    tri.ok,
+    partager,
+    quality: qualite,
+    shareConversationId: conversationId,
+    shareTitle: l10n.safeboxShareBatchTitle(tri.ok.length),
+  );
   if (context.mounted) safeboxSnack(context, l10n.safeboxShareQueued);
   return true;
 }

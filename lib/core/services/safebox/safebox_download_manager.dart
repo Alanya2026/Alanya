@@ -20,8 +20,9 @@ import 'safebox_models.dart';
 abstract class SafeboxDownloadTransport {
   Future<SafeboxDownloadPlan> plan(int fileId);
 
-  /// Plan d'un fichier reçu par partage (compte un téléchargement).
-  Future<SafeboxDownloadPlan> sharePlan(int shareId);
+  /// Plan d'un fichier reçu par partage, ou d'un élément d'un lot
+  /// ([itemId]) ; compte un téléchargement.
+  Future<SafeboxDownloadPlan> sharePlan(int shareId, {int itemId = 0});
   Future<void> getBlock(String url, {int from, required void Function(List<int> bytes) onBytes});
   Future<Uint8List> getPreview(String url);
 }
@@ -34,7 +35,8 @@ class ApiSafeboxDownloadTransport implements SafeboxDownloadTransport {
   Future<SafeboxDownloadPlan> plan(int fileId) => api.fetchSafeboxDownload(fileId);
 
   @override
-  Future<SafeboxDownloadPlan> sharePlan(int shareId) => api.fetchSafeboxShareDownload(shareId);
+  Future<SafeboxDownloadPlan> sharePlan(int shareId, {int itemId = 0}) =>
+      api.fetchSafeboxShareDownload(shareId, itemId: itemId);
 
   @override
   Future<void> getBlock(String url, {int from = 0, required void Function(List<int> bytes) onBytes}) =>
@@ -101,6 +103,10 @@ class SafeboxDownloadManager extends ChangeNotifier {
   /// Un fichier reçu dans une discussion ([SafeboxShareInfo.asFile]).
   Future<File> fetchShare(SafeboxShareInfo share) =>
       _demarrer(share.asFile(), () => _transport.sharePlan(share.id));
+
+  /// Un élément reçu par partage (fichier seul : élément 0, ou élément d'un lot).
+  Future<File> fetchShareItem(SafeboxShareItem item) =>
+      _demarrer(item.asFile(), () => _transport.sharePlan(item.shareId, itemId: item.id));
 
   Future<File> _demarrer(SafeboxFile file, Future<SafeboxDownloadPlan> Function() planifier) {
     return _enCours.putIfAbsent(file.id, () async {

@@ -214,32 +214,83 @@ extension SafeboxApi on TalkyApiClient {
 
   // ── Partage entre inscrits ───────────────────────────────────────────────
 
-  /// Partage un fichier de mon coffre dans une discussion dont je suis membre.
-  Future<SafeboxShareCreated> createSafeboxShare({required int fileId, required int conversationId}) async =>
+  /// Partage dans une discussion dont je suis membre : un fichier
+  /// ([fileId]), plusieurs en un seul message ([fileIds], avec un [title]) ou
+  /// un album ([folderId]). Plusieurs fichiers font un lot, une seule carte.
+  Future<SafeboxShareCreated> createSafeboxShare({
+    required int conversationId,
+    int? fileId,
+    List<int>? fileIds,
+    int? folderId,
+    String? title,
+  }) async =>
       SafeboxShareCreated.fromJson(await _safeboxJson(() => _client.post(
             _safebox('/shares'),
             headers: _headers,
-            body: jsonEncode({'fileId': fileId, 'conversationId': conversationId}),
+            body: jsonEncode({
+              'conversationId': conversationId,
+              'fileId': ?fileId,
+              'fileIds': ?fileIds,
+              'folderId': ?folderId,
+              'title': ?title,
+            }),
           )));
 
-  /// La carte : disponible ou retiré, aperçu, clé, téléchargements restants.
+  /// La carte : disponible ou retiré, expéditeur, aperçu, clé, téléchargements
+  /// restants ; mosaïque d'un lot ; suivi pour l'expéditeur.
   Future<SafeboxShareInfo> fetchSafeboxShare(int shareId) async => SafeboxShareInfo.fromJson(
         await _safeboxJson(() => _client.get(_safebox('/shares/$shareId'), headers: _headers)),
       );
 
-  /// Clé et adresses des blocs d'un fichier reçu. Compte un téléchargement
-  /// (une fois par fenêtre de deux heures, 3 par 24 h).
-  Future<SafeboxDownloadPlan> fetchSafeboxShareDownload(int shareId) async => SafeboxDownloadPlan.fromJson(
-        await _safeboxJson(() => _client.get(_safebox('/shares/$shareId/download'), headers: _headers)),
+  /// Les éléments d'un partage, par pages de 100 ; un fichier seul est l'élément 0.
+  Future<SafeboxShareItemsPage> fetchSafeboxShareItems(int shareId, {int? cursor}) async =>
+      SafeboxShareItemsPage.fromJson(
+        shareId,
+        await _safeboxJson(() => _client.get(
+              _safebox('/shares/$shareId/items', cursor == null ? null : {'cursor': '$cursor'}),
+              headers: _headers,
+            )),
       );
 
-  /// Enregistre un fichier reçu dans mon coffre (aucune copie chez MEGA).
-  Future<SafeboxFile> saveSafeboxShare(int shareId, {int? folderId}) async =>
+  /// Clé et adresses des blocs d'un fichier reçu, ou d'un élément d'un lot
+  /// ([itemId]). Compte un téléchargement : une fois par partage et par
+  /// fenêtre de deux heures, 3 par 24 h.
+  Future<SafeboxDownloadPlan> fetchSafeboxShareDownload(int shareId, {int itemId = 0}) async =>
+      SafeboxDownloadPlan.fromJson(await _safeboxJson(() => _client.get(
+            _safebox('/shares/$shareId/download', itemId == 0 ? null : {'item': '$itemId'}),
+            headers: _headers,
+          )));
+
+  /// Garde un fichier reçu, ou un élément d'un lot ([itemId]), dans mon coffre
+  /// (aucune copie chez MEGA).
+  Future<SafeboxFile> saveSafeboxShare(int shareId, {int itemId = 0, int? folderId}) async =>
       SafeboxFile.fromJson(await _safeboxJson(() => _client.post(
             _safebox('/shares/$shareId/save'),
             headers: _headers,
-            body: jsonEncode({if (folderId != null) 'folderId': folderId}),
+            body: jsonEncode({if (itemId != 0) 'itemId': itemId, 'folderId': ?folderId}),
           )));
+
+  /// Garde un lot entier : il devient un album dans mes Albums.
+  Future<SafeboxFolder> saveSafeboxShareBatch(int shareId) async {
+    final r = await _safeboxJson(() => _client.post(_safebox('/shares/$shareId/save'), headers: _headers, body: '{}'));
+    return SafeboxFolder.fromJson(Map<String, dynamic>.from(r['folder'] as Map));
+  }
+
+  /// L'onglet « Reçus », du plus récent au plus ancien.
+  Future<SafeboxReceivedPage> fetchReceivedSafeboxShares({int? cursor}) async =>
+      SafeboxReceivedPage.fromJson(await _safeboxJson(() => _client.get(
+            _safebox('/shares/received', cursor == null ? null : {'cursor': '$cursor'}),
+            headers: _headers,
+          )));
+
+  /// Le suivi d'un partage, pour son expéditeur.
+  Future<SafeboxShareRecipients> fetchSafeboxShareRecipients(int shareId) async => SafeboxShareRecipients.fromJson(
+        await _safeboxJson(() => _client.get(_safebox('/shares/$shareId/recipients'), headers: _headers)),
+      );
+
+  /// « Retirer le partage » : la carte dira « retiré par l'expéditeur ».
+  Future<void> revokeSafeboxShare(int shareId) =>
+      _safeboxJson(() => _client.post(_safebox('/shares/$shareId/revoke'), headers: _headers, body: '{}'));
 
   // ── Transferts directs chez MEGA ─────────────────────────────────────────
   //

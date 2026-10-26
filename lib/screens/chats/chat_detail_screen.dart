@@ -118,6 +118,7 @@ import '../../core/services/safebox/safebox_controller.dart';
 import '../../core/utils/safebox_share_payload.dart';
 import '../safebox/safebox_send_screen.dart';
 import '../safebox/safebox_share_card.dart';
+import '../safebox/safebox_share_widgets.dart';
 import '../../widgets/chat/trip_message_card.dart';
 import '../../widgets/chat/translation_model_prompt.dart';
 import '../../widgets/report/report_sheet.dart';
@@ -1445,6 +1446,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                   ],
                 ),
               ),
+              // Fichiers du téléphone en route vers le coffre pour cette
+              // discussion : l'expéditeur seul les voit, avec « Annuler ».
+              if (convId != null && !_selectionMode) SafeboxPendingShares(conversationId: convId),
               // Dans la Column existante et non un OverlayEntry : un vrai
               // overlay se battrait avec le clavier.
               if (!_selectionMode && !_inputBlocked) _buildMentionOverlay(),

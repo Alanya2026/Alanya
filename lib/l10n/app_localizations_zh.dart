@@ -7653,6 +7653,217 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxYesterday => '昨天';
 
   @override
+  String get safeboxShareBadge => '保险箱';
+
+  @override
+  String get safeboxShareSeeAlbum => '查看相册';
+
+  @override
+  String safeboxShareItems(int count) {
+    return '$count 项';
+  }
+
+  @override
+  String safeboxShareFamilyPhotos(int count) {
+    return '$count 张照片';
+  }
+
+  @override
+  String safeboxShareFamilyVideos(int count) {
+    return '$count 个视频';
+  }
+
+  @override
+  String safeboxShareFamilyAudios(int count) {
+    return '$count 个音频';
+  }
+
+  @override
+  String safeboxShareFamilyDocuments(int count) {
+    return '$count 个文档';
+  }
+
+  @override
+  String safeboxShareDownloadedBy(int count, int total) {
+    return '$total 人中 $count 人已下载';
+  }
+
+  @override
+  String get safeboxShareSeeTracking => '查看下载情况';
+
+  @override
+  String safeboxShareUploading(int percent) {
+    return '正在上传到保险箱 · $percent%';
+  }
+
+  @override
+  String get safeboxShareUploadingHint => '上传完成后成员才会看到。';
+
+  @override
+  String safeboxShareBatchTitle(int count) {
+    return '$count 个文件';
+  }
+
+  @override
+  String get safeboxSharedFileTitle => '共享文件';
+
+  @override
+  String safeboxSharedBy(String name) {
+    return '由 $name 发送';
+  }
+
+  @override
+  String safeboxSharedFrom(String name) {
+    return '来自 $name';
+  }
+
+  @override
+  String get safeboxSharedSender => '发送者';
+
+  @override
+  String safeboxSharedAvailableWhile(String name) {
+    return '已加密。只要 $name 将其保留在保险箱中即可使用。';
+  }
+
+  @override
+  String get safeboxSharedDownloadPlay => '下载并打开';
+
+  @override
+  String safeboxSharedWifiAdvised(String size) {
+    return '建议使用 Wi-Fi（$size）。';
+  }
+
+  @override
+  String get safeboxSharedDownloadAll => '全部下载';
+
+  @override
+  String safeboxSharedKeepAlbumHint(String size) {
+    return '“保留”会将其添加到您的相册（占用 $size 空间）。';
+  }
+
+  @override
+  String safeboxSharedAlbumKept(String name) {
+    return '相册“$name”已添加到您的相册';
+  }
+
+  @override
+  String get safeboxSharedAllKept => '全部已在您的保险箱中';
+
+  @override
+  String get safeboxSharedUnavailable => '已不可用：发送者已将其删除';
+
+  @override
+  String safeboxTrackingOutOf(int count, int total) {
+    return '$count / $total';
+  }
+
+  @override
+  String get safeboxTrackingReceivedLabel => '位成员已下载或保留';
+
+  @override
+  String safeboxTrackingSaved(int count) {
+    return '$count 人已保存到保险箱';
+  }
+
+  @override
+  String safeboxTrackingSentAt(String date) {
+    return '发送于 $date';
+  }
+
+  @override
+  String get safeboxTrackingMembers => '成员';
+
+  @override
+  String safeboxTrackingDownloadedAt(String date) {
+    return '已下载 · $date';
+  }
+
+  @override
+  String get safeboxTrackingSavedState => '已保存到其保险箱';
+
+  @override
+  String get safeboxTrackingPending => '尚未';
+
+  @override
+  String get safeboxTrackingNote => '文件保留在您的“分享”文件夹中。如果删除，聊天中将无法再获取。';
+
+  @override
+  String get safeboxTrackingSendElsewhere => '发送到其他聊天';
+
+  @override
+  String get safeboxTrackingRevoke => '取消共享';
+
+  @override
+  String get safeboxTrackingRevokeConfirm => '成员将无法再下载。文件仍保留在您的保险箱中。';
+
+  @override
+  String get safeboxTrackingRevoked => '已取消共享';
+
+  @override
+  String safeboxShareTabSent(int count) {
+    return '我的发送 · $count';
+  }
+
+  @override
+  String safeboxShareTabReceived(int count) {
+    return '已接收 · $count';
+  }
+
+  @override
+  String get safeboxShareTabReceivedPlain => '已接收';
+
+  @override
+  String get safeboxShareSentInfo => '这些文件会一直保留，直到您将其删除。它们计入您的空间。';
+
+  @override
+  String get safeboxShareReceivedInfo => '通过保险箱发送给您的文件（来自所有聊天）。只要发送者保留，即可使用。';
+
+  @override
+  String safeboxShareAllReceived(int count) {
+    return '$count 个文件所有人已下载';
+  }
+
+  @override
+  String safeboxShareToFree(String size) {
+    return '可释放 $size';
+  }
+
+  @override
+  String safeboxShareDeleteAllReceived(int count) {
+    return '从“分享”中删除这 $count 个文件？所有人都已拥有。';
+  }
+
+  @override
+  String get safeboxShareNotSent => '尚未发送';
+
+  @override
+  String safeboxShareStatusAll(String name) {
+    return '$name · 所有人已下载';
+  }
+
+  @override
+  String safeboxShareStatusNone(String name) {
+    return '$name · 还没有人下载';
+  }
+
+  @override
+  String safeboxShareStatusSome(String name, int count, int total) {
+    return '$name · $total 人中 $count 人已下载';
+  }
+
+  @override
+  String get safeboxShareConvFallback => '一个聊天';
+
+  @override
+  String get safeboxReceivedEmpty => '尚未通过保险箱收到任何文件';
+
+  @override
+  String get safeboxReceivedInDownloads => '在 下载/Alanya 中';
+
+  @override
+  String get safeboxReceivedKept => '已保存到您的保险箱';
+
+  @override
   String get safeboxRootVideos => '视频';
 
   @override
@@ -7957,13 +8168,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get safeboxShareSave => '保存到我的保险箱';
+  String get safeboxShareSave => '保留在我的保险箱';
 
   @override
   String get safeboxShareSaved => '已在您的保险箱中';
 
   @override
-  String get safeboxShareSavedToast => '已保存到您的保险箱';
+  String get safeboxShareSavedToast => '已保留在您的保险箱';
 
   @override
   String get safeboxShareRevoked => '发送者已移除该文件';

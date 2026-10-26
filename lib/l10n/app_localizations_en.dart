@@ -8021,6 +8021,272 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxYesterday => 'Yesterday';
 
   @override
+  String get safeboxShareBadge => 'Safe';
+
+  @override
+  String get safeboxShareSeeAlbum => 'View album';
+
+  @override
+  String safeboxShareItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count videos',
+      one: '1 video',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyAudios(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count audios',
+      one: '1 audio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyDocuments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count documents',
+      one: '1 document',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareDownloadedBy(int count, int total) {
+    return 'Downloaded by $count of $total';
+  }
+
+  @override
+  String get safeboxShareSeeTracking => 'See who has it';
+
+  @override
+  String safeboxShareUploading(int percent) {
+    return 'Uploading to the safe · $percent%';
+  }
+
+  @override
+  String get safeboxShareUploadingHint =>
+      'Members will see it once the upload is done.';
+
+  @override
+  String safeboxShareBatchTitle(int count) {
+    return '$count files';
+  }
+
+  @override
+  String get safeboxSharedFileTitle => 'Shared file';
+
+  @override
+  String safeboxSharedBy(String name) {
+    return 'Sent by $name';
+  }
+
+  @override
+  String safeboxSharedFrom(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String get safeboxSharedSender => 'the sender';
+
+  @override
+  String safeboxSharedAvailableWhile(String name) {
+    return 'Encrypted. Available as long as $name keeps it in their safe.';
+  }
+
+  @override
+  String get safeboxSharedDownloadPlay => 'Download and open';
+
+  @override
+  String safeboxSharedWifiAdvised(String size) {
+    return 'Wi-Fi recommended ($size).';
+  }
+
+  @override
+  String get safeboxSharedDownloadAll => 'Download all';
+
+  @override
+  String safeboxSharedKeepAlbumHint(String size) {
+    return '“Keep” adds it to your Albums ($size of your space).';
+  }
+
+  @override
+  String safeboxSharedAlbumKept(String name) {
+    return 'Album “$name” added to your Albums';
+  }
+
+  @override
+  String get safeboxSharedAllKept => 'Everything is in your safe';
+
+  @override
+  String get safeboxSharedUnavailable =>
+      'No longer available: the sender deleted it';
+
+  @override
+  String safeboxTrackingOutOf(int count, int total) {
+    return '$count of $total';
+  }
+
+  @override
+  String get safeboxTrackingReceivedLabel => 'members downloaded or kept it';
+
+  @override
+  String safeboxTrackingSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kept it in their safe',
+      one: '1 kept it in their safe',
+      zero: 'Nobody has kept it in their safe yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxTrackingSentAt(String date) {
+    return 'sent $date';
+  }
+
+  @override
+  String get safeboxTrackingMembers => 'Members';
+
+  @override
+  String safeboxTrackingDownloadedAt(String date) {
+    return 'Downloaded · $date';
+  }
+
+  @override
+  String get safeboxTrackingSavedState => 'Kept in their safe';
+
+  @override
+  String get safeboxTrackingPending => 'Not yet';
+
+  @override
+  String get safeboxTrackingNote =>
+      'The file stays in your Share folder. If you delete it, it will no longer be available in the chat.';
+
+  @override
+  String get safeboxTrackingSendElsewhere => 'Send elsewhere';
+
+  @override
+  String get safeboxTrackingRevoke => 'Stop sharing';
+
+  @override
+  String get safeboxTrackingRevokeConfirm =>
+      'Members will no longer be able to download it. The file stays in your safe.';
+
+  @override
+  String get safeboxTrackingRevoked => 'Sharing stopped';
+
+  @override
+  String safeboxShareTabSent(int count) {
+    return 'My shares · $count';
+  }
+
+  @override
+  String safeboxShareTabReceived(int count) {
+    return 'Received · $count';
+  }
+
+  @override
+  String get safeboxShareTabReceivedPlain => 'Received';
+
+  @override
+  String get safeboxShareSentInfo =>
+      'These files stay here until you delete them. They count towards your space.';
+
+  @override
+  String get safeboxShareReceivedInfo =>
+      'Files sent to you through the safe, from all your chats. They stay available as long as the sender keeps them.';
+
+  @override
+  String safeboxShareAllReceived(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files downloaded by everyone',
+      one: '1 file downloaded by everyone',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareToFree(String size) {
+    return '$size to free up';
+  }
+
+  @override
+  String safeboxShareDeleteAllReceived(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Delete these $count files from Share? Everyone already has them.',
+      one: 'Delete this file from Share? Everyone already has it.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxShareNotSent => 'Not sent yet';
+
+  @override
+  String safeboxShareStatusAll(String name) {
+    return '$name · downloaded by everyone';
+  }
+
+  @override
+  String safeboxShareStatusNone(String name) {
+    return '$name · nobody has downloaded it yet';
+  }
+
+  @override
+  String safeboxShareStatusSome(String name, int count, int total) {
+    return '$name · downloaded by $count of $total';
+  }
+
+  @override
+  String get safeboxShareConvFallback => 'a chat';
+
+  @override
+  String get safeboxReceivedEmpty => 'Nothing received through the safe yet';
+
+  @override
+  String get safeboxReceivedInDownloads => 'In Downloads/Alanya';
+
+  @override
+  String get safeboxReceivedKept => 'Kept in your safe';
+
+  @override
   String get safeboxRootVideos => 'Videos';
 
   @override
@@ -8348,13 +8614,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxShareSave => 'Save to my safe';
+  String get safeboxShareSave => 'Keep in my safe';
 
   @override
   String get safeboxShareSaved => 'In your safe';
 
   @override
-  String get safeboxShareSavedToast => 'Saved to your safe';
+  String get safeboxShareSavedToast => 'Kept in your safe';
 
   @override
   String get safeboxShareRevoked => 'File removed by the sender';

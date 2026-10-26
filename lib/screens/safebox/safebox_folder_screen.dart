@@ -4,6 +4,11 @@
 //  tous types avec un filtre par type, sélection multiple (appui long) et sa
 //  barre Télécharger · Envoyer · Album · Déplacer · Supprimer, feuille
 //  « Télécharger » (galerie ou ZIP).
+//
+//  Lot 9 : le dossier Partager a deux onglets, « Mes envois » (ses fichiers,
+//  chacun avec ce qu'il est devenu : « Pas encore envoyé », « Famille Ngono ·
+//  téléchargé par 5 sur 8 »…) et « Reçus » ; une sélection part en un seul
+//  message.
 
 import 'dart:async';
 import 'dart:io';
@@ -30,6 +35,8 @@ import 'safebox_note_widgets.dart';
 import 'safebox_photo_screen.dart';
 import 'safebox_compression_sheet.dart';
 import 'safebox_move_picker.dart';
+import 'safebox_received_list.dart';
+import 'safebox_share_widgets.dart';
 import 'safebox_transfers_screen.dart';
 import 'safebox_widgets.dart';
 
@@ -45,7 +52,7 @@ class SafeboxFolderScreen extends StatefulWidget {
   State<SafeboxFolderScreen> createState() => _SafeboxFolderScreenState();
 }
 
-class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
+class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTickerProviderStateMixin {
   SafeboxFolderPage? _page;
   final List<SafeboxFile> _fichiers = [];
   int? _suite;
@@ -61,6 +68,10 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
   SafeboxFamily? _filtre;
   bool _choixOuvert = false;
 
+  /// Racine Partager : « Mes envois » et « Reçus » (lot 9).
+  TabController? _onglets;
+  int? _nbRecus;
+
   SafeboxController get _c => context.read<SafeboxController>();
   bool get _grille =>
       widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos || widget.root == SafeboxRoot.albums;
@@ -75,6 +86,14 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.root == SafeboxRoot.partager && _c.overview?.rootIds[SafeboxRoot.partager] == widget.folderId) {
+      _onglets = TabController(length: 2, vsync: this)
+        ..addListener(() {
+          if (_onglets!.indexIsChanging) return;
+          if (_selection) _quitterSelection();
+          setState(() {});
+        });
+    }
     _charger();
     _abonnement = _c.uploads.completed.listen((f) {
       if (f.folderId == widget.folderId) _charger();
@@ -87,6 +106,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
   @override
   void dispose() {
     _abonnement?.cancel();
+    _onglets?.dispose();
     _defilement.dispose();
     super.dispose();
   }
@@ -281,7 +301,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     if (ids == null || ids.isEmpty || !mounted) return;
     if (!await confirmSafeboxHevcSend(context, f, ids) || !mounted) return;
     try {
-      final n = await _c.sendToConversations(f, ids);
+      final n = await _c.sendToConversations([f], ids);
       if (!mounted) return;
       safeboxSnack(context, context.l10n.safeboxSendDone(n));
       await _charger(); // le badge « envoyé » apparaît
@@ -490,15 +510,18 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     if (fichiers.isEmpty) return;
     final ids = await pickSafeboxConversations(context, file: fichiers.first, others: fichiers.length - 1);
     if (ids == null || ids.isEmpty || !mounted) return;
-    var envoyes = 0;
     try {
+      // Une vidéo H.265 qu'un membre ne lirait pas : demandée une par une.
+      final retenus = <SafeboxFile>[];
       for (final f in fichiers) {
         if (!mounted) return;
-        if (!await confirmSafeboxHevcSend(context, f, ids)) continue;
-        envoyes += await _c.sendToConversations(f, ids) > 0 ? 1 : 0;
+        if (await confirmSafeboxHevcSend(context, f, ids)) retenus.add(f);
       }
+      if (retenus.isEmpty || !mounted) return;
+      // Une sélection part en un seul message (lot 9), au nom du dossier.
+      final n = await _c.sendToConversations(retenus, ids, title: _titreDossier(l10n));
       if (!mounted) return;
-      if (envoyes > 0) safeboxSnack(context, l10n.safeboxSendDone(ids.length));
+      if (n > 0) safeboxSnack(context, l10n.safeboxSendDone(n));
       _quitterSelection();
       await _charger();
     } catch (e) {
@@ -710,12 +733,24 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                     l10n.safeboxAlsoIn(SafeboxController.placeLabel(f.alsoIn.first, l10n)),
                     style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
-                if (f.sent != null) SafeboxSentBadge(sent: f.sent!),
+                if (_onglets != null)
+                  _EtatEnvoi(sent: f.sent)
+                else if (f.sent != null)
+                  SafeboxSentBadge(sent: f.sent!),
               ],
             ),
             trailing: _selection
                 ? null
-                : IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuFichier(f)),
+                : _onglets != null && f.sent == null
+                    ? FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                        ),
+                        onPressed: () => _envoyerDansDiscussion(f),
+                        child: Text(l10n.safeboxSend),
+                      )
+                    : IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuFichier(f)),
             onTap: () => _toucherFichier(f),
             onLongPress: () => _basculer(f),
           );
@@ -784,6 +819,15 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
               )
             : AppBar(
                 title: Text(_titreDossier(l10n)),
+                bottom: _onglets == null
+                    ? null
+                    : TabBar(
+                        controller: _onglets,
+                        tabs: [
+                          Tab(text: l10n.safeboxShareTabSent(_fichiers.length)),
+                          Tab(text: _nbRecus == null ? l10n.safeboxShareTabReceivedPlain : l10n.safeboxShareTabReceived(_nbRecus!)),
+                        ],
+                      ),
                 actions: [
                   if (c.uploads.jobs.isNotEmpty)
                     IconButton(
@@ -809,7 +853,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                     ),
                 ],
               ),
-        floatingActionButton: page == null || _selection
+        floatingActionButton: page == null || _selection || _onglets?.index == 1
             ? null
             : FloatingActionButton(
                 heroTag: 'coffre_dossier_${widget.folderId}',
@@ -818,50 +862,142 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
                 child: const Icon(Icons.add),
               ),
         bottomNavigationBar: _selection ? _barreSelection(l10n) : null,
-        body: _erreur != null && page == null
-            ? Center(
-                child: Padding(
-                  padding: AppSpacing.card,
-                  child: TextButton(onPressed: _charger, child: Text(l10n.safeboxRetry)),
-                ),
-              )
-            : page == null
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: _charger,
-                    child: CustomScrollView(
-                      controller: _defilement,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        if (filtres != null) SliverToBoxAdapter(child: filtres),
-                        if (envois.isNotEmpty)
-                          SliverList.list(children: [for (final j in envois) _LigneEnvoiDossier(job: j)]),
-                        if (!_selection)
-                          SliverList.list(children: [
-                            for (final d in page.folders)
-                              ListTile(
-                                leading: Icon(Icons.folder_outlined, color: context.colors.primary),
-                                title: Text(d.name ?? ''),
-                                trailing: IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuDossier(d)),
-                                onTap: () async {
-                                  await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => SafeboxFolderScreen(folderId: d.id, root: widget.root)),
-                                  );
-                                  if (mounted) await _charger();
-                                },
-                              ),
-                          ]),
-                        if (page.folders.isEmpty && _fichiers.isEmpty && envois.isEmpty)
-                          SliverFillRemaining(hasScrollBody: false, child: _Vide(l10n: l10n))
-                        else
-                          ..._fichiersEnSlivers(l10n),
-                        const SliverToBoxAdapter(child: SizedBox(height: 96)),
-                      ],
-                    ),
-                  ),
+        body: _onglets == null
+            ? _corps(l10n, page, envois, filtres)
+            : TabBarView(
+                controller: _onglets,
+                children: [
+                  _corps(l10n, page, envois, filtres),
+                  SafeboxReceivedList(onCount: (n) => setState(() => _nbRecus = n)),
+                ],
+              ),
       ),
     );
+  }
+
+  /// En tête de « Mes envois » : l'explication, puis, quand des fichiers ont
+  /// été téléchargés par tous, la place à libérer et « Supprimer ».
+  Widget _enTeteMesEnvois(AppLocalizations l10n) {
+    final recusParTous = _fichiers.where((f) => f.sent?.receivedByAll ?? false).toList();
+    // Un contenu encore ailleurs dans le coffre ne libère rien.
+    final aLiberer = recusParTous.where((f) => f.alsoIn.isEmpty).fold<int>(0, (s, f) => s + f.storedBytes);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          safeboxShareInfoLine(context, l10n.safeboxShareSentInfo),
+          if (recusParTous.isNotEmpty) ...[
+            AppSpacing.vGapSm,
+            Material(
+              color: context.colors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: AppRadius.brLg,
+                side: BorderSide(color: context.colors.outlineVariant),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: context.semantic.successContainer,
+                      child: Icon(Icons.check, color: context.semantic.success),
+                    ),
+                    AppSpacing.hGapMd,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l10n.safeboxShareAllReceived(recusParTous.length), style: context.text.titleSmall),
+                          Text(l10n.safeboxShareToFree(formatBytes(aLiberer, l10n)),
+                              style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 40),
+                        foregroundColor: context.colors.error,
+                        side: BorderSide(color: context.colors.error.withValues(alpha: 0.4)),
+                      ),
+                      onPressed: () => _supprimerRecusParTous(recusParTous),
+                      child: Text(l10n.safeboxDelete),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Supprime de Partager ce que tout le monde a déjà ; l'inscrit le décide lui-même.
+  Future<void> _supprimerRecusParTous(List<SafeboxFile> fichiers) async {
+    final l10n = context.l10n;
+    final ok = await safeboxConfirm(
+      context,
+      message: l10n.safeboxShareDeleteAllReceived(fichiers.length),
+      action: l10n.safeboxDelete,
+    );
+    if (!ok || !mounted) return;
+    try {
+      for (final f in fichiers) {
+        await _c.trashFile(f);
+      }
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    }
+    if (mounted) await _charger();
+  }
+
+  /// Le contenu du dossier ; dans Partager, le premier onglet (« Mes envois »).
+  Widget _corps(AppLocalizations l10n, SafeboxFolderPage? page, List<SafeboxUploadJob> envois, Widget? filtres) {
+    return _erreur != null && page == null
+        ? Center(
+            child: Padding(
+              padding: AppSpacing.card,
+              child: TextButton(onPressed: _charger, child: Text(l10n.safeboxRetry)),
+            ),
+          )
+        : page == null
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _charger,
+                child: CustomScrollView(
+                  controller: _defilement,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    if (_onglets != null) SliverToBoxAdapter(child: _enTeteMesEnvois(l10n)),
+                    if (filtres != null) SliverToBoxAdapter(child: filtres),
+                    if (envois.isNotEmpty)
+                      SliverList.list(children: [for (final j in envois) _LigneEnvoiDossier(job: j)]),
+                    if (!_selection)
+                      SliverList.list(children: [
+                        for (final d in page.folders)
+                          ListTile(
+                            leading: Icon(Icons.folder_outlined, color: context.colors.primary),
+                            title: Text(d.name ?? ''),
+                            trailing: IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuDossier(d)),
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => SafeboxFolderScreen(folderId: d.id, root: widget.root)),
+                              );
+                              if (mounted) await _charger();
+                            },
+                          ),
+                      ]),
+                    if (page.folders.isEmpty && _fichiers.isEmpty && envois.isEmpty)
+                      SliverFillRemaining(hasScrollBody: false, child: _Vide(l10n: l10n))
+                    else
+                      ..._fichiersEnSlivers(l10n),
+                    const SliverToBoxAdapter(child: SizedBox(height: 96)),
+                  ],
+                ),
+              );
   }
 
   /// Télécharger · Envoyer · Album · Déplacer · Supprimer (et « Plus » pour un
@@ -922,6 +1058,32 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Ce qu'est devenu un fichier de Partager : « Pas encore envoyé », « Famille
+/// Ngono · téléchargé par 5 sur 8 », « … · téléchargé par tous ».
+class _EtatEnvoi extends StatelessWidget {
+  const _EtatEnvoi({required this.sent});
+  final SafeboxSent? sent;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final s = sent;
+    TextStyle? style(Color c) => context.text.bodySmall?.copyWith(color: c, fontWeight: FontWeight.w500);
+    if (s == null) return Text(l10n.safeboxShareNotSent, style: style(context.colors.onSurfaceVariant));
+    // Serveur d'avant le lot 9 : pas de discussion ni de « reçu par ».
+    if (s.received == null || s.lastConversationId == null) return SafeboxSentBadge(sent: s);
+    return SafeboxConversationName(
+      conversationId: s.lastConversationId,
+      builder: (context, nom) {
+        final discussion = nom ?? l10n.safeboxShareConvFallback;
+        if (s.receivedByAll) return Text(l10n.safeboxShareStatusAll(discussion), style: style(context.semantic.success));
+        if (s.received == 0) return Text(l10n.safeboxShareStatusNone(discussion), style: style(context.semantic.warning));
+        return Text(l10n.safeboxShareStatusSome(discussion, s.received!, s.recipients), style: style(context.colors.primary));
+      },
     );
   }
 }

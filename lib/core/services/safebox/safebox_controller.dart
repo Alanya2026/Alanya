@@ -4,6 +4,7 @@
 //  continue quand l'inscrit quitte l'écran du coffre.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -92,14 +93,15 @@ class SafeboxController extends ChangeNotifier {
     required TalkyApiClient api,
     SafeboxForeground? foreground,
     Future<void> Function(int level)? quotaAlert,
+    @visibleForTesting SafeboxUploadManager? uploadManager,
   })  : _api = api,
         _premierPlan = foreground ?? SafeboxForeground(),
         _alertes = SafeboxQuotaAlerter(quotaAlert ?? _notifierEspace),
-        uploads = SafeboxUploadManager(transport: ApiSafeboxTransport(api)),
+        uploads = uploadManager ?? SafeboxUploadManager(transport: ApiSafeboxTransport(api)),
         downloads = SafeboxDownloadManager(transport: ApiSafeboxDownloadTransport(api)),
         previews = SafeboxPreviewCache(transport: ApiSafeboxDownloadTransport(api)) {
     exports = SafeboxExporter(
-      fetch: downloads.fetch,
+      fetch: _pourExport,
       cached: downloads.cached,
       evict: downloads.evict,
       progressOf: downloads.progressOf,
@@ -113,8 +115,11 @@ class SafeboxController extends ChangeNotifier {
     _abonnement = uploads.completed.listen((_) => unawaited(refreshOverview()));
     _abonnementPartages = uploads.completedJobs.listen((e) {
       final conv = e.job.shareConversationId;
-      if (conv != null) unawaited(_partagerApresEnvoi(e.file, conv));
+      if (conv == null) return;
+      final groupe = e.job.shareGroup;
+      unawaited(groupe == null ? _partagerApresEnvoi(e.file, conv) : _ajouterAuGroupe(groupe, e.file, conv));
     });
+    uploads.addListener(_surveillerGroupes);
   }
 
   late final StreamSubscription<({SafeboxUploadJob job, SafeboxFile file})> _abonnementPartages;
@@ -168,6 +173,7 @@ class SafeboxController extends ChangeNotifier {
     if (_demarre) return;
     _demarre = true;
     unawaited(uploads.resumeAll());
+    unawaited(_lireGroupes().then((_) => _verifierGroupes()));
   }
 
   /// Le réseau revient : les envois qui l'attendaient repartent.
@@ -344,16 +350,49 @@ class SafeboxController extends ChangeNotifier {
   /// Prépare chaque fichier (compression dans le format [quality], aperçu
   /// chiffré) et le confie au gestionnaire d'envoi. Les fichiers partent un
   /// par un.
+  ///
+  /// Envoyés ensemble dans une discussion ([shareConversationId]), plusieurs
+  /// fichiers y partent en un seul message, titré [shareTitle], quand le
+  /// dernier est arrivé (lot 9).
   Future<void> addFiles(
     List<SafeboxPick> picks,
     SafeboxFolder folder, {
     required SafeboxQuality quality,
     int? shareConversationId,
+    String? shareTitle,
   }) async {
     final prep = await _prep();
     await prep.workDir.create(recursive: true);
     final maxApercu = (_overview?.limits.maxPreviewBytes ?? 256 * 1024) - kSafeboxTagBytes;
     final hevc = quality == SafeboxQuality.original ? false : await _hevcPermis(folder, shareConversationId);
+    String? groupe;
+    if (shareConversationId != null && picks.length > 1) {
+      groupe = 'g${DateTime.now().microsecondsSinceEpoch}';
+      (await _lireGroupes())[groupe] = _GroupeEnvoi(conversationId: shareConversationId, title: shareTitle ?? '');
+      _groupesEnPreparation.add(groupe);
+      await _ecrireGroupes();
+    }
+    try {
+      await _preparer(picks, folder, prep, quality: quality, hevc: hevc, maxApercu: maxApercu,
+          shareConversationId: shareConversationId, shareGroup: groupe);
+    } finally {
+      if (groupe != null) {
+        _groupesEnPreparation.remove(groupe);
+        unawaited(_verifierGroupes());
+      }
+    }
+  }
+
+  Future<void> _preparer(
+    List<SafeboxPick> picks,
+    SafeboxFolder folder,
+    SafeboxMediaPrep prep, {
+    required SafeboxQuality quality,
+    required bool hevc,
+    required int maxApercu,
+    int? shareConversationId,
+    String? shareGroup,
+  }) async {
     for (final pick in picks) {
       try {
         var source = pick.path;
@@ -398,6 +437,7 @@ class SafeboxController extends ChangeNotifier {
             previewPath: cheminApercu,
             previewSize: tailleApercu,
             shareConversationId: shareConversationId,
+            shareGroup: shareGroup,
             meta: details?.toJson(),
           ),
           cle,
@@ -428,7 +468,7 @@ class SafeboxController extends ChangeNotifier {
     unawaited(refreshOverview());
   }
 
-  // ── Partage dans une discussion (lot 3) ──────────────────────────────────
+  // ── Partage dans une discussion (lots 3 et 9) ───────────────────────────
 
   /// Publie un message dans une discussion. Posé par l'écran d'accueil, qui a
   /// accès aux discussions ; un partage prêt avant lui attend dans
@@ -446,46 +486,108 @@ class SafeboxController extends ChangeNotifier {
     }
   }
 
-  /// Partage un fichier de mon coffre dans une discussion et rend le contenu
-  /// du message, mini-image floue comprise (tirée de l'aperçu).
-  Future<SafeboxSharePayload> shareFile(SafeboxFile file, int conversationId) async {
-    final cree = await _api.createSafeboxShare(fileId: file.id, conversationId: conversationId);
-    String? flou;
+  Future<void> _publier(int conversationId, SafeboxSharePayload payload) async {
+    final envoyer = _envoyeur;
+    if (envoyer != null) {
+      await envoyer(conversationId, payload);
+    } else {
+      _partagesEnAttente.add((conversationId, payload));
+    }
+  }
+
+  /// Mini-image floue tirée de l'aperçu d'un fichier de mon coffre (base64).
+  Future<String?> _flou(SafeboxFile file, {required int maxWidth, required int max}) async {
     try {
       final apercu = await previews.load(file);
-      if (apercu != null) {
-        final b64 = await ImageThumbnailService.base64ForBytes(apercu, maxWidth: 24);
-        if (b64 != null && b64.length <= 6000) flou = b64;
-      }
+      if (apercu == null) return null;
+      final b64 = await ImageThumbnailService.base64ForBytes(apercu, maxWidth: maxWidth);
+      return b64 != null && b64.length <= max ? b64 : null;
     } catch (e) {
       debugPrint('[Coffre] mini-image du partage : $e');
+      return null;
     }
+  }
+
+  /// Crée le partage — un fichier, plusieurs en un lot ([ids], titrés
+  /// [title]), ou un album — et rend le contenu du message : la mini-image
+  /// floue d'un fichier, la mosaïque des quatre premiers éléments d'un lot,
+  /// tirées des aperçus de [known] (mes fichiers déjà en mémoire).
+  Future<SafeboxSharePayload> _creerPartage(
+    int conversationId, {
+    List<int> ids = const [],
+    SafeboxFolder? album,
+    String? title,
+    Map<int, SafeboxFile> known = const {},
+  }) async {
+    final cree = album != null
+        ? await _api.createSafeboxShare(conversationId: conversationId, folderId: album.id)
+        : ids.length == 1
+            ? await _api.createSafeboxShare(conversationId: conversationId, fileId: ids.first)
+            : await _api.createSafeboxShare(
+                conversationId: conversationId,
+                fileIds: ids,
+                title: title == null || title.isEmpty ? null : title,
+              );
+    if (cree.kind == SafeboxShareKind.batch) {
+      final mosaique = <String>[];
+      for (final id in cree.cover.take(4)) {
+        final f = known[id];
+        mosaique.add(f == null ? '' : await _flou(f, maxWidth: 16, max: SafeboxSharePayload.mosaicBlurMax) ?? '');
+      }
+      return SafeboxSharePayload(
+        share: cree.shareId,
+        name: cree.name,
+        size: cree.plainBytes,
+        mime: cree.mime,
+        family: cree.family,
+        kind: SafeboxShareKind.batch,
+        count: cree.count,
+        families: cree.families,
+        mosaic: mosaique,
+      );
+    }
+    final f = cree.cover.isEmpty ? null : known[cree.cover.first];
     return SafeboxSharePayload(
       share: cree.shareId,
       name: cree.name,
       size: cree.plainBytes,
       mime: cree.mime,
       family: cree.family,
-      blur: flou,
-      meta: cree.meta ?? file.meta,
+      blur: f == null ? null : await _flou(f, maxWidth: 24, max: 6000),
+      meta: cree.meta ?? f?.meta,
     );
   }
 
-  /// Envoie un fichier de mon coffre dans plusieurs discussions (bouton
-  /// « Envoyer dans une discussion » du coffre). Rend le nombre de
-  /// discussions où il est parti.
-  Future<int> sendToConversations(SafeboxFile file, List<int> conversationIds) async {
+  /// Partage un fichier de mon coffre dans une discussion et rend le contenu
+  /// du message, mini-image floue comprise (tirée de l'aperçu).
+  Future<SafeboxSharePayload> shareFile(SafeboxFile file, int conversationId) =>
+      _creerPartage(conversationId, ids: [file.id], known: {file.id: file});
+
+  /// Envoie des fichiers de mon coffre dans plusieurs discussions : un seul,
+  /// une sélection en un seul message (titrée [title]), ou tout un [album].
+  /// Rend le nombre de discussions où ils sont partis.
+  Future<int> sendToConversations(
+    List<SafeboxFile> files,
+    List<int> conversationIds, {
+    String? title,
+    SafeboxFolder? album,
+  }) =>
+      _envoyerPartout(
+        conversationIds,
+        (conv) => _creerPartage(conv,
+            ids: [for (final f in files) f.id], album: album, title: title, known: {for (final f in files) f.id: f}),
+      );
+
+  /// « Envoyer ailleurs », depuis le suivi : les mêmes fichiers, sous le même titre.
+  Future<int> sendShareElsewhere(SafeboxShareInfo info, List<int> conversationIds) =>
+      _envoyerPartout(conversationIds, (conv) => _creerPartage(conv, ids: info.fileIds, title: info.name));
+
+  Future<int> _envoyerPartout(List<int> conversationIds, Future<SafeboxSharePayload> Function(int conv) creer) async {
     var reussis = 0;
     Object? premiereErreur;
     for (final conv in conversationIds) {
       try {
-        final payload = await shareFile(file, conv);
-        final envoyer = _envoyeur;
-        if (envoyer != null) {
-          await envoyer(conv, payload);
-        } else {
-          _partagesEnAttente.add((conv, payload));
-        }
+        await _publier(conv, await creer(conv));
         reussis += 1;
       } catch (e) {
         premiereErreur ??= e;
@@ -499,17 +601,137 @@ class SafeboxController extends ChangeNotifier {
   /// Fichier déposé depuis une discussion : une fois dans le coffre, il part.
   Future<void> _partagerApresEnvoi(SafeboxFile file, int conversationId) async {
     try {
-      final payload = await shareFile(file, conversationId);
-      final envoyer = _envoyeur;
-      if (envoyer != null) {
-        await envoyer(conversationId, payload);
-      } else {
-        _partagesEnAttente.add((conversationId, payload));
-      }
+      await _publier(conversationId, await shareFile(file, conversationId));
     } catch (e) {
       debugPrint('[Coffre] partage après envoi impossible : $e');
     }
   }
+
+  // ── Plusieurs fichiers du téléphone, un seul message (lot 9) ─────────────
+  //
+  // Envoyés ensemble depuis une discussion, ils partent en un lot quand plus
+  // aucun d'eux n'est en cours d'envoi : ceux qui sont arrivés dans le coffre
+  // (un envoi en échec ne retient pas les autres ; relancé plus tard, il part
+  // seul). Gardé dans les préférences : un redémarrage n'y change rien.
+
+  static const _cleGroupes = 'safebox_share_groups_v1';
+  Map<String, _GroupeEnvoi>? _groupes;
+  final Set<String> _groupesEnPreparation = {};
+
+  /// Mes fichiers arrivés, pour la mosaïque floue du message.
+  final Map<int, SafeboxFile> _fichiersDesGroupes = {};
+
+  /// Fichiers déjà partis dans leur lot : leur annonce tardive ne les renvoie pas seuls.
+  final Set<int> _partisEnLot = {};
+  bool _verificationEnCours = false;
+  bool _aRevoir = false;
+
+  Future<Map<String, _GroupeEnvoi>> _lireGroupes() async {
+    final deja = _groupes;
+    if (deja != null) return deja;
+    final lus = <String, _GroupeEnvoi>{};
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final d = jsonDecode(prefs.getString(_cleGroupes) ?? '{}');
+      if (d is Map) {
+        for (final e in d.entries) {
+          final g = _GroupeEnvoi.fromJson(e.value);
+          if (g != null) lus['${e.key}'] = g;
+        }
+      }
+    } catch (e) {
+      debugPrint('[Coffre] groupes d\'envoi illisibles : $e');
+    }
+    return _groupes ??= lus;
+  }
+
+  Future<void> _ecrireGroupes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cleGroupes, jsonEncode({
+      for (final e in (_groupes ?? const <String, _GroupeEnvoi>{}).entries) e.key: e.value.toJson(),
+    }));
+  }
+
+  Future<void> _ajouterAuGroupe(String groupe, SafeboxFile file, int conversationId) async {
+    final g = (await _lireGroupes())[groupe];
+    if (g == null) {
+      // Déjà parti avec son lot ; sinon (envoi relancé après coup), il part seul.
+      if (!_partisEnLot.contains(file.id)) await _partagerApresEnvoi(file, conversationId);
+      return;
+    }
+    _fichiersDesGroupes[file.id] = file;
+    if (!g.fileIds.contains(file.id)) g.fileIds.add(file.id);
+    await _ecrireGroupes();
+    await _verifierGroupes();
+  }
+
+  void _surveillerGroupes() {
+    if (_groupes?.isNotEmpty ?? false) unawaited(_verifierGroupes());
+  }
+
+  static bool _envoiActif(SafeboxUploadJob j) => switch (j.state) {
+        SafeboxUploadState.queued ||
+        SafeboxUploadState.running ||
+        SafeboxUploadState.waitingNetwork ||
+        SafeboxUploadState.paused =>
+          true,
+        SafeboxUploadState.failed || SafeboxUploadState.completed => false,
+      };
+
+  bool _groupePret(String cle) => !uploads.jobs.any((j) => j.shareGroup == cle && _envoiActif(j));
+
+  Future<void> _verifierGroupes() async {
+    if (_verificationEnCours) {
+      _aRevoir = true;
+      return;
+    }
+    _verificationEnCours = true;
+    try {
+      do {
+        _aRevoir = false;
+        final groupes = await _lireGroupes();
+        final prets = [
+          for (final e in groupes.entries)
+            if (!_groupesEnPreparation.contains(e.key) && _groupePret(e.key)) e,
+        ];
+        for (final e in prets) {
+          groupes.remove(e.key);
+          // Un envoi passe à « terminé » un peu avant que son fichier soit
+          // annoncé : ses fichiers sont aussi pris dans les envois terminés.
+          final g = e.value;
+          for (final j in uploads.jobs) {
+            final id = j.fileId;
+            if (j.shareGroup == e.key && j.state == SafeboxUploadState.completed && id != null && !g.fileIds.contains(id)) {
+              g.fileIds.add(id);
+            }
+          }
+          // Avant toute attente : une annonce qui arrive pendant l'envoi
+          // ne doit pas repartir seule.
+          _partisEnLot.addAll(g.fileIds);
+          await _ecrireGroupes();
+          await _envoyerGroupe(g);
+        }
+      } while (_aRevoir);
+    } finally {
+      _verificationEnCours = false;
+    }
+  }
+
+  Future<void> _envoyerGroupe(_GroupeEnvoi g) async {
+    if (g.fileIds.isEmpty) return;
+    try {
+      await _publier(
+        g.conversationId,
+        await _creerPartage(g.conversationId, ids: g.fileIds, title: g.title, known: _fichiersDesGroupes),
+      );
+    } catch (e) {
+      debugPrint('[Coffre] envoi groupé dans la discussion ${g.conversationId} impossible : $e');
+    } finally {
+      g.fileIds.forEach(_fichiersDesGroupes.remove);
+    }
+  }
+
+  // ── Ce que l'on reçoit (lots 3 et 9) ─────────────────────────────────────
 
   final Map<int, SafeboxShareInfo> _cartes = {};
   final Map<int, Future<SafeboxShareInfo?>> _cartesEnCours = {};
@@ -536,11 +758,49 @@ class SafeboxController extends ChangeNotifier {
     });
   }
 
+  /// Les éléments reçus par un partage, enregistrés pour le téléchargement groupé.
+  final Map<int, SafeboxShareItem> _elementsRecus = {};
+
+  /// Tous les éléments d'un partage (500 au plus, par pages de 100).
+  Future<List<SafeboxShareItem>> shareItems(int shareId) async {
+    final out = <SafeboxShareItem>[];
+    int? curseur;
+    do {
+      final page = await _api.fetchSafeboxShareItems(shareId, cursor: curseur);
+      out.addAll(page.items);
+      curseur = page.nextCursor;
+    } while (curseur != null);
+    for (final i in out) {
+      _elementsRecus[i.localId] = i;
+    }
+    return out;
+  }
+
+  /// Le téléchargement groupé (galerie, ZIP) prend aussi les éléments reçus.
+  Future<File> _pourExport(SafeboxFile f) {
+    final element = f.id < 0 ? _elementsRecus[f.id] : null;
+    return element != null ? downloads.fetchShareItem(element) : downloads.fetch(f);
+  }
+
   /// Télécharge un fichier reçu (compte un téléchargement), puis relit la carte.
-  Future<File> downloadShare(SafeboxShareInfo info) async {
-    final f = await downloads.fetchShare(info);
-    unawaited(shareInfo(info.id, refresh: true));
+  Future<File> downloadShare(SafeboxShareInfo info) => _telechargerElement(info.asItem());
+
+  Future<File> _telechargerElement(SafeboxShareItem item) async {
+    final f = await downloads.fetchShareItem(item);
+    unawaited(shareInfo(item.shareId, refresh: true));
     return f;
+  }
+
+  /// L'onglet « Reçus ».
+  Future<SafeboxReceivedPage> receivedShares({int? cursor}) => _api.fetchReceivedSafeboxShares(cursor: cursor);
+
+  /// Le suivi d'un partage, pour son expéditeur.
+  Future<SafeboxShareRecipients> shareRecipients(int shareId) => _api.fetchSafeboxShareRecipients(shareId);
+
+  /// « Retirer le partage » ; la carte le dit ensuite.
+  Future<void> revokeShare(int shareId) async {
+    await _api.revokeSafeboxShare(shareId);
+    await shareInfo(shareId, refresh: true);
   }
 
   // ── Commentaire d'une photo (privé) ──────────────────────────────────────
@@ -592,31 +852,47 @@ class SafeboxController extends ChangeNotifier {
   /// téléchargé puis copié dans Téléchargements/Alanya (la copie privée est
   /// alors supprimée). `published` dit si la copie vient d'être faite ; si
   /// elle échoue, le fichier reste dans l'application (`saveFailed`).
-  Future<({String location, bool published, bool saveFailed})> fetchReceived(SafeboxShareInfo info) async {
-    final deja = await received.location(info.id);
+  Future<({String location, bool published, bool saveFailed})> fetchReceived(SafeboxShareInfo info) =>
+      fetchReceivedItem(info.asItem());
+
+  /// Pareil pour un élément reçu : un fichier seul (élément 0) ou un élément d'un lot.
+  Future<({String location, bool published, bool saveFailed})> fetchReceivedItem(SafeboxShareItem item) async {
+    final cle = -item.localId;
+    final deja = await received.location(cle);
     if (deja != null) return (location: deja, published: false, saveFailed: false);
-    final f = await downloadShare(info);
-    final loc = await received.publish(f, shareId: info.id, name: info.name, mime: info.mime, family: info.family);
+    final f = await _telechargerElement(item);
+    final loc = await received.publish(f, shareId: cle, name: item.name, mime: item.mime, family: item.family);
     if (loc == null) return (location: f.path, published: false, saveFailed: true);
-    await downloads.evict(info.localId);
+    await downloads.evict(item.localId);
     return (location: loc, published: true, saveFailed: false);
   }
 
   /// Le fichier reçu est-il déjà sur le téléphone (Téléchargements, ou
   /// dossier de l'application si la copie avait échoué) ?
-  Future<bool> hasReceived(SafeboxShareInfo info) async =>
-      await received.location(info.id) != null || await downloads.cached(info.asFile()) != null;
+  Future<bool> hasReceived(SafeboxShareInfo info) => hasReceivedItem(info.asItem());
 
-  /// Enregistre un fichier reçu dans mon coffre.
-  Future<SafeboxFile> saveShare(int shareId) async {
-    final f = await _api.saveSafeboxShare(shareId);
+  Future<bool> hasReceivedItem(SafeboxShareItem item) async =>
+      await received.location(-item.localId) != null || await downloads.cached(item.asFile()) != null;
+
+  /// Garde dans mon coffre un fichier reçu, ou un élément d'un lot ([itemId]).
+  Future<SafeboxFile> saveShare(int shareId, {int itemId = 0}) async {
+    final f = await _api.saveSafeboxShare(shareId, itemId: itemId);
     await shareInfo(shareId, refresh: true);
     unawaited(refreshOverview());
     return f;
   }
 
+  /// Garde un lot entier : il devient un album dans mes Albums.
+  Future<SafeboxFolder> saveShareBatch(int shareId) async {
+    final album = await _api.saveSafeboxShareBatch(shareId);
+    await shareInfo(shareId, refresh: true);
+    unawaited(refreshOverview());
+    return album;
+  }
+
   @override
   void dispose() {
+    uploads.removeListener(_surveillerGroupes);
     _abonnementPartages.cancel();
     _abonnement.cancel();
     uploads.removeListener(notifyListeners);
@@ -630,6 +906,27 @@ class SafeboxController extends ChangeNotifier {
     downloads.dispose();
     super.dispose();
   }
+}
+
+/// Plusieurs fichiers du téléphone en route vers une même discussion : la
+/// discussion, le titre du lot, et ceux déjà arrivés dans le coffre.
+class _GroupeEnvoi {
+  _GroupeEnvoi({required this.conversationId, required this.title, List<int>? fileIds}) : fileIds = fileIds ?? [];
+
+  static _GroupeEnvoi? fromJson(dynamic j) {
+    if (j is! Map || j['conv'] is! int) return null;
+    return _GroupeEnvoi(
+      conversationId: j['conv'] as int,
+      title: j['title'] is String ? j['title'] as String : '',
+      fileIds: [for (final v in (j['files'] is List ? j['files'] as List : const [])) if (v is int) v],
+    );
+  }
+
+  final int conversationId;
+  final String title;
+  final List<int> fileIds;
+
+  Map<String, dynamic> toJson() => {'conv': conversationId, 'title': title, 'files': fileIds};
 }
 
 /// Alertes d'espace du coffre : une fois par palier (80, 95, 100 %) franchi en

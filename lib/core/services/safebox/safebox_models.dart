@@ -350,14 +350,23 @@ class SafeboxMeta {
 /// Ce que sont devenus les partages d'un fichier de mon coffre : le badge
 /// « reçu par 3 destinataires sur 4 ».
 class SafeboxSent {
-  const SafeboxSent({required this.shares, required this.recipients, this.received});
+  const SafeboxSent({required this.shares, required this.recipients, this.received, this.lastConversationId});
 
   static SafeboxSent? fromJson(dynamic j) {
     if (j is! Map) return null;
     final shares = _int(j['shares']);
     if (shares <= 0) return null;
-    return SafeboxSent(shares: shares, recipients: _int(j['recipients']), received: _intOrNull(j['received']));
+    return SafeboxSent(
+      shares: shares,
+      recipients: _int(j['recipients']),
+      received: _intOrNull(j['received']),
+      lastConversationId: _intOrNull(j['lastConversationId']),
+    );
   }
+
+  /// La discussion du dernier partage (« Famille Ngono · téléchargé par 5
+  /// sur 8 ») ; nulle avec un serveur d'avant le lot 9.
+  final int? lastConversationId;
 
   /// Partages actifs (une discussion chacun).
   final int shares;
@@ -671,6 +680,31 @@ class SafeboxTrash {
 }
 
 /// Partage créé (`POST /api/safebox/shares`).
+/// Un partage, d'un fichier ou d'un lot (lot 9 : un album ou une sélection,
+/// une seule carte).
+enum SafeboxShareKind {
+  file,
+  batch;
+
+  static SafeboxShareKind fromName(String? name) => name == 'batch' ? batch : file;
+}
+
+/// Nombre d'éléments par type d'un lot (« 35 photos, 6 vidéos, 1 document »),
+/// dans l'ordre des types ; vide pour un fichier seul.
+Map<SafeboxFamily, int> safeboxFamilyCounts(dynamic j) {
+  if (j is! Map) return const {};
+  return {
+    for (final f in SafeboxFamily.values)
+      if (_int(j[f.name]) > 0) f: _int(j[f.name]),
+  };
+}
+
+/// Identifiant local d'un élément reçu par un partage : négatif, pour ne
+/// jamais croiser celui d'un fichier de mon coffre dans les caches ; celui
+/// d'un fichier seul (élément 0) reste celui de son partage.
+int safeboxSharedLocalId(int shareId, int itemId) => itemId == 0 ? -shareId : -((1 << 40) + itemId);
+
+/// Ce que rend la création d'un partage (`POST /api/safebox/shares`).
 class SafeboxShareCreated {
   const SafeboxShareCreated({
     required this.shareId,
@@ -678,7 +712,11 @@ class SafeboxShareCreated {
     required this.mime,
     required this.family,
     required this.plainBytes,
+    this.kind = SafeboxShareKind.file,
+    this.count = 1,
+    this.families = const {},
     this.meta,
+    this.cover = const [],
   });
 
   factory SafeboxShareCreated.fromJson(Map<String, dynamic> j) => SafeboxShareCreated(
@@ -687,18 +725,219 @@ class SafeboxShareCreated {
         mime: j['mime'] as String?,
         family: SafeboxFamily.fromName(j['family'] as String?),
         plainBytes: _int(j['plainBytes']),
+        kind: SafeboxShareKind.fromName(j['kind'] as String?),
+        count: j['count'] == null ? 1 : _int(j['count']),
+        families: safeboxFamilyCounts(j['families']),
         meta: SafeboxMeta.fromJson(j['meta']),
+        cover: [for (final v in (j['cover'] is List ? j['cover'] as List : const [])) _int(v)],
       );
 
   final int shareId;
+  final SafeboxShareKind kind;
+
+  /// Nom du fichier, ou titre du lot.
   final String name;
+  final String? mime;
+
+  /// Type du fichier ; pour un lot, le plus nombreux.
+  final SafeboxFamily family;
+
+  /// Taille en clair ; pour un lot, la somme.
+  final int plainBytes;
+  final int count;
+  final Map<SafeboxFamily, int> families;
+  final SafeboxMeta? meta;
+
+  /// Mes fichiers des quatre premiers éléments : la mosaïque floue du message.
+  final List<int> cover;
+}
+
+/// Qui a envoyé un partage.
+class SafeboxShareSender {
+  const SafeboxShareSender({required this.id, this.name, this.avatarUrl});
+
+  static SafeboxShareSender? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    return SafeboxShareSender(
+      id: _int(j['id']),
+      name: j['name'] is String && (j['name'] as String).isNotEmpty ? j['name'] as String : null,
+      avatarUrl: j['avatarUrl'] as String?,
+    );
+  }
+
+  final int id;
+  final String? name;
+  final String? avatarUrl;
+}
+
+/// Résumé du suivi, pour l'expéditeur : membres de la discussion (lui exclu),
+/// ceux qui ont téléchargé, ceux qui ont gardé le contenu dans leur coffre.
+class SafeboxShareTracking {
+  const SafeboxShareTracking({required this.members, required this.downloaded, required this.saved});
+
+  static SafeboxShareTracking? fromJson(dynamic j) {
+    if (j is! Map) return null;
+    return SafeboxShareTracking(
+      members: _int(j['members']),
+      downloaded: _int(j['downloaded']),
+      saved: _int(j['saved']),
+    );
+  }
+
+  final int members;
+  final int downloaded;
+  final int saved;
+
+  /// Ceux qui l'ont reçu, d'une façon ou de l'autre.
+  int get received => downloaded + saved;
+  bool get receivedByAll => members > 0 && received >= members;
+}
+
+/// Un élément d'un partage, tel que l'écran ouvert depuis la carte l'affiche
+/// (`GET /api/safebox/shares/:id/items`) ; l'élément 0 est le fichier d'un
+/// partage simple.
+class SafeboxShareItem {
+  const SafeboxShareItem({
+    required this.shareId,
+    required this.id,
+    required this.position,
+    required this.name,
+    required this.ext,
+    required this.mime,
+    required this.family,
+    required this.plainBytes,
+    required this.available,
+    this.storedBytes,
+    this.quality = SafeboxQuality.original,
+    this.meta,
+    this.lost = false,
+    this.key,
+    this.previewUrl,
+    this.savedFileId,
+  });
+
+  factory SafeboxShareItem.fromJson(int shareId, Map<String, dynamic> j) => SafeboxShareItem(
+        shareId: shareId,
+        id: _int(j['id']),
+        position: _int(j['position']),
+        name: '${j['name'] ?? ''}',
+        ext: '${j['ext'] ?? ''}',
+        mime: j['mime'] as String?,
+        family: SafeboxFamily.fromName(j['family'] as String?),
+        plainBytes: _int(j['plainBytes']),
+        available: j['available'] == true,
+        storedBytes: _intOrNull(j['storedBytes']),
+        quality: SafeboxQuality.fromName(j['quality'] as String?),
+        meta: SafeboxMeta.fromJson(j['meta']),
+        lost: j['lost'] == true,
+        key: j['key'] is String ? base64Decode(j['key'] as String) : null,
+        previewUrl: j['previewUrl'] as String?,
+        savedFileId: _intOrNull(j['savedFileId']),
+      );
+
+  final int shareId;
+  final int id;
+  final int position;
+  final String name;
+  final String ext;
   final String? mime;
   final SafeboxFamily family;
   final int plainBytes;
+
+  /// Faux quand l'expéditeur a supprimé ce fichier ou retiré le partage.
+  final bool available;
+  final int? storedBytes;
+  final SafeboxQuality quality;
   final SafeboxMeta? meta;
+  final bool lost;
+  final Uint8List? key;
+  final String? previewUrl;
+
+  /// Le même contenu, déjà dans mon coffre.
+  final int? savedFileId;
+
+  int get localId => safeboxSharedLocalId(shareId, id);
+
+  /// Vu comme un fichier, pour l'aperçu, la grille et le téléchargement.
+  SafeboxFile asFile() => SafeboxFile(
+        id: localId,
+        folderId: 0,
+        name: name,
+        ext: ext.isNotEmpty ? ext : safeboxExtensionOf(name),
+        mime: mime,
+        family: family,
+        plainBytes: plainBytes,
+        storedBytes: storedBytes ?? 0,
+        originalBytes: null,
+        compressed: quality != SafeboxQuality.original,
+        cipherFormat: '',
+        key: key,
+        previewUrl: previewUrl,
+        meta: meta,
+        lost: lost,
+        quality: quality,
+      );
 }
 
-/// La carte d'un fichier partagé (`GET /api/safebox/shares/:id`).
+/// Une page d'éléments d'un partage.
+class SafeboxShareItemsPage {
+  const SafeboxShareItemsPage({required this.items, this.nextCursor});
+
+  factory SafeboxShareItemsPage.fromJson(int shareId, Map<String, dynamic> j) => SafeboxShareItemsPage(
+        items: _list(j['items']).map((e) => SafeboxShareItem.fromJson(shareId, e)).toList(),
+        nextCursor: _intOrNull(j['nextCursor']),
+      );
+
+  final List<SafeboxShareItem> items;
+  final int? nextCursor;
+}
+
+/// Un membre dans le suivi de l'expéditeur.
+enum SafeboxRecipientState {
+  saved,
+  downloaded,
+  pending;
+
+  static SafeboxRecipientState fromName(String? name) =>
+      values.firstWhere((s) => s.name == name, orElse: () => pending);
+}
+
+class SafeboxShareMember {
+  const SafeboxShareMember({required this.alanyaId, required this.state, this.name, this.avatarUrl, this.at});
+
+  factory SafeboxShareMember.fromJson(Map<String, dynamic> j) => SafeboxShareMember(
+        alanyaId: _int(j['alanyaID']),
+        name: j['name'] as String?,
+        avatarUrl: j['avatarUrl'] as String?,
+        state: SafeboxRecipientState.fromName(j['state'] as String?),
+        at: _date(j['at']),
+      );
+
+  final int alanyaId;
+  final String? name;
+  final String? avatarUrl;
+  final SafeboxRecipientState state;
+
+  /// Première réception (téléchargement ou « Garder »).
+  final DateTime? at;
+}
+
+/// Le suivi chez l'expéditeur (`GET /api/safebox/shares/:id/recipients`).
+class SafeboxShareRecipients {
+  const SafeboxShareRecipients({required this.members, required this.tracking});
+
+  factory SafeboxShareRecipients.fromJson(Map<String, dynamic> j) => SafeboxShareRecipients(
+        members: _list(j['members']).map(SafeboxShareMember.fromJson).toList(),
+        tracking: SafeboxShareTracking.fromJson(j['tracking']) ??
+            const SafeboxShareTracking(members: 0, downloaded: 0, saved: 0),
+      );
+
+  final List<SafeboxShareMember> members;
+  final SafeboxShareTracking tracking;
+}
+
+/// La carte d'un partage (`GET /api/safebox/shares/:id`), et une ligne de
+/// l'onglet « Reçus » (`GET /api/safebox/shares/received`).
 class SafeboxShareInfo {
   const SafeboxShareInfo({
     required this.id,
@@ -710,7 +949,11 @@ class SafeboxShareInfo {
     required this.plainBytes,
     required this.available,
     required this.isSender,
+    this.kind = SafeboxShareKind.file,
+    this.count = 1,
+    this.families = const {},
     this.storedBytes,
+    this.quality = SafeboxQuality.original,
     this.key,
     this.previewUrl,
     this.downloadsLeft,
@@ -718,40 +961,76 @@ class SafeboxShareInfo {
     this.meta,
     this.lost = false,
     this.removedByModeration = false,
+    this.revokedBySender = false,
+    this.sender,
+    this.tracking,
+    this.cover = const [],
+    this.availableCount,
+    this.savedCount,
+    this.fileIds = const [],
+    this.createdAt,
+    this.receivedAt,
   });
 
-  factory SafeboxShareInfo.fromJson(Map<String, dynamic> j) => SafeboxShareInfo(
-        id: _int(j['id']),
-        conversationId: _int(j['conversationId']),
-        senderId: _int(j['senderId']),
-        name: '${j['name'] ?? ''}',
-        mime: j['mime'] as String?,
-        family: SafeboxFamily.fromName(j['family'] as String?),
-        plainBytes: _int(j['plainBytes']),
-        available: j['available'] == true,
-        isSender: j['isSender'] == true,
-        storedBytes: _intOrNull(j['storedBytes']),
-        key: j['key'] is String ? base64Decode(j['key'] as String) : null,
-        previewUrl: j['previewUrl'] as String?,
-        downloadsLeft: _intOrNull(j['downloadsLeft']),
-        savedFileId: _intOrNull(j['savedFileId']),
-        meta: SafeboxMeta.fromJson(j['meta']),
-        lost: j['lost'] == true,
-        removedByModeration: j['removedByModeration'] == true,
-      );
+  factory SafeboxShareInfo.fromJson(Map<String, dynamic> j) {
+    final id = _int(j['id']);
+    final couverture = j['cover'];
+    return SafeboxShareInfo(
+      id: id,
+      conversationId: _int(j['conversationId']),
+      senderId: _int(j['senderId']),
+      name: '${j['name'] ?? ''}',
+      mime: j['mime'] as String?,
+      family: SafeboxFamily.fromName(j['family'] as String?),
+      plainBytes: _int(j['plainBytes']),
+      available: j['available'] == true,
+      isSender: j['isSender'] == true,
+      kind: SafeboxShareKind.fromName(j['kind'] as String?),
+      count: j['count'] == null ? 1 : _int(j['count']),
+      families: safeboxFamilyCounts(j['families']),
+      storedBytes: _intOrNull(j['storedBytes']),
+      quality: SafeboxQuality.fromName(j['quality'] as String?),
+      key: j['key'] is String ? base64Decode(j['key'] as String) : null,
+      previewUrl: j['previewUrl'] as String?,
+      downloadsLeft: _intOrNull(j['downloadsLeft']),
+      savedFileId: _intOrNull(j['savedFileId']),
+      meta: SafeboxMeta.fromJson(j['meta']),
+      lost: j['lost'] == true,
+      removedByModeration: j['removedByModeration'] == true,
+      revokedBySender: j['revokedBySender'] == true,
+      sender: SafeboxShareSender.fromJson(j['sender']),
+      tracking: SafeboxShareTracking.fromJson(j['tracking']),
+      // Une liste pour la carte d'un lot, un seul élément pour une ligne de « Reçus ».
+      cover: couverture is Map
+          ? [SafeboxShareItem.fromJson(id, Map<String, dynamic>.from(couverture))]
+          : _list(couverture).map((e) => SafeboxShareItem.fromJson(id, e)).toList(),
+      availableCount: _intOrNull(j['availableCount']),
+      savedCount: _intOrNull(j['savedCount']),
+      fileIds: [for (final v in (j['fileIds'] is List ? j['fileIds'] as List : const [])) _int(v)],
+      createdAt: _date(j['createdAt']),
+      receivedAt: _date(j['receivedAt']),
+    );
+  }
 
   final int id;
   final int conversationId;
   final int senderId;
+  final SafeboxShareKind kind;
+
+  /// Nom du fichier, ou titre du lot.
   final String name;
   final String? mime;
   final SafeboxFamily family;
   final int plainBytes;
+  final int count;
+  final Map<SafeboxFamily, int> families;
 
-  /// Faux quand l'expéditeur a retiré le fichier de son coffre.
+  /// Faux quand l'expéditeur a retiré le fichier (ou tout le lot) de son
+  /// coffre, ou le partage.
   final bool available;
   final bool isSender;
   final int? storedBytes;
+  final SafeboxQuality quality;
   final Uint8List? key;
   final String? previewUrl;
 
@@ -766,28 +1045,71 @@ class SafeboxShareInfo {
   /// Contenu perdu chez l'hébergeur : la carte le dit, rien ne se télécharge.
   final bool lost;
 
-  /// Retiré par la modération d'Alanya (et non par l'expéditeur).
+  /// Retiré par la modération d'Alanya.
   final bool removedByModeration;
+
+  /// Retiré par l'expéditeur (« Retirer le partage »).
+  final bool revokedBySender;
+
+  final SafeboxShareSender? sender;
+
+  /// Pour l'expéditeur seul : « téléchargé par 2 sur 7 ».
+  final SafeboxShareTracking? tracking;
+
+  /// Lot : les quatre premiers éléments disponibles (la mosaïque) ; ligne de
+  /// « Reçus » : le premier.
+  final List<SafeboxShareItem> cover;
+
+  /// Lot : éléments encore disponibles, et ceux déjà dans mon coffre.
+  final int? availableCount;
+  final int? savedCount;
+
+  /// Pour l'expéditeur : ses fichiers encore disponibles (« Envoyer ailleurs »).
+  final List<int> fileIds;
+  final DateTime? createdAt;
+
+  /// Ligne de « Reçus » : quand je l'ai téléchargé ou gardé la première fois.
+  final DateTime? receivedAt;
+
+  bool get isBatch => kind == SafeboxShareKind.batch;
 
   /// Identifiant local d'un fichier reçu : négatif, pour ne jamais croiser
   /// celui d'un fichier de mon coffre dans les caches.
   int get localId => -id;
 
-  /// Vu comme un fichier, pour l'aperçu et le téléchargement.
-  SafeboxFile asFile() => SafeboxFile(
-        id: localId,
-        folderId: 0,
+  /// Un fichier seul vu comme son unique élément.
+  SafeboxShareItem asItem() => SafeboxShareItem(
+        shareId: id,
+        id: 0,
+        position: 0,
         name: name,
         ext: safeboxExtensionOf(name),
         mime: mime,
         family: family,
         plainBytes: plainBytes,
-        storedBytes: storedBytes ?? 0,
-        originalBytes: null,
-        compressed: false,
-        cipherFormat: '',
+        available: available,
+        storedBytes: storedBytes,
+        quality: quality,
+        meta: meta,
+        lost: lost,
         key: key,
         previewUrl: previewUrl,
-        meta: meta,
+        savedFileId: savedFileId,
       );
+
+  /// Vu comme un fichier, pour l'aperçu et le téléchargement.
+  SafeboxFile asFile() => asItem().asFile();
+}
+
+/// Une page de l'onglet « Reçus ».
+class SafeboxReceivedPage {
+  const SafeboxReceivedPage({required this.shares, this.nextCursor});
+
+  factory SafeboxReceivedPage.fromJson(Map<String, dynamic> j) => SafeboxReceivedPage(
+        shares: _list(j['shares']).map(SafeboxShareInfo.fromJson).toList(),
+        nextCursor: _intOrNull(j['nextCursor']),
+      );
+
+  final List<SafeboxShareInfo> shares;
+  final int? nextCursor;
 }

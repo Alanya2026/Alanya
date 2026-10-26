@@ -8116,6 +8116,274 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxYesterday => 'Hier';
 
   @override
+  String get safeboxShareBadge => 'Coffre-fort';
+
+  @override
+  String get safeboxShareSeeAlbum => 'Voir l\'album';
+
+  @override
+  String safeboxShareItems(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count éléments',
+      one: '1 élément',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count vidéos',
+      one: '1 vidéo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyAudios(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count audios',
+      one: '1 audio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareFamilyDocuments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count documents',
+      one: '1 document',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareDownloadedBy(int count, int total) {
+    return 'Téléchargé par $count sur $total';
+  }
+
+  @override
+  String get safeboxShareSeeTracking => 'Voir le suivi';
+
+  @override
+  String safeboxShareUploading(int percent) {
+    return 'Envoi vers le coffre-fort · $percent %';
+  }
+
+  @override
+  String get safeboxShareUploadingHint =>
+      'Les membres le verront à la fin de l\'envoi.';
+
+  @override
+  String safeboxShareBatchTitle(int count) {
+    return '$count fichiers';
+  }
+
+  @override
+  String get safeboxSharedFileTitle => 'Fichier partagé';
+
+  @override
+  String safeboxSharedBy(String name) {
+    return 'Envoyé par $name';
+  }
+
+  @override
+  String safeboxSharedFrom(String name) {
+    return 'De $name';
+  }
+
+  @override
+  String get safeboxSharedSender => 'l\'expéditeur';
+
+  @override
+  String safeboxSharedAvailableWhile(String name) {
+    return 'Chiffré. Disponible tant que $name le garde dans son coffre-fort.';
+  }
+
+  @override
+  String get safeboxSharedDownloadPlay => 'Télécharger et lire';
+
+  @override
+  String safeboxSharedWifiAdvised(String size) {
+    return 'Wi-Fi conseillé ($size).';
+  }
+
+  @override
+  String get safeboxSharedDownloadAll => 'Tout télécharger';
+
+  @override
+  String safeboxSharedKeepAlbumHint(String size) {
+    return '« Garder » l\'ajoute à vos Albums ($size de votre espace).';
+  }
+
+  @override
+  String safeboxSharedAlbumKept(String name) {
+    return 'Album « $name » ajouté à vos Albums';
+  }
+
+  @override
+  String get safeboxSharedAllKept => 'Tout est dans votre coffre';
+
+  @override
+  String get safeboxSharedUnavailable =>
+      'Plus disponible : l\'expéditeur l\'a supprimé';
+
+  @override
+  String safeboxTrackingOutOf(int count, int total) {
+    return '$count sur $total';
+  }
+
+  @override
+  String get safeboxTrackingReceivedLabel =>
+      'membres l\'ont téléchargé ou gardé';
+
+  @override
+  String safeboxTrackingSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count l\'ont gardé dans leur coffre-fort',
+      one: '1 l\'a gardé dans son coffre-fort',
+      zero: 'Personne ne l\'a encore gardé dans son coffre-fort',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxTrackingSentAt(String date) {
+    return 'envoyé $date';
+  }
+
+  @override
+  String get safeboxTrackingMembers => 'Membres';
+
+  @override
+  String safeboxTrackingDownloadedAt(String date) {
+    return 'Téléchargé · $date';
+  }
+
+  @override
+  String get safeboxTrackingSavedState => 'Gardé dans son coffre-fort';
+
+  @override
+  String get safeboxTrackingPending => 'Pas encore';
+
+  @override
+  String get safeboxTrackingNote =>
+      'Le fichier reste dans votre dossier Partager. Si vous le supprimez, il ne sera plus disponible dans la discussion.';
+
+  @override
+  String get safeboxTrackingSendElsewhere => 'Envoyer ailleurs';
+
+  @override
+  String get safeboxTrackingRevoke => 'Retirer le partage';
+
+  @override
+  String get safeboxTrackingRevokeConfirm =>
+      'Les membres ne pourront plus le télécharger. Le fichier reste dans votre coffre.';
+
+  @override
+  String get safeboxTrackingRevoked => 'Partage retiré';
+
+  @override
+  String safeboxShareTabSent(int count) {
+    return 'Mes envois · $count';
+  }
+
+  @override
+  String safeboxShareTabReceived(int count) {
+    return 'Reçus · $count';
+  }
+
+  @override
+  String get safeboxShareTabReceivedPlain => 'Reçus';
+
+  @override
+  String get safeboxShareSentInfo =>
+      'Ces fichiers restent ici jusqu\'à ce que vous les supprimiez. Ils comptent dans votre espace.';
+
+  @override
+  String get safeboxShareReceivedInfo =>
+      'Les fichiers que l\'on vous envoie par le coffre, toutes discussions confondues. Ils restent disponibles tant que l\'expéditeur les garde.';
+
+  @override
+  String safeboxShareAllReceived(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers téléchargés par tous',
+      one: '1 fichier téléchargé par tous',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxShareToFree(String size) {
+    return '$size à libérer';
+  }
+
+  @override
+  String safeboxShareDeleteAllReceived(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Supprimer ces $count fichiers de Partager ? Tout le monde les a déjà.',
+      one: 'Supprimer ce fichier de Partager ? Tout le monde l\'a déjà.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxShareNotSent => 'Pas encore envoyé';
+
+  @override
+  String safeboxShareStatusAll(String name) {
+    return '$name · téléchargé par tous';
+  }
+
+  @override
+  String safeboxShareStatusNone(String name) {
+    return '$name · personne n\'a encore téléchargé';
+  }
+
+  @override
+  String safeboxShareStatusSome(String name, int count, int total) {
+    return '$name · téléchargé par $count sur $total';
+  }
+
+  @override
+  String get safeboxShareConvFallback => 'une discussion';
+
+  @override
+  String get safeboxReceivedEmpty => 'Rien reçu par le coffre pour l\'instant';
+
+  @override
+  String get safeboxReceivedInDownloads => 'Dans Téléchargements/Alanya';
+
+  @override
+  String get safeboxReceivedKept => 'Gardé dans votre coffre';
+
+  @override
   String get safeboxRootVideos => 'Vidéos';
 
   @override
@@ -8445,13 +8713,13 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get safeboxShareSave => 'Enregistrer dans mon coffre';
+  String get safeboxShareSave => 'Garder dans mon coffre';
 
   @override
   String get safeboxShareSaved => 'Dans votre coffre';
 
   @override
-  String get safeboxShareSavedToast => 'Enregistré dans votre coffre';
+  String get safeboxShareSavedToast => 'Gardé dans votre coffre';
 
   @override
   String get safeboxShareRevoked => 'Fichier retiré par l\'expéditeur';
