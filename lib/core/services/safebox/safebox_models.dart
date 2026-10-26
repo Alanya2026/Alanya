@@ -4,6 +4,10 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'safebox_quality.dart';
+
+export 'safebox_quality.dart' show SafeboxQuality;
+
 /// Les quatre types de fichiers (la « famille »), décidés par l'extension.
 enum SafeboxFamily {
   photos,
@@ -272,7 +276,7 @@ class SafeboxFolder {
 /// durée et définition d'une vidéo, pages d'un PDF, titre, artiste et durée
 /// d'un audio. Ils décorent la carte d'un fichier partagé, rien de plus.
 class SafeboxMeta {
-  const SafeboxMeta({this.durationMs, this.width, this.height, this.pages, this.title, this.artist});
+  const SafeboxMeta({this.durationMs, this.width, this.height, this.pages, this.title, this.artist, this.codec});
 
   /// Null quand il n'y a rien d'utile.
   static SafeboxMeta? fromJson(dynamic j) {
@@ -286,6 +290,7 @@ class SafeboxMeta {
       pages: entier(j['pages']),
       title: texte(j['title']),
       artist: texte(j['artist']),
+      codec: j['codec'] == 'hevc' || j['codec'] == 'avc' ? j['codec'] as String : null,
     );
     return m.isEmpty ? null : m;
   }
@@ -297,8 +302,18 @@ class SafeboxMeta {
   final String? title;
   final String? artist;
 
+  /// Format d'une vidéo : « hevc » (H.265) ou « avc » (H.264).
+  final String? codec;
+
+  bool get isHevc => codec == 'hevc';
+
   bool get isEmpty =>
-      durationMs == null && (width == null || height == null) && pages == null && title == null && artist == null;
+      durationMs == null &&
+      (width == null || height == null) &&
+      pages == null &&
+      title == null &&
+      artist == null &&
+      codec == null;
 
   Map<String, dynamic> toJson() => {
         if (durationMs != null) 'durationMs': durationMs,
@@ -306,6 +321,7 @@ class SafeboxMeta {
         if (pages != null) 'pages': pages,
         if (title != null) 'title': title,
         if (artist != null) 'artist': artist,
+        if (codec != null) 'codec': codec,
       };
 
   /// « 12:47 », « 1:02:03 ».
@@ -440,6 +456,7 @@ class SafeboxFile {
     this.lost = false,
     this.note,
     this.alsoIn = const [],
+    this.quality = SafeboxQuality.original,
   });
 
   factory SafeboxFile.fromJson(Map<String, dynamic> j) => SafeboxFile(
@@ -467,6 +484,10 @@ class SafeboxFile {
         lost: j['lost'] == true,
         note: SafeboxNote.fromJson(j['note']),
         alsoIn: _list(j['alsoIn']).map(SafeboxPlace.fromJson).toList(),
+        // Un serveur d'avant le 24/10/2026 ne dit que `compressed`.
+        quality: j['quality'] is String
+            ? SafeboxQuality.fromName(j['quality'] as String)
+            : (j['compressed'] == true ? SafeboxQuality.hd : SafeboxQuality.original),
       );
 
   final int id;
@@ -479,6 +500,9 @@ class SafeboxFile {
   /// Les autres endroits du coffre où se trouve le même contenu, sans copie
   /// (décision du 24/10/2026) ; vide s'il n'est qu'ici.
   final List<SafeboxPlace> alsoIn;
+
+  /// Le format dans lequel il a été déposé ; Original s'il est tel quel.
+  final SafeboxQuality quality;
 
   /// Taille en clair : celle que l'inscrit retrouvera.
   final int plainBytes;

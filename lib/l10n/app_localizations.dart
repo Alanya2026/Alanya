@@ -13156,6 +13156,144 @@ abstract class AppLocalizations {
   /// **'Déplacer vers…'**
   String get safeboxMoveToRoot;
 
+  /// No description provided for @safeboxQualityTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qualité d\'envoi'**
+  String get safeboxQualityTitle;
+
+  /// No description provided for @safeboxQualityOriginal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Original'**
+  String get safeboxQualityOriginal;
+
+  /// No description provided for @safeboxQualityHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'HD'**
+  String get safeboxQualityHd;
+
+  /// No description provided for @safeboxQualityCompressed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Compressé'**
+  String get safeboxQualityCompressed;
+
+  /// No description provided for @safeboxQualityOriginalHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tel quel, aucune perte de qualité.'**
+  String get safeboxQualityOriginalHint;
+
+  /// No description provided for @safeboxQualityVideoPart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vidéo {res}'**
+  String safeboxQualityVideoPart(String res);
+
+  /// No description provided for @safeboxQualityPhotoPart.
+  ///
+  /// In fr, this message translates to:
+  /// **'photo {px} px'**
+  String safeboxQualityPhotoPart(String px);
+
+  /// No description provided for @safeboxQualityMusicPart.
+  ///
+  /// In fr, this message translates to:
+  /// **'musique {kbps} kbit/s'**
+  String safeboxQualityMusicPart(String kbps);
+
+  /// No description provided for @safeboxQualityTooLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'« {name} » ferait {size} : au-delà de la limite de {max} par fichier.'**
+  String safeboxQualityTooLarge(String name, String size, String max);
+
+  /// No description provided for @safeboxQualityNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les documents partent toujours tels quels. Un fichier déjà plus léger que le format choisi n\'est pas modifié.'**
+  String get safeboxQualityNote;
+
+  /// No description provided for @safeboxQualityFreeAfter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après l\'ajout : {size} libres'**
+  String safeboxQualityFreeAfter(String size);
+
+  /// No description provided for @safeboxQualityNoneFits.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop lourd même compressé : la limite est de {max} par fichier.'**
+  String safeboxQualityNoneFits(String max);
+
+  /// No description provided for @safeboxQualityDowngraded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop lourd dans votre format habituel : envoi en {quality}.'**
+  String safeboxQualityDowngraded(String quality);
+
+  /// No description provided for @safeboxQualityTo.
+  ///
+  /// In fr, this message translates to:
+  /// **'vers {destination}'**
+  String safeboxQualityTo(String destination);
+
+  /// No description provided for @safeboxQualityAddCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Ajouter 1 fichier · ≈ {size}} other{Ajouter {count} fichiers · ≈ {size}}}'**
+  String safeboxQualityAddCount(int count, String size);
+
+  /// No description provided for @safeboxQualitySendCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Envoyer 1 fichier · ≈ {size}} other{Envoyer {count} fichiers · ≈ {size}}}'**
+  String safeboxQualitySendCount(int count, String size);
+
+  /// No description provided for @safeboxCountVideos.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 vidéo} other{{count} vidéos}}'**
+  String safeboxCountVideos(int count);
+
+  /// No description provided for @safeboxCountPhotos.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 photo} other{{count} photos}}'**
+  String safeboxCountPhotos(int count);
+
+  /// No description provided for @safeboxCountAudios.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier audio} other{{count} fichiers audio}}'**
+  String safeboxCountAudios(int count);
+
+  /// No description provided for @safeboxCountDocuments.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 document} other{{count} documents}}'**
+  String safeboxCountDocuments(int count);
+
+  /// No description provided for @safeboxHevcWarningTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vidéo en H.265'**
+  String get safeboxHevcWarningTitle;
+
+  /// No description provided for @safeboxHevcWarningBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Certains membres risquent de ne pas pouvoir lire cette vidéo : elle est en H.265, un format que leur téléphone ne lit pas. L\'envoyer quand même ?'**
+  String get safeboxHevcWarningBody;
+
+  /// No description provided for @safeboxHevcWarningSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer quand même'**
+  String get safeboxHevcWarningSend;
+
   /// No description provided for @safeboxRootVideos.
   ///
   /// In fr, this message translates to:

@@ -15,6 +15,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../theme/locale_controller.dart';
 import '../local_notification_helper.dart';
 import '../image_thumbnail_service.dart';
+import '../video_codec_policy.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
 import 'safebox_cipher.dart';
@@ -22,6 +23,7 @@ import 'safebox_download_manager.dart';
 import 'safebox_foreground.dart';
 import 'safebox_media_prep.dart';
 import 'safebox_models.dart';
+import 'safebox_quality.dart';
 import 'safebox_received_files.dart';
 import 'safebox_upload_manager.dart';
 
@@ -45,8 +47,44 @@ class SafeboxRejection {
   final SafeboxFamily? expectedFamily;
 }
 
-/// Choix de compression retenu par l'inscrit (« Retenir mon choix »).
-enum SafeboxCompressionChoice { ask, original, compressed }
+/// Ce que pèserait un lot de fichiers dans chacun des trois formats, pour la
+/// feuille « Qualité d'envoi ».
+class SafeboxQualityEstimate {
+  const SafeboxQualityEstimate({
+    required this.totals,
+    required this.tooLarge,
+    required this.counts,
+    required this.compressible,
+    required this.hevc,
+  });
+
+  /// Poids total du lot dans chaque format.
+  final Map<SafeboxQuality, int> totals;
+
+  /// Le premier fichier qui dépasserait la limite d'un fichier dans ce format.
+  final Map<SafeboxQuality, ({String name, int bytes})> tooLarge;
+
+  /// Nombre de fichiers par type, pour le sous-titre (« 3 vidéos et 2 photos »).
+  final Map<SafeboxFamily, int> counts;
+
+  /// Au moins un fichier du lot se compresse : sinon, pas de question.
+  final bool compressible;
+
+  /// Les vidéos partiraient en H.265.
+  final bool hevc;
+
+  bool fits(SafeboxQuality q) => !tooLarge.containsKey(q);
+
+  /// Gain par rapport à l'original, en pour cent (0 à 100).
+  int gainPercent(SafeboxQuality q) {
+    final o = totals[SafeboxQuality.original] ?? 0;
+    final t = totals[q] ?? o;
+    return o <= 0 ? 0 : ((o - t) * 100 / o).round().clamp(0, 100);
+  }
+
+  /// Moins de 5 % de gain : rien qui vaille une perte de qualité.
+  bool nothingToGain(SafeboxQuality q) => q != SafeboxQuality.original && gainPercent(q) < 5;
+}
 
 class SafeboxController extends ChangeNotifier {
   SafeboxController({
@@ -180,19 +218,45 @@ class SafeboxController extends ChangeNotifier {
   /// tant que les réglages du coffre ne sont pas chargés).
   SafeboxFamily familyOf(String name) => _overview?.limits.familyOf(name) ?? SafeboxFamily.documents;
 
-  // ── Choix de compression ─────────────────────────────────────────────────
+  // ── Format d'envoi (décision du 24/10/2026) ──────────────────────────────
 
-  static const _cleChoix = 'safebox_compression_choice_v1';
+  /// Le choix « Retenir mon choix ». La clé change avec les trois formats :
+  /// l'ancien « compressé » (720p) ne veut plus dire la même chose.
+  static const _cleChoix = 'safebox_quality_choice_v2';
 
-  Future<SafeboxCompressionChoice> rememberedChoice() async {
+  /// Le format retenu, ou null : poser la question.
+  Future<SafeboxQuality?> rememberedQuality() async {
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_cleChoix);
-    return SafeboxCompressionChoice.values.firstWhere((c) => c.name == v, orElse: () => SafeboxCompressionChoice.ask);
+    return v == null ? null : SafeboxQuality.fromName(v);
   }
 
-  Future<void> rememberChoice(SafeboxCompressionChoice choice) async {
+  Future<void> rememberQuality(SafeboxQuality q) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cleChoix, choice.name);
+    await prefs.setString(_cleChoix, q.name);
+  }
+
+  /// Les vidéos peuvent-elles partir en H.265 ? Il faut que ce téléphone
+  /// l'encode, et que les destinataires le lisent : ceux de la discussion
+  /// quand on l'envoie, aucun d'inconnu sinon. Déposée dans Partager sans
+  /// destinataire connu, une vidéo part en H.264, que tout le monde lit.
+  Future<bool> _hevcPermis(SafeboxFolder folder, int? conversationId) async {
+    if (!(await VideoCodecSupport.detect()).hevcEncoder) return false;
+    if (conversationId != null) return hevcAllowedFor(conversationId);
+    return folder.root != SafeboxRoot.partager;
+  }
+
+  /// Une vidéo en H.265 de mon coffre, envoyée dans des discussions dont un
+  /// membre ne lit pas ce format : l'écran prévient avant l'envoi (elle n'est
+  /// pas reconvertie). Faux dans le doute, pour ne pas alarmer à tort.
+  Future<bool> hevcUnreadableIn(SafeboxFile file, List<int> conversationIds) async {
+    if (file.family != SafeboxFamily.videos || !(file.meta?.isHevc ?? false)) return false;
+    final politique = VideoCodecPolicy.maybeInstance;
+    if (politique == null) return false;
+    for (final conv in conversationIds) {
+      if (await politique.membersReadHevc(conv) == false) return true;
+    }
+    return false;
   }
 
   // ── Dépôt ────────────────────────────────────────────────────────────────
@@ -217,7 +281,9 @@ class SafeboxController extends ChangeNotifier {
         refuses.add(SafeboxRejection(pick, SafeboxRejectReason.wrongFamily, expectedFamily: famille));
         continue;
       }
-      if (limites != null && pick.size > limites.maxFileBytes) {
+      // Trop lourd tel quel : refusé seulement s'il ne se compresse pas. Sinon
+      // la feuille des formats dit lesquels passent sous la limite.
+      if (limites != null && pick.size > limites.maxFileBytes && !SafeboxMediaPrep.canCompress(famille, pick.name)) {
         refuses.add(SafeboxRejection(pick, SafeboxRejectReason.tooLarge));
         continue;
       }
@@ -226,46 +292,66 @@ class SafeboxController extends ChangeNotifier {
     return (ok: ok, rejected: refuses);
   }
 
-  /// Poids total et poids compressé estimé, pour la feuille de choix. Null
-  /// quand rien de ce lot ne se compresse (documents, audios, GIF…). Chaque
-  /// fichier selon son type : un lot pour Albums ou Partager mélange les types.
-  Future<({int original, int compressed})?> estimate(List<SafeboxPick> picks) async {
-    bool compressible(SafeboxPick p) => SafeboxMediaPrep.canCompress(familyOf(p.name), p.name);
-    if (!picks.any(compressible)) return null;
+  /// Ce que pèserait le lot dans chacun des trois formats, chaque fichier
+  /// selon son type (un lot pour Albums ou Partager les mélange), avec le
+  /// codec qu'auraient ses vidéos à cette destination.
+  Future<SafeboxQualityEstimate> estimateQualities(
+    List<SafeboxPick> picks, {
+    required SafeboxFolder folder,
+    int? conversationId,
+  }) async {
+    final hevc = await _hevcPermis(folder, conversationId);
+    final limite = _overview?.limits.maxFileBytes ?? 0;
     final prep = await _prep();
-    var original = 0;
-    var compresse = 0;
-    for (final p in picks) {
-      original += p.size;
-      compresse += compressible(p) ? await prep.estimate(p.path, familyOf(p.name), p.size) : p.size;
+    final totaux = {for (final q in SafeboxQuality.values) q: 0};
+    final tropLourds = <SafeboxQuality, ({String name, int bytes})>{};
+    final nombres = <SafeboxFamily, int>{};
+    var compressible = false;
+    for (final pick in picks) {
+      final famille = familyOf(pick.name);
+      nombres[famille] = (nombres[famille] ?? 0) + 1;
+      final peut = SafeboxMediaPrep.canCompress(famille, pick.name);
+      compressible = compressible || peut;
+      final faits = peut ? await prep.facts(pick.path, famille, pick.size) : SafeboxMediaFacts(sizeBytes: pick.size);
+      for (final q in SafeboxQuality.values) {
+        final octets = SafeboxMediaPrep.estimateFrom(faits, famille, pick.name, q, hevc: hevc);
+        totaux[q] = totaux[q]! + octets;
+        if (limite > 0 && octets > limite) tropLourds.putIfAbsent(q, () => (name: pick.name, bytes: octets));
+      }
     }
-    return (original: original, compressed: compresse);
+    return SafeboxQualityEstimate(
+      totals: totaux,
+      tooLarge: tropLourds,
+      counts: nombres,
+      compressible: compressible,
+      hevc: hevc,
+    );
   }
 
-  /// Prépare chaque fichier (compression au besoin, aperçu chiffré) et le
-  /// confie au gestionnaire d'envoi. Les fichiers partent un par un.
+  /// Prépare chaque fichier (compression dans le format [quality], aperçu
+  /// chiffré) et le confie au gestionnaire d'envoi. Les fichiers partent un
+  /// par un.
   Future<void> addFiles(
     List<SafeboxPick> picks,
     SafeboxFolder folder, {
-    required bool compress,
+    required SafeboxQuality quality,
     int? shareConversationId,
   }) async {
     final prep = await _prep();
     await prep.workDir.create(recursive: true);
     final maxApercu = (_overview?.limits.maxPreviewBytes ?? 256 * 1024) - kSafeboxTagBytes;
+    final hevc = quality == SafeboxQuality.original ? false : await _hevcPermis(folder, shareConversationId);
     for (final pick in picks) {
       try {
         var source = pick.path;
         var nom = pick.name;
         var possede = false;
         final famille = familyOf(pick.name);
-        if (compress) {
-          final c = await prep.compress(pick.path, pick.name, famille);
-          if (c != null) {
-            source = c.path;
-            nom = c.name;
-            possede = true;
-          }
+        final c = await prep.compress(pick.path, pick.name, famille, quality, hevc: hevc);
+        if (c != null) {
+          source = c.path;
+          nom = c.name;
+          possede = true;
         }
         final st = await File(source).stat();
         if (st.size <= 0) continue;
@@ -293,6 +379,9 @@ class SafeboxController extends ChangeNotifier {
             plainSize: st.size,
             originalSize: possede ? pick.size : null,
             compressed: possede,
+            // Un fichier déjà plus léger que le format part tel quel : il
+            // reste un original (utile pour « Libérer la mémoire du téléphone »).
+            quality: (possede ? quality : SafeboxQuality.original).name,
             previewPath: cheminApercu,
             previewSize: tailleApercu,
             shareConversationId: shareConversationId,

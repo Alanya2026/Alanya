@@ -7284,6 +7284,134 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxMoveToRoot => '移动到…';
 
   @override
+  String get safeboxQualityTitle => '上传质量';
+
+  @override
+  String get safeboxQualityOriginal => '原始';
+
+  @override
+  String get safeboxQualityHd => '高清';
+
+  @override
+  String get safeboxQualityCompressed => '压缩';
+
+  @override
+  String get safeboxQualityOriginalHint => '保持原样，画质无损。';
+
+  @override
+  String safeboxQualityVideoPart(String res) {
+    return '视频 $res';
+  }
+
+  @override
+  String safeboxQualityPhotoPart(String px) {
+    return '照片 $px 像素';
+  }
+
+  @override
+  String safeboxQualityMusicPart(String kbps) {
+    return '音乐 $kbps kbps';
+  }
+
+  @override
+  String safeboxQualityTooLarge(String name, String size, String max) {
+    return '“$name”将为 $size：超过每个文件 $max 的上限。';
+  }
+
+  @override
+  String get safeboxQualityNote => '文档始终按原样发送。已经比所选格式更小的文件不会被修改。';
+
+  @override
+  String safeboxQualityFreeAfter(String size) {
+    return '添加后：剩余 $size';
+  }
+
+  @override
+  String safeboxQualityNoneFits(String max) {
+    return '即使压缩后仍过大：每个文件上限为 $max。';
+  }
+
+  @override
+  String safeboxQualityDowngraded(String quality) {
+    return '按常用格式太大：将以$quality发送。';
+  }
+
+  @override
+  String safeboxQualityTo(String destination) {
+    return '到$destination';
+  }
+
+  @override
+  String safeboxQualityAddCount(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '添加 $count 个文件 · ≈ $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxQualitySendCount(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '发送 $count 个文件 · ≈ $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 张照片',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountAudios(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个音频',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountDocuments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文档',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxHevcWarningTitle => 'H.265 视频';
+
+  @override
+  String get safeboxHevcWarningBody =>
+      '部分成员可能无法播放此视频：它采用 H.265 格式，他们的手机无法读取。仍要发送吗？';
+
+  @override
+  String get safeboxHevcWarningSend => '仍然发送';
+
+  @override
   String get safeboxRootVideos => '视频';
 
   @override

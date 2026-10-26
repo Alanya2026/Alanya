@@ -140,6 +140,7 @@ extension SafeboxApi on TalkyApiClient {
     required String cipherFormat,
     int? originalSize,
     bool compressed = false,
+    String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
   }) async =>
@@ -155,6 +156,7 @@ extension SafeboxApi on TalkyApiClient {
               'cipherFormat': cipherFormat,
               if (originalSize != null) 'originalSize': originalSize,
               'compressed': compressed,
+              if (quality != null) 'quality': quality,
               'previewSize': previewSize,
               if (meta != null && meta.isNotEmpty) 'meta': meta,
             }),

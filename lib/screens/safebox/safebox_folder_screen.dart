@@ -17,7 +17,6 @@ import '../../talky_api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_chat_picker.dart';
 import 'safebox_note_widgets.dart';
@@ -180,44 +179,11 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
     }
     if (tri.ok.isEmpty) return;
 
-    var compresser = false;
-    final estimation = await _c.estimate(tri.ok);
-    if (estimation != null && mounted) {
-      final retenu = await _c.rememberedChoice();
-      if (retenu == SafeboxCompressionChoice.ask) {
-        if (!mounted) return;
-        final r = await showSafeboxCompressionSheet(
-          context,
-          originalBytes: estimation.original,
-          compressedBytes: estimation.compressed,
-        );
-        if (r == null) return;
-        compresser = r.compress;
-        if (r.remember) {
-          await _c.rememberChoice(r.compress ? SafeboxCompressionChoice.compressed : SafeboxCompressionChoice.original);
-        }
-      } else {
-        compresser = retenu == SafeboxCompressionChoice.compressed;
-      }
-    }
-    // Espace : on prévient tout de suite plutôt qu'à la réservation.
-    final quota = _c.overview?.quota;
-    final total = tri.ok.fold<int>(0, (s, p) => s + p.size);
-    if (quota != null && !compresser && total > quota.freeBytes) {
-      _espacePlein();
-      return;
-    }
-    if (!mounted) return;
+    // Original, HD ou Compressé (décision du 24/10/2026), espace compris.
+    final qualite = await askSafeboxQuality(context, picks: tri.ok, folder: page.folder);
+    if (qualite == null || !mounted) return;
     safeboxSnack(context, l10n.safeboxPreparing);
-    await _c.addFiles(tri.ok, page.folder, compress: compresser);
-  }
-
-  void _espacePlein() {
-    final l10n = context.l10n;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(l10n.safeboxQuotaExceeded),
-      action: SnackBarAction(label: l10n.safeboxGoPlus, onPressed: () => showPaywall(context, null)),
-    ));
+    await _c.addFiles(tri.ok, page.folder, quality: qualite);
   }
 
   // ── Fichiers ─────────────────────────────────────────────────────────────
@@ -270,6 +236,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> {
   Future<void> _envoyerDansDiscussion(SafeboxFile f) async {
     final ids = await pickSafeboxConversations(context, file: f);
     if (ids == null || ids.isEmpty || !mounted) return;
+    if (!await confirmSafeboxHevcSend(context, f, ids) || !mounted) return;
     try {
       final n = await _c.sendToConversations(f, ids);
       if (!mounted) return;

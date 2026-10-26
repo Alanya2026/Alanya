@@ -102,16 +102,32 @@ class VideoCodecPolicy {
   Future<bool> allowsHevc(int conversationID) async {
     try {
       if (!(await _support()).hevcEncoder) return false;
-      final now = _clock();
-      final hit = _cache[conversationID];
-      if (hit != null && now.difference(hit.at) < cacheFor) return hit.hevc;
-      final hevc = await _fetchAllowsHevc(conversationID);
-      _cache[conversationID] = (hevc: hevc, at: now);
-      return hevc;
+      return await _membresLisentHevc(conversationID);
     } catch (e) {
       debugPrint('[VideoCodec] autorisation HEVC inconnue pour $conversationID, H.264: $e');
       return false;
     }
+  }
+
+  /// `true` si tous les appareils actifs des membres de [conversationID]
+  /// lisent le HEVC, quel que soit ce téléphone : pour une vidéo déjà en HEVC
+  /// (coffre-fort), qui n'a pas à être encodée ici. `null` si on ne sait pas.
+  Future<bool?> membersReadHevc(int conversationID) async {
+    try {
+      return await _membresLisentHevc(conversationID);
+    } catch (e) {
+      debugPrint('[VideoCodec] lecture HEVC inconnue pour $conversationID: $e');
+      return null;
+    }
+  }
+
+  Future<bool> _membresLisentHevc(int conversationID) async {
+    final now = _clock();
+    final hit = _cache[conversationID];
+    if (hit != null && now.difference(hit.at) < cacheFor) return hit.hevc;
+    final hevc = await _fetchAllowsHevc(conversationID);
+    _cache[conversationID] = (hevc: hevc, at: now);
+    return hevc;
   }
 
   /// Déclare au serveur si ce téléphone lit le HEVC. Une fois par session ;

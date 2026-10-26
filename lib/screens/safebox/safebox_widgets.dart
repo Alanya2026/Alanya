@@ -226,6 +226,30 @@ void safeboxSnack(BuildContext context, String message, {bool error = false}) {
 void safeboxShowError(BuildContext context, Object e) =>
     safeboxSnack(context, presenterErreur(context.l10n, e, domaine: ErrorDomain.media), error: true);
 
+/// Une vidéo en H.265 envoyée dans des discussions dont un membre ne lit pas
+/// ce format (décision du 24/10/2026) : elle n'est pas reconvertie, on
+/// prévient. Vrai pour envoyer.
+Future<bool> confirmSafeboxHevcSend(BuildContext context, SafeboxFile file, List<int> conversationIds) async {
+  final risque = await context.read<SafeboxController>().hevcUnreadableIn(file, conversationIds);
+  if (!risque || !context.mounted) return true;
+  final l10n = context.l10n;
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.safeboxHevcWarningTitle),
+      content: Text(l10n.safeboxHevcWarningBody),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(MaterialLocalizations.of(ctx).cancelButtonLabel),
+        ),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.safeboxHevcWarningSend)),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
 /// Ce que sont devenus les envois d'un fichier : « Reçu par 3 sur 4 »,
 /// « Reçu par tous » (on peut le supprimer sans priver personne), ou
 /// « Envoyé dans 2 discussions » quand le serveur ne sait pas qui l'a reçu.

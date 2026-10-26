@@ -55,33 +55,17 @@ Future<bool> sendPhoneFilesViaSafebox(
       error: true,
     );
   }
-  if (tri.ok.isEmpty) return false;
-  var compresser = false;
-  final estimation = await c.estimate(tri.ok);
-  if (estimation != null && context.mounted) {
-    final retenu = await c.rememberedChoice();
-    if (retenu == SafeboxCompressionChoice.ask) {
-      if (!context.mounted) return false;
-      final r = await showSafeboxCompressionSheet(
-        context,
-        originalBytes: estimation.original,
-        compressedBytes: estimation.compressed,
-      );
-      if (r == null) return false;
-      compresser = r.compress;
-      if (r.remember) {
-        await c.rememberChoice(r.compress ? SafeboxCompressionChoice.compressed : SafeboxCompressionChoice.original);
-      }
-    } else {
-      compresser = retenu == SafeboxCompressionChoice.compressed;
-    }
-  }
-  final total = tri.ok.fold<int>(0, (s, p) => s + p.size);
-  if (!compresser && total > (c.overview ?? vue).quota.freeBytes) {
-    if (context.mounted) safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
-    return false;
-  }
-  await c.addFiles(tri.ok, partager, compress: compresser, shareConversationId: conversationId);
+  if (tri.ok.isEmpty || !context.mounted) return false;
+  // Les vidéos partent en H.265 seulement si tous les membres le lisent.
+  final qualite = await askSafeboxQuality(
+    context,
+    picks: tri.ok,
+    folder: partager,
+    conversationId: conversationId,
+    send: true,
+  );
+  if (qualite == null) return false;
+  await c.addFiles(tri.ok, partager, quality: qualite, shareConversationId: conversationId);
   if (context.mounted) safeboxSnack(context, l10n.safeboxShareQueued);
   return true;
 }
@@ -107,6 +91,7 @@ class _SafeboxSendScreenState extends State<SafeboxSendScreen> {
 
   /// Fichier choisi dans le coffre : le partage est créé, le message rendu.
   Future<void> _envoyerDuCoffre(SafeboxFile f) async {
+    if (!await confirmSafeboxHevcSend(context, f, [widget.conversationId]) || !mounted) return;
     setState(() => _occupe = true);
     try {
       final payload = await _c.shareFile(f, widget.conversationId);

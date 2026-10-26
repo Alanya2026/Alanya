@@ -42,6 +42,7 @@ abstract class SafeboxTransport {
     required String cipherFormat,
     int? originalSize,
     bool compressed,
+    String? quality,
     int previewSize,
     Map<String, dynamic>? meta,
   });
@@ -76,6 +77,7 @@ class ApiSafeboxTransport implements SafeboxTransport {
     required String cipherFormat,
     int? originalSize,
     bool compressed = false,
+    String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
   }) =>
@@ -88,6 +90,7 @@ class ApiSafeboxTransport implements SafeboxTransport {
         cipherFormat: cipherFormat,
         originalSize: originalSize,
         compressed: compressed,
+        quality: quality,
         previewSize: previewSize,
         meta: meta,
       );
@@ -131,6 +134,7 @@ class SafeboxUploadJob {
     required this.plainSize,
     required this.originalSize,
     required this.compressed,
+    this.quality,
     this.previewPath,
     this.previewSize = 0,
     this.fileId,
@@ -158,6 +162,7 @@ class SafeboxUploadJob {
         plainSize: j['plainSize'] as int,
         originalSize: j['originalSize'] as int?,
         compressed: j['compressed'] == true,
+        quality: j['quality'] as String?,
         previewPath: j['previewPath'] as String?,
         previewSize: (j['previewSize'] as int?) ?? 0,
         fileId: j['fileId'] as int?,
@@ -190,6 +195,10 @@ class SafeboxUploadJob {
   final int plainSize;
   final int? originalSize;
   final bool compressed;
+
+  /// Format choisi (« original », « hd », « compressed ») ; null pour un
+  /// envoi préparé avant le 24/10/2026.
+  final String? quality;
 
   /// Aperçu déjà chiffré, prêt à partir.
   final String? previewPath;
@@ -239,6 +248,7 @@ class SafeboxUploadJob {
         'plainSize': plainSize,
         'originalSize': originalSize,
         'compressed': compressed,
+        if (quality != null) 'quality': quality,
         'previewPath': previewPath,
         'previewSize': previewSize,
         'fileId': fileId,
@@ -521,6 +531,7 @@ class SafeboxUploadManager extends ChangeNotifier {
             cipherFormat: kSafeboxCipherFormat,
             originalSize: job.originalSize,
             compressed: job.compressed,
+            quality: job.quality,
             previewSize: job.previewSize,
             meta: job.meta,
           ));

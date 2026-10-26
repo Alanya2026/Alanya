@@ -7727,6 +7727,141 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxMoveToRoot => 'Déplacer vers…';
 
   @override
+  String get safeboxQualityTitle => 'Qualité d\'envoi';
+
+  @override
+  String get safeboxQualityOriginal => 'Original';
+
+  @override
+  String get safeboxQualityHd => 'HD';
+
+  @override
+  String get safeboxQualityCompressed => 'Compressé';
+
+  @override
+  String get safeboxQualityOriginalHint => 'Tel quel, aucune perte de qualité.';
+
+  @override
+  String safeboxQualityVideoPart(String res) {
+    return 'Vidéo $res';
+  }
+
+  @override
+  String safeboxQualityPhotoPart(String px) {
+    return 'photo $px px';
+  }
+
+  @override
+  String safeboxQualityMusicPart(String kbps) {
+    return 'musique $kbps kbit/s';
+  }
+
+  @override
+  String safeboxQualityTooLarge(String name, String size, String max) {
+    return '« $name » ferait $size : au-delà de la limite de $max par fichier.';
+  }
+
+  @override
+  String get safeboxQualityNote =>
+      'Les documents partent toujours tels quels. Un fichier déjà plus léger que le format choisi n\'est pas modifié.';
+
+  @override
+  String safeboxQualityFreeAfter(String size) {
+    return 'Après l\'ajout : $size libres';
+  }
+
+  @override
+  String safeboxQualityNoneFits(String max) {
+    return 'Trop lourd même compressé : la limite est de $max par fichier.';
+  }
+
+  @override
+  String safeboxQualityDowngraded(String quality) {
+    return 'Trop lourd dans votre format habituel : envoi en $quality.';
+  }
+
+  @override
+  String safeboxQualityTo(String destination) {
+    return 'vers $destination';
+  }
+
+  @override
+  String safeboxQualityAddCount(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ajouter $count fichiers · ≈ $size',
+      one: 'Ajouter 1 fichier · ≈ $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxQualitySendCount(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Envoyer $count fichiers · ≈ $size',
+      one: 'Envoyer 1 fichier · ≈ $size',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountVideos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count vidéos',
+      one: '1 vidéo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountAudios(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers audio',
+      one: '1 fichier audio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCountDocuments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count documents',
+      one: '1 document',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxHevcWarningTitle => 'Vidéo en H.265';
+
+  @override
+  String get safeboxHevcWarningBody =>
+      'Certains membres risquent de ne pas pouvoir lire cette vidéo : elle est en H.265, un format que leur téléphone ne lit pas. L\'envoyer quand même ?';
+
+  @override
+  String get safeboxHevcWarningSend => 'Envoyer quand même';
+
+  @override
   String get safeboxRootVideos => 'Vidéos';
 
   @override

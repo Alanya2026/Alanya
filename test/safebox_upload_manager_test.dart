@@ -25,6 +25,7 @@ class _FauxServeur implements SafeboxTransport {
   int incompletUneFois = 0;
   bool annule = false;
   Map<String, dynamic>? derniereMeta;
+  String? derniereQualite;
 
   @override
   Future<SafeboxUploadTicket> reserve({
@@ -36,11 +37,13 @@ class _FauxServeur implements SafeboxTransport {
     required String cipherFormat,
     int? originalSize,
     bool compressed = false,
+    String? quality,
     int previewSize = 0,
     Map<String, dynamic>? meta,
   }) async {
     appels.add('reserve');
     derniereMeta = meta;
+    derniereQualite = quality;
     if (erreurReserve != null) throw erreurReserve!;
     final id = prochainId++;
     final n = safeboxBlockCount(plainSize, blockSize);
@@ -186,6 +189,7 @@ void main() {
       id: 'j1', folderId: 1, name: 'f.pdf', mime: 'application/pdf',
       sourcePath: f.path, sourceSize: st.size, sourceModifiedMs: st.modified.millisecondsSinceEpoch,
       ownsSource: possede, plainSize: taille, originalSize: null, compressed: false,
+      quality: possede ? 'compressed' : 'original',
       previewPath: cheminApercu, previewSize: apercu,
     );
   }
@@ -206,6 +210,7 @@ void main() {
     await m.enqueue(await travail(apercu: 500, possede: true), _cle);
     final f = await fin;
     expect(f.id, 100);
+    expect(serveur.derniereQualite, 'compressed', reason: 'le format choisi part au serveur');
     expect(serveur.recus[100], {1, 2, 3});
     expect(serveur.appels.where((a) => a.startsWith('put blk')).length, 3);
     expect(store.cles, isEmpty);
@@ -326,5 +331,15 @@ void main() {
     expect(store.cles, isEmpty);
     expect(m.jobs, isEmpty);
     expect(File('${dossier.path}/source.bin').existsSync(), isFalse);
+  });
+
+  test('format choisi : gardé avec l\'envoi, même après un redémarrage', () {
+    final j = SafeboxUploadJob(
+      id: 'q', folderId: 1, name: 'v.mp4', mime: null, sourcePath: '/x', sourceSize: 1,
+      sourceModifiedMs: 0, ownsSource: true, plainSize: 1, originalSize: 5, compressed: true, quality: 'hd',
+    );
+    expect(SafeboxUploadJob.fromJson(j.toJson()).quality, 'hd');
+    // Un envoi préparé avant le 24/10/2026 n'en avait pas.
+    expect(SafeboxUploadJob.fromJson(j.toJson()..remove('quality')).quality, isNull);
   });
 }
