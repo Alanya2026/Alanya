@@ -136,6 +136,11 @@ class _StickerPacksScreenState extends State<StickerPacksScreen> {
                 else
                   SliverReorderableList(
                     itemCount: installed.length,
+                    proxyDecorator: (child, index, animation) => Material(
+                      elevation: 6,
+                      color: context.colors.surface,
+                      child: child,
+                    ),
                     onReorderItem: (oldIndex, newIndex) {
                       final ids = installed.map((p) => p.packId).toList();
                       final reordered = reorderedIds(ids, oldIndex, newIndex);
