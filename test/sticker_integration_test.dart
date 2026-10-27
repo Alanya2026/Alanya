@@ -33,6 +33,7 @@ LocalMessage _msg(String? content, {String? url = 'https://x/y.webp'}) =>
       isForwarded: false,
       isPinned: false,
       isViewOnce: false,
+      isSensitive: false,
       syncPending: false,
       retryCount: 0,
       translationState: 0,

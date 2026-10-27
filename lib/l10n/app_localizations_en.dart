@@ -1945,6 +1945,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sensitiveDocumentBadge => 'Sensitive document';
 
   @override
+  String sensitiveViewedBy(String numero, String appareil, String date) {
+    return 'Viewed by Alanya $numero · $appareil · $date';
+  }
+
+  @override
+  String get sensitiveCannotPreview =>
+      'This document can\'t be opened in Alanya. It stays protected: only a copy signed in your name can leave the app.';
+
+  @override
+  String get sensitiveSaveSigned => 'Save a signed copy';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

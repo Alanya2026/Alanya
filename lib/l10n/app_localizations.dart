@@ -3604,6 +3604,24 @@ abstract class AppLocalizations {
   /// **'Document sensible'**
   String get sensitiveDocumentBadge;
 
+  /// No description provided for @sensitiveViewedBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Consulté par Alanya {numero} · {appareil} · {date}'**
+  String sensitiveViewedBy(String numero, String appareil, String date);
+
+  /// No description provided for @sensitiveCannotPreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce document ne s\'ouvre pas dans Alanya. Il reste protégé : seule une copie signée à votre nom peut en sortir.'**
+  String get sensitiveCannotPreview;
+
+  /// No description provided for @sensitiveSaveSigned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer une copie signée'**
+  String get sensitiveSaveSigned;
+
   /// No description provided for @comingSoon.
   ///
   /// In fr, this message translates to:

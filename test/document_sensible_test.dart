@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:talky_flutter/core/db/app_database.dart';
@@ -9,6 +10,7 @@ import 'package:talky_flutter/core/services/documents_sensibles/descripteur_sens
 // Compilé ici pour vérifier le branchement de l'envoi (menu des pièces jointes).
 // ignore: unused_import
 import 'package:talky_flutter/screens/chats/chat_detail_screen.dart';
+import 'package:talky_flutter/screens/chats/visionneuse_document_sensible.dart';
 
 /// Documents sensibles, lot 1 : le descripteur et la colonne locale.
 void main() {
@@ -117,5 +119,25 @@ void main() {
         .map((r) => r.read<String>('name'));
     expect(cols, containsAll(['is_sensitive', 'media_protection']));
     await db.select(db.localMessages).get();
+  });
+
+  testWidgets('la signature court aux quatre bords, sans capter les gestes',
+      (tester) async {
+    var appuis = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: Stack(children: [
+        Positioned.fill(
+          child: GestureDetector(
+            onTap: () => appuis++,
+            child: const ColoredBox(color: Colors.grey),
+          ),
+        ),
+        const SignatureBords(texte: 'Consulté par Alanya 6764 1599'),
+      ]),
+    ));
+    expect(find.text('Consulté par Alanya 6764 1599'), findsNWidgets(4));
+    expect(find.byType(RotatedBox), findsNWidgets(2));
+    await tester.tap(find.byType(ColoredBox).first);
+    expect(appuis, 1, reason: 'le document sous la signature reste manipulable');
   });
 }

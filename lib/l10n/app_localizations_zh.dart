@@ -1882,6 +1882,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensitiveDocumentBadge => '敏感文件';
 
   @override
+  String sensitiveViewedBy(String numero, String appareil, String date) {
+    return 'Alanya $numero 查看 · $appareil · $date';
+  }
+
+  @override
+  String get sensitiveCannotPreview => '此文件无法在 Alanya 中打开。它仍受保护：只能导出以您名义签名的副本。';
+
+  @override
+  String get sensitiveSaveSigned => '保存签名副本';
+
+  @override
   String get comingSoon => '即将推出';
 
   @override

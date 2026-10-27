@@ -955,7 +955,10 @@ class ChatDao {
             db.localMessages.deletedForID.equals(myId).not()) &
         db.localMessages.type.isIn(types.isEmpty ? kMyMediaTypes : types) &
         (db.localMessages.isViewOnce.equals(false) |
-            db.localMessages.senderID.equals(myId));
+            db.localMessages.senderID.equals(myId)) &
+        // Document sensible : visionneuse protégée seulement, jamais dans une
+        // liste de médias (qui l'ouvrirait dans la visionneuse ordinaire).
+        db.localMessages.isSensitive.equals(false);
     if (requireLocalFile) {
       where = where & db.localMessages.localMediaPath.isNotNull();
     }
@@ -1091,7 +1094,8 @@ class ChatDao {
           db.localMessages.type.isIn(kMyMediaTypes) &
           db.localMessages.localMediaPath.isNotNull() &
           (db.localMessages.isViewOnce.equals(false) |
-              db.localMessages.senderID.equals(myId)));
+              db.localMessages.senderID.equals(myId)) &
+          db.localMessages.isSensitive.equals(false));
     final rows = await query.get();
     return rows
         .map((r) => r.read(db.localMessages.conversationID))

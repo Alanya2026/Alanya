@@ -24,6 +24,7 @@ LocalMessage _mediaMsg({
     isDeleted: false,
     isPinned: false,
     isViewOnce: false,
+    isSensitive: false,
     isStatusReply: 0,
     isForwarded: false,
     syncPending: false,

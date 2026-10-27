@@ -945,6 +945,8 @@ extension _ChatActions on _ChatDetailScreenState {
   /// l'appareil.
   bool _canSaveMediaToDevice(LocalMessage msg) {
     if (msg.isViewOnce || msg.isDeleted) return false;
+    // Document sensible : jamais l'original ; seule une copie signée sort.
+    if (msg.isSensitive) return false;
     if (msg.type != 1 && msg.type != 2 && msg.type != 4) return false;
     final hasLocal = msg.localMediaPath != null &&
         File(msg.localMediaPath!).existsSync();
@@ -2349,6 +2351,7 @@ extension _ChatActions on _ChatDetailScreenState {
         isMine: isMine,
         isViewOnce: msg.isViewOnce,
         mediaName: msg.mediaName,
+        isSensitive: msg.isSensitive,
       );
       if (path == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2572,6 +2575,42 @@ extension _ChatActions on _ChatDetailScreenState {
 
     // Consommé à la fermeture : marque vu localement + notifie le serveur.
     await _chat.repository.markViewed(msg.msgID);
+  }
+
+  /// Document sensible : toujours la visionneuse protégée, jamais la galerie
+  /// ni une autre application.
+  Future<void> _openSensitive(LocalMessage msg) async {
+    if (_selectionMode) {
+      _toggleSelection(msg);
+      return;
+    }
+    String? path;
+    for (final p in [msg.localMediaPath, _localMediaPathOverrides[msg.msgID]]) {
+      if (p != null && File(p).existsSync()) {
+        path = p;
+        break;
+      }
+    }
+    if (path == null) {
+      if (_isExpiredMedia(msg)) {
+        _showMediaExpiredSnackBar(msg);
+        return;
+      }
+      path = await _downloadReceivedMedia(msg);
+      if (path == null) return;
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VisionneuseDocumentSensible(
+          msgID: msg.msgID,
+          type: msg.type,
+          fichier: File(path!),
+          titre: msg.mediaName ?? context.l10n.sensitiveDocumentBadge,
+        ),
+      ),
+    );
   }
 
   void _showLoading() {
