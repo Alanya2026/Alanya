@@ -79,7 +79,9 @@ void main() {
     expect(natureSignature('video/mp4', 'a.mp4'), NatureSignature.video);
     expect(natureSignature('audio/mp4', 'voix.m4a'), NatureSignature.audio);
     expect(natureSignature('', 'son.wav'), NatureSignature.audio);
-    expect(natureSignature('video/webm', 'a.webm'), NatureSignature.aucune);
+    // Incrustable sur Android (réencodée en MP4), sans métadonnées sinon.
+    expect(natureSignature('video/webm', 'a.webm'), NatureSignature.video);
+    expect(natureSignature('', 'a.webm'), NatureSignature.aucune);
     expect(natureSignature('', 'a.docx'), NatureSignature.aucune);
   });
 
@@ -177,6 +179,14 @@ void main() {
       expect(copie.signee, isFalse);
       expect(copie.nom, 'Rapport.docx');
       expect(copie.fichier.readAsStringSync(), 'contenu');
+    });
+
+    test('une WebM sans incrustation sort telle quelle, sous son nom', () async {
+      // Hors Android, pas d'incrustation ; et la WebM n'a pas de métadonnées.
+      final source = File('${dossier.path}/v.webm')..writeAsStringSync('webm');
+      final copie = await signer(source, 'v.webm', 'video/webm');
+      expect(copie.signee, isFalse);
+      expect(copie.nom, 'v.webm');
     });
 
     test('une vidéo illisible sort telle quelle, sans exception', () async {

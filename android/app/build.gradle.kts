@@ -99,6 +99,19 @@ dependencies {
     // Tests JVM purs (aucun impact APK). `org.json:json` fournit la vraie
     // implémentation à la place des stubs android.jar, qui lèvent sinon
     // « not mocked » sur JSONArray/JSONObject.
+    // Documents sensibles : la signature incrustée aux quatre bords d'une vidéo
+    // (`SignatureVideo.kt`). Media3 Transformer réencode avec un calque
+    // (`media3-effect`).
+    //
+    // ⚠️ LA VERSION DOIT RESTER CELLE QUE `pro_video_editor` IMPOSE DÉJÀ (son
+    // android/build.gradle : media3 1.10.1, qui l'emporte aussi sur le 1.9.2
+    // de `video_player_android`) : deux versions de Media3, et Gradle en
+    // choisit une que l'autre n'attend pas. À revérifier à chaque montée.
+    implementation("androidx.media3:media3-transformer:1.10.1")
+    implementation("androidx.media3:media3-effect:1.10.1")
+    // `androidx.annotation.OptIn`, pour déclarer l'usage des API « instables »
+    // de Media3 sans que le contrôle d'Android (lint) refuse la construction.
+    implementation("androidx.annotation:annotation-experimental:1.4.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }

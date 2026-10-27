@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -258,7 +259,8 @@ enum NatureSignature {
   /// Texte aux quatre bords, et EXIF (JPEG) ou texte PNG.
   image,
 
-  /// Métadonnées MP4 (MP4, MOV, 3GP).
+  /// Texte aux quatre bords (vidéo réencodée en MP4, Android), puis
+  /// métadonnées ; à défaut, métadonnées seules (MP4, MOV, 3GP).
   video,
 
   /// L'empreinte seule dans les métadonnées (MP3, WAV, M4A).
@@ -290,7 +292,11 @@ NatureSignature natureSignature(String mime, String nom) {
   if (m.startsWith('audio/') || _audios.contains(ext)) {
     return NatureSignature.audio;
   }
-  if (Mp4Metadonnees.prisEnCharge(m, nom)) return NatureSignature.video;
+  // Toute vidéo peut recevoir l'incrustation (Android la réencode en MP4) ;
+  // à défaut, seuls MP4, MOV et 3GP reçoivent les métadonnées.
+  if (m.startsWith('video/') || Mp4Metadonnees.prisEnCharge(m, nom)) {
+    return NatureSignature.video;
+  }
   return NatureSignature.aucune;
 }
 
@@ -384,6 +390,11 @@ class SignatureDocument {
           await fichier.writeAsBytes(r, flush: true);
           return CopieSignee(fichier: fichier, nom: nomFinal, signee: true);
         case NatureSignature.video:
+          final incrustee = await _incruster(source, nom, dossier, signature);
+          if (incrustee != null) return incrustee;
+          // Pas d'incrustation : la copie aux seules métadonnées, si le
+          // conteneur le permet.
+          if (!Mp4Metadonnees.prisEnCharge(mime, nom)) break;
           await Mp4Metadonnees.ecrire(source, cible, signature.elementsMp4);
           return CopieSignee(fichier: cible, nom: nom, signee: true);
         case NatureSignature.audio:
@@ -399,6 +410,48 @@ class SignatureDocument {
     if (await cible.exists()) await cible.delete();
     final copie = await source.copy(cible.path);
     return CopieSignee(fichier: copie, nom: nom, signee: false);
+  }
+
+  static const _canal = MethodChannel('com.alanya/signature');
+
+  /// La signature incrustée aux quatre bords d'une vidéo (Android seulement,
+  /// `SignatureVideo.kt`), puis les métadonnées écrites sur le MP4 produit.
+  ///
+  /// La vidéo est réencodée en MP4 (H.264 / AAC) : la copie prend
+  /// l'extension `.mp4`. Rend `null` si l'incrustation est impossible.
+  static Future<CopieSignee?> _incruster(
+    File source,
+    String nom,
+    Directory dossier,
+    SignatureSortie signature,
+  ) async {
+    if (!Platform.isAndroid) return null;
+    final nomMp4 = '${_racine(nom)}.mp4';
+    final brute = File('${dossier.path}/${_racine(nom)}_incrustee.mp4');
+    try {
+      final r = await _canal.invokeMapMethod<String, Object?>('signerVideo', {
+        'entree': source.path,
+        'sortie': brute.path,
+        'bords': signature.bordsVisuels.join('\n'),
+      });
+      if (r?['chemin'] == null || !await brute.exists()) return null;
+    } catch (e) {
+      debugPrint('[Alanya] Vidéo non incrustée ($nom) : $e');
+      if (await brute.exists()) await brute.delete();
+      return null;
+    }
+    final cible = File('${dossier.path}/$nomMp4');
+    try {
+      await Mp4Metadonnees.ecrire(brute, cible, signature.elementsMp4);
+      await brute.delete();
+    } catch (e) {
+      // Les bords sont là, c'est l'essentiel : la vidéo sort sans métadonnées
+      // plutôt que de perdre l'incrustation.
+      debugPrint('[Alanya] Métadonnées MP4 non écrites ($nom) : $e');
+      if (await cible.exists()) await cible.delete();
+      await brute.rename(cible.path);
+    }
+    return CopieSignee(fichier: cible, nom: nomMp4, signee: true);
   }
 
   static TravailPdf _travailPdf(
