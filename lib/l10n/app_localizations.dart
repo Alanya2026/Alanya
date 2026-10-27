@@ -3640,6 +3640,144 @@ abstract class AppLocalizations {
   /// **'Impossible d\'enregistrer la copie.'**
   String get sensitiveSaveFailed;
 
+  /// No description provided for @sensitiveAlreadySignedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie déjà signée'**
+  String get sensitiveAlreadySignedTitle;
+
+  /// No description provided for @sensitiveAlreadySignedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier est la copie signée d\'un document sensible. Il ne peut pas repartir en sensible : il serait signé à nouveau et perdrait l\'empreinte de la personne qui l\'a fait sortir. Vous pouvez l\'envoyer en document ordinaire, qui la garde.'**
+  String get sensitiveAlreadySignedBody;
+
+  /// No description provided for @sensitiveSendAsOrdinary.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer en ordinaire'**
+  String get sensitiveSendAsOrdinary;
+
+  /// No description provided for @fingerprintCheckTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier une empreinte'**
+  String get fingerprintCheckTitle;
+
+  /// No description provided for @fingerprintCheckSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui a fait sortir une copie signée d\'un document sensible'**
+  String get fingerprintCheckSubtitle;
+
+  /// No description provided for @fingerprintCheckIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque copie d\'un document sensible enregistrée hors d\'Alanya porte une empreinte numérique : 32 caractères sur ses bords ou dans ses propriétés. Saisissez-la pour savoir qui l\'a fait sortir. Seules les personnes qui pouvaient voir le document obtiennent une réponse.'**
+  String get fingerprintCheckIntro;
+
+  /// No description provided for @fingerprintField.
+  ///
+  /// In fr, this message translates to:
+  /// **'Empreinte numérique'**
+  String get fingerprintField;
+
+  /// No description provided for @fingerprintPaste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coller'**
+  String get fingerprintPaste;
+
+  /// No description provided for @fingerprintSearch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher'**
+  String get fingerprintSearch;
+
+  /// No description provided for @fingerprintInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il faut 32 caractères, chiffres de 0 à 9 et lettres de A à F.'**
+  String get fingerprintInvalid;
+
+  /// No description provided for @fingerprintUnknown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Empreinte inconnue, ou copie d\'un document que vous ne pouviez pas voir.'**
+  String get fingerprintUnknown;
+
+  /// No description provided for @fingerprintLookupFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La recherche n\'a pas abouti. Réessayez.'**
+  String get fingerprintLookupFailed;
+
+  /// No description provided for @fingerprintResult.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie identifiée'**
+  String get fingerprintResult;
+
+  /// No description provided for @fingerprintBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie par'**
+  String get fingerprintBy;
+
+  /// No description provided for @fingerprintAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Geste'**
+  String get fingerprintAction;
+
+  /// No description provided for @fingerprintDate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Date'**
+  String get fingerprintDate;
+
+  /// No description provided for @fingerprintDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil'**
+  String get fingerprintDevice;
+
+  /// No description provided for @fingerprintSender.
+  ///
+  /// In fr, this message translates to:
+  /// **'Expéditeur du document'**
+  String get fingerprintSender;
+
+  /// No description provided for @fingerprintDocument.
+  ///
+  /// In fr, this message translates to:
+  /// **'Document'**
+  String get fingerprintDocument;
+
+  /// No description provided for @fingerprintUnknownValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inconnu'**
+  String get fingerprintUnknownValue;
+
+  /// No description provided for @fingerprintActionDownload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement'**
+  String get fingerprintActionDownload;
+
+  /// No description provided for @fingerprintActionShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage'**
+  String get fingerprintActionShare;
+
+  /// No description provided for @fingerprintActionForward.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transfert'**
+  String get fingerprintActionForward;
+
   /// No description provided for @comingSoon.
   ///
   /// In fr, this message translates to:

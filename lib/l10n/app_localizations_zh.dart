@@ -1902,6 +1902,77 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensitiveSaveFailed => '无法保存副本。';
 
   @override
+  String get sensitiveAlreadySignedTitle => '已签名的副本';
+
+  @override
+  String get sensitiveAlreadySignedBody =>
+      '此文件是敏感文件的签名副本，不能再次作为敏感文件发送：它会被重新签名，并丢失导出者的指纹。您可以将其作为普通文件发送，指纹会保留。';
+
+  @override
+  String get sensitiveSendAsOrdinary => '作为普通文件发送';
+
+  @override
+  String get fingerprintCheckTitle => '核验指纹';
+
+  @override
+  String get fingerprintCheckSubtitle => '查明谁导出了敏感文件的签名副本';
+
+  @override
+  String get fingerprintCheckIntro =>
+      '每份保存到 Alanya 之外的敏感文件副本都带有数字指纹：位于边缘或属性中的 32 个字符。输入指纹即可查明导出者。只有能查看该文件的人才会得到答复。';
+
+  @override
+  String get fingerprintField => '数字指纹';
+
+  @override
+  String get fingerprintPaste => '粘贴';
+
+  @override
+  String get fingerprintSearch => '查找';
+
+  @override
+  String get fingerprintInvalid => '需要 32 个字符：数字 0–9 和字母 A–F。';
+
+  @override
+  String get fingerprintUnknown => '未知指纹，或是您无权查看的文件的副本。';
+
+  @override
+  String get fingerprintLookupFailed => '查找失败，请重试。';
+
+  @override
+  String get fingerprintResult => '已识别副本';
+
+  @override
+  String get fingerprintBy => '导出者';
+
+  @override
+  String get fingerprintAction => '操作';
+
+  @override
+  String get fingerprintDate => '日期';
+
+  @override
+  String get fingerprintDevice => '设备';
+
+  @override
+  String get fingerprintSender => '文件发送者';
+
+  @override
+  String get fingerprintDocument => '文件';
+
+  @override
+  String get fingerprintUnknownValue => '未知';
+
+  @override
+  String get fingerprintActionDownload => '下载';
+
+  @override
+  String get fingerprintActionShare => '分享';
+
+  @override
+  String get fingerprintActionForward => '转发';
+
+  @override
   String get comingSoon => '即将推出';
 
   @override

@@ -129,6 +129,7 @@ import '../../core/utils/contact_aliases.dart';
 import '../../core/services/documents_sensibles/descripteur_sensible.dart';
 import 'visionneuse_document_sensible.dart';
 import '../../core/services/documents_sensibles/sortie_document_sensible.dart';
+import '../../core/services/documents_sensibles/detecteur_copie_signee.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

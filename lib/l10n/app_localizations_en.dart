@@ -1968,6 +1968,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sensitiveSaveFailed => 'Couldn\'t save the copy.';
 
   @override
+  String get sensitiveAlreadySignedTitle => 'Already a signed copy';
+
+  @override
+  String get sensitiveAlreadySignedBody =>
+      'This file is a signed copy of a sensitive document. It can\'t be sent as sensitive again: it would be re-signed and lose the fingerprint of whoever took it out. You can send it as an ordinary document, which keeps it.';
+
+  @override
+  String get sensitiveSendAsOrdinary => 'Send as ordinary';
+
+  @override
+  String get fingerprintCheckTitle => 'Check a fingerprint';
+
+  @override
+  String get fingerprintCheckSubtitle =>
+      'Who took a signed copy of a sensitive document out';
+
+  @override
+  String get fingerprintCheckIntro =>
+      'Every copy of a sensitive document saved outside Alanya carries a digital fingerprint: 32 characters on its edges or in its properties. Enter it to find out who took it out. Only people who could see the document get an answer.';
+
+  @override
+  String get fingerprintField => 'Digital fingerprint';
+
+  @override
+  String get fingerprintPaste => 'Paste';
+
+  @override
+  String get fingerprintSearch => 'Search';
+
+  @override
+  String get fingerprintInvalid =>
+      'It takes 32 characters: digits 0–9 and letters A–F.';
+
+  @override
+  String get fingerprintUnknown =>
+      'Unknown fingerprint, or a copy of a document you couldn\'t see.';
+
+  @override
+  String get fingerprintLookupFailed =>
+      'The search didn\'t go through. Try again.';
+
+  @override
+  String get fingerprintResult => 'Copy identified';
+
+  @override
+  String get fingerprintBy => 'Taken out by';
+
+  @override
+  String get fingerprintAction => 'Action';
+
+  @override
+  String get fingerprintDate => 'Date';
+
+  @override
+  String get fingerprintDevice => 'Device';
+
+  @override
+  String get fingerprintSender => 'Document sender';
+
+  @override
+  String get fingerprintDocument => 'Document';
+
+  @override
+  String get fingerprintUnknownValue => 'Unknown';
+
+  @override
+  String get fingerprintActionDownload => 'Download';
+
+  @override
+  String get fingerprintActionShare => 'Share';
+
+  @override
+  String get fingerprintActionForward => 'Forward';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

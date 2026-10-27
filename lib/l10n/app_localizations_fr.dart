@@ -1987,6 +1987,81 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sensitiveSaveFailed => 'Impossible d\'enregistrer la copie.';
 
   @override
+  String get sensitiveAlreadySignedTitle => 'Copie déjà signée';
+
+  @override
+  String get sensitiveAlreadySignedBody =>
+      'Ce fichier est la copie signée d\'un document sensible. Il ne peut pas repartir en sensible : il serait signé à nouveau et perdrait l\'empreinte de la personne qui l\'a fait sortir. Vous pouvez l\'envoyer en document ordinaire, qui la garde.';
+
+  @override
+  String get sensitiveSendAsOrdinary => 'Envoyer en ordinaire';
+
+  @override
+  String get fingerprintCheckTitle => 'Vérifier une empreinte';
+
+  @override
+  String get fingerprintCheckSubtitle =>
+      'Qui a fait sortir une copie signée d\'un document sensible';
+
+  @override
+  String get fingerprintCheckIntro =>
+      'Chaque copie d\'un document sensible enregistrée hors d\'Alanya porte une empreinte numérique : 32 caractères sur ses bords ou dans ses propriétés. Saisissez-la pour savoir qui l\'a fait sortir. Seules les personnes qui pouvaient voir le document obtiennent une réponse.';
+
+  @override
+  String get fingerprintField => 'Empreinte numérique';
+
+  @override
+  String get fingerprintPaste => 'Coller';
+
+  @override
+  String get fingerprintSearch => 'Rechercher';
+
+  @override
+  String get fingerprintInvalid =>
+      'Il faut 32 caractères, chiffres de 0 à 9 et lettres de A à F.';
+
+  @override
+  String get fingerprintUnknown =>
+      'Empreinte inconnue, ou copie d\'un document que vous ne pouviez pas voir.';
+
+  @override
+  String get fingerprintLookupFailed =>
+      'La recherche n\'a pas abouti. Réessayez.';
+
+  @override
+  String get fingerprintResult => 'Copie identifiée';
+
+  @override
+  String get fingerprintBy => 'Sortie par';
+
+  @override
+  String get fingerprintAction => 'Geste';
+
+  @override
+  String get fingerprintDate => 'Date';
+
+  @override
+  String get fingerprintDevice => 'Appareil';
+
+  @override
+  String get fingerprintSender => 'Expéditeur du document';
+
+  @override
+  String get fingerprintDocument => 'Document';
+
+  @override
+  String get fingerprintUnknownValue => 'Inconnu';
+
+  @override
+  String get fingerprintActionDownload => 'Enregistrement';
+
+  @override
+  String get fingerprintActionShare => 'Partage';
+
+  @override
+  String get fingerprintActionForward => 'Transfert';
+
+  @override
   String get comingSoon => 'Bientôt';
 
   @override

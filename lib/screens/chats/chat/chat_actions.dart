@@ -1469,11 +1469,39 @@ extension _ChatActions on _ChatDetailScreenState {
     final picked = res?.files.firstOrNull;
     final path = picked?.path;
     if (picked == null || path == null) return;
+
+    // Une copie SIGNÉE ne repart pas en « sensible » : re-signée au nom du
+    // destinataire, elle perdrait l'empreinte de qui l'a fait sortir la
+    // première fois. Elle peut partir en document ordinaire, qui la garde.
+    var sensible = true;
+    if (await DetecteurCopieSignee.estCopieSigneeFichier(path)) {
+      if (!mounted) return;
+      final ordinaire = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(ctx.l10n.sensitiveAlreadySignedTitle),
+          content: Text(ctx.l10n.sensitiveAlreadySignedBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(ctx.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(ctx.l10n.sensitiveSendAsOrdinary),
+            ),
+          ],
+        ),
+      );
+      if (ordinaire != true) return;
+      sensible = false;
+    }
+
     await _sendMediaFile(
       File(path),
       type: typeMessagePourFichier(picked.name),
       name: picked.name,
-      sensible: const DescripteurSensible(),
+      sensible: sensible ? const DescripteurSensible() : null,
     );
   }
 
