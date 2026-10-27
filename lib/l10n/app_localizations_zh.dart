@@ -1893,6 +1893,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensitiveSaveSigned => '保存签名副本';
 
   @override
+  String get sensitiveSavedSigned => '已保存签名副本：其中带有您的数字指纹。';
+
+  @override
+  String get sensitiveSavedUnsigned => '副本已保存，但此格式无法签名。下载已被记录。';
+
+  @override
+  String get sensitiveSaveFailed => '无法保存副本。';
+
+  @override
   String get comingSoon => '即将推出';
 
   @override

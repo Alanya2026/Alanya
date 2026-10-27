@@ -1976,6 +1976,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sensitiveSaveSigned => 'Enregistrer une copie signée';
 
   @override
+  String get sensitiveSavedSigned =>
+      'Copie signée enregistrée : elle porte votre empreinte numérique.';
+
+  @override
+  String get sensitiveSavedUnsigned =>
+      'Copie enregistrée, mais ce format ne peut pas être signé. L\'enregistrement a été noté.';
+
+  @override
+  String get sensitiveSaveFailed => 'Impossible d\'enregistrer la copie.';
+
+  @override
   String get comingSoon => 'Bientôt';
 
   @override

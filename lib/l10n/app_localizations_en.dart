@@ -1957,6 +1957,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sensitiveSaveSigned => 'Save a signed copy';
 
   @override
+  String get sensitiveSavedSigned =>
+      'Signed copy saved: it carries your digital fingerprint.';
+
+  @override
+  String get sensitiveSavedUnsigned =>
+      'Copy saved, but this format can\'t be signed. The download has been recorded.';
+
+  @override
+  String get sensitiveSaveFailed => 'Couldn\'t save the copy.';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

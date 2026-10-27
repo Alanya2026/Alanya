@@ -540,6 +540,16 @@ extension _ChatActions on _ChatDetailScreenState {
                   _saveMediaToDevice(msg);
                 },
               ),
+            // Document sensible : seule une copie SIGNÉE sort.
+            if (msg.isSensitive && !msg.isDeleted && msg.status != 0)
+              ListTile(
+                leading: Icon(Icons.download_rounded, color: primary),
+                title: Text(context.l10n.sensitiveSaveSigned),
+                onTap: () {
+                  Navigator.pop(context);
+                  _saveSensitiveCopy(msg);
+                },
+              ),
             if (canForwardMessage(msg))
               ListTile(
                 leading: Icon(Icons.share_outlined, color: primary),
@@ -2608,9 +2618,62 @@ extension _ChatActions on _ChatDetailScreenState {
           type: msg.type,
           fichier: File(path!),
           titre: msg.mediaName ?? context.l10n.sensitiveDocumentBadge,
+          onEnregistrer: () => _saveSensitiveCopy(msg, clair: path),
         ),
       ),
     );
+  }
+
+  /// Enregistre une copie SIGNÉE d'un document sensible (bords, métadonnées,
+  /// empreinte), et note le geste au serveur.
+  Future<void> _saveSensitiveCopy(LocalMessage msg, {String? clair}) async {
+    var path = clair;
+    if (path == null || !File(path).existsSync()) {
+      path = null;
+      for (final p in [msg.localMediaPath, _localMediaPathOverrides[msg.msgID]]) {
+        if (p != null && File(p).existsSync()) {
+          path = p;
+          break;
+        }
+      }
+    }
+    if (path == null) {
+      if (_isExpiredMedia(msg)) {
+        _showMediaExpiredSnackBar(msg);
+        return;
+      }
+      path = await _downloadReceivedMedia(msg);
+      if (path == null) return;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    final sortie = SortieDocumentSensible(
+      _apiClient,
+      numero: context.read<AuthProvider>().currentUser?.alanyaPhone ?? '',
+    );
+    try {
+      final r = await sortie.enregistrer(
+        clair: File(path),
+        msgID: msg.msgID,
+        type: msg.type,
+        nom: msg.mediaName ?? path.split('/').last,
+        jeSuisExpediteur: msg.senderID == _myId,
+      );
+      messenger.showSnackBar(SnackBar(
+        content: Text(!r.enregistree
+            ? l10n.sensitiveSaveFailed
+            : r.copie.signee
+                ? l10n.sensitiveSavedSigned
+                : l10n.sensitiveSavedUnsigned),
+        backgroundColor: r.enregistree ? null : AppColors.error,
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.sensitiveSaveFailed),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   void _showLoading() {

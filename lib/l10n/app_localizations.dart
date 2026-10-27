@@ -3622,6 +3622,24 @@ abstract class AppLocalizations {
   /// **'Enregistrer une copie signée'**
   String get sensitiveSaveSigned;
 
+  /// No description provided for @sensitiveSavedSigned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie signée enregistrée : elle porte votre empreinte numérique.'**
+  String get sensitiveSavedSigned;
+
+  /// No description provided for @sensitiveSavedUnsigned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie enregistrée, mais ce format ne peut pas être signé. L\'enregistrement a été noté.'**
+  String get sensitiveSavedUnsigned;
+
+  /// No description provided for @sensitiveSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la copie.'**
+  String get sensitiveSaveFailed;
+
   /// No description provided for @comingSoon.
   ///
   /// In fr, this message translates to:
