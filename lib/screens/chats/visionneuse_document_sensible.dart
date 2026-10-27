@@ -23,8 +23,8 @@ import '../../talky_api_client.dart';
 ///   seule sa copie signée peut sortir.
 /// * L'écran est protégé : ni capture ni enregistrement (Android FLAG_SECURE,
 ///   iOS).
-/// * Une signature court aux QUATRE BORDS — « Consulté par Alanya <numéro> ·
-///   <appareil> · <date> » : une photo de l'écran dit qui regardait.
+/// * Une signature court aux QUATRE BORDS — « Consulté par Alanya `numéro` ·
+///   `appareil` · `date` » : une photo de l'écran dit qui regardait.
 /// * La consultation est notée par le serveur. Son échec n'empêche jamais la
 ///   lecture.
 class VisionneuseDocumentSensible extends StatefulWidget {
