@@ -793,10 +793,12 @@ class ChatRepository {
   Future<void> sendMediaFiles({
     required int conversationID,
     required List<AlbumSendItem> items,
+    String? content,
   }) =>
       _sender.sendMediaFiles(
         conversationID: conversationID,
         items: items,
+        content: content,
       );
 
   Future<void> sendMediaAlbum({

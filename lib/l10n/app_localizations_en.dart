@@ -1972,7 +1972,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sensitiveAlreadySignedBody =>
-      'This file is a signed copy of a sensitive document. It can\'t be sent as sensitive again: it would be re-signed and lose the fingerprint of whoever took it out. You can send it as an ordinary document, which keeps it.';
+      'These files are signed copies of sensitive documents. They can\'t be sent as sensitive again: re-signed, they would lose the fingerprint of whoever took them out. They can be sent as ordinary documents, which keep it:';
 
   @override
   String get sensitiveSendAsOrdinary => 'Send as ordinary';
@@ -2102,6 +2102,30 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pdfProtectionFailed =>
       'Protecting the PDF failed: no copy was saved.';
+
+  @override
+  String get sensitivePreviewTitle => 'Sensitive document';
+
+  @override
+  String sensitivePreviewTitleMany(int n) {
+    return '$n sensitive documents';
+  }
+
+  @override
+  String get sensitivePreviewRemove => 'Remove this file';
+
+  @override
+  String get sensitivePreviewBanner =>
+      'Will open only in Alanya\'s protected viewer. No forwarding or sharing; any saved copy will be signed.';
+
+  @override
+  String get sensitivePreviewOrdinary =>
+      'Already a signed copy: it will be sent as an ordinary document, with its original fingerprint.';
+
+  @override
+  String pdfProtectionIntroMany(int n) {
+    return 'These settings apply to the $n PDFs in this send, and to the copy the recipient saves outside Alanya. Inside Alanya, the documents stay readable in the protected viewer.';
+  }
 
   @override
   String get comingSoon => 'Coming soon';

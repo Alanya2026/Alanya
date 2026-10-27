@@ -1207,6 +1207,15 @@ extension _ChatActions on _ChatDetailScreenState {
                   _attachOption(Icons.camera_alt, context.l10n.camera, context.colors.primary, _pickImageFromCamera),
                   _attachOption(Icons.videocam, context.l10n.video2, context.colors.error, _pickVideo),
                   _attachOption(Icons.insert_drive_file, context.l10n.file2, sem.warning, _pickFile),
+                  // Document sensible, à côté des fichiers : visionneuse
+                  // protégée seulement, ni transfert ni partage, copie signée
+                  // à l'enregistrement.
+                  _attachOption(
+                    Icons.verified_user_outlined,
+                    context.l10n.sensitiveDocument,
+                    context.colors.error,
+                    _pickSensitive,
+                  ),
                 ],
               ),
               AppSpacing.vGapMd,
@@ -1245,20 +1254,6 @@ extension _ChatActions on _ChatDetailScreenState {
                   ),
                 ],
               ),
-              AppSpacing.vGapMd,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Document sensible : visionneuse protégée seulement, ni
-                  // transfert ni partage, copie signée à l'enregistrement.
-                  _attachOption(
-                    Icons.lock_outline,
-                    context.l10n.sensitiveDocument,
-                    context.colors.error,
-                    _pickSensitive,
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -1266,22 +1261,36 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  /// Une entrée du menu. `Flexible` et un retrait latéral réduit : la
+  /// première rangée en compte cinq depuis « Sensible », et doit tenir sur un
+  /// écran de 360 dp (5 × 64 dp dans les 328 dp que laisse la feuille).
   Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-      borderRadius: AppRadius.brSm,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
-            AppSpacing.vGapSm,
-            Text(label, style: context.text.bodySmall),
-          ],
+    return Flexible(
+      child: InkWell(
+        onTap: () {
+          Navigator.pop(context);
+          onTap();
+        },
+        borderRadius: AppRadius.brSm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
+              AppSpacing.vGapSm,
+              Text(
+                label,
+                style: context.text.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1465,22 +1474,75 @@ extension _ChatActions on _ChatDetailScreenState {
   /// message suit le fichier (image, vidéo, audio, sinon document), pour que
   /// la visionneuse protégée sache l'afficher.
   Future<void> _pickSensitive() async {
-    final res = await FilePicker.platform.pickFiles(withData: false);
-    final picked = res?.files.firstOrNull;
-    final path = picked?.path;
-    if (picked == null || path == null) return;
+    final res = await FilePicker.platform.pickFiles(
+      withData: false,
+      allowMultiple: true,
+    );
+    final picked = res?.files;
+    if (picked == null || picked.isEmpty || _myId == null) return;
+
+    // Mêmes bornes que les autres fichiers : nombre et poids.
+    final max = ChatRepository.maxAlbumItems;
+    if (picked.length > max && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            '${context.l10n.maxFiles(max)} ${context.l10n.albumFirstOnly(max)}'),
+      ));
+    }
+    var items = <AlbumSendItem>[];
+    var tropLourds = 0;
+    for (final f in picked.take(max)) {
+      final path = f.path;
+      if (path == null) continue;
+      final local = File(path);
+      if ((local.existsSync() ? local.lengthSync() : 0) > _maxMediaBytes) {
+        tropLourds++;
+        continue;
+      }
+      items.add(AlbumSendItem(
+        file: local,
+        type: typeMessagePourFichier(f.name),
+        mediaName: f.name,
+        duration: typeMessagePourFichier(f.name) == 3
+            ? await MusicMetadataService.durationSeconds(path)
+            : null,
+        sensible: const DescripteurSensible(),
+      ));
+    }
+    if (!mounted) return;
+    if (tropLourds > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n.filesSkippedTooLarge(
+            tropLourds, '${EntitlementService.maxUploadMb}')),
+        backgroundColor: AppColors.error,
+      ));
+    }
+    if (items.isEmpty) return;
 
     // Une copie SIGNÉE ne repart pas en « sensible » : re-signée au nom du
     // destinataire, elle perdrait l'empreinte de qui l'a fait sortir la
     // première fois. Elle peut partir en document ordinaire, qui la garde.
-    var sensible = true;
-    if (await DetecteurCopieSignee.estCopieSigneeFichier(path)) {
+    final signees = <AlbumSendItem>[
+      for (final i in items)
+        if (await DetecteurCopieSignee.estCopieSigneeFichier(i.file.path)) i,
+    ];
+    if (signees.isNotEmpty) {
       if (!mounted) return;
       final ordinaire = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(ctx.l10n.sensitiveAlreadySignedTitle),
-          content: Text(ctx.l10n.sensitiveAlreadySignedBody),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(ctx.l10n.sensitiveAlreadySignedBody),
+              AppSpacing.vGapSm,
+              for (final i in signees)
+                Text('• ${i.mediaName ?? i.file.path.split('/').last}',
+                    style: ctx.text.bodySmall),
+            ],
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -1494,28 +1556,51 @@ extension _ChatActions on _ChatDetailScreenState {
         ),
       );
       if (ordinaire != true) return;
-      sensible = false;
+      items = [for (final i in items) signees.contains(i) ? i.sansSensible() : i];
     }
 
-    // Un PDF sensible : l'expéditeur règle une fois la protection de la
-    // copie qui sortira (impression, mots de passe).
-    DescripteurSensible? descripteur;
-    if (sensible) {
-      descripteur = const DescripteurSensible();
-      if (picked.name.toLowerCase().endsWith('.pdf')) {
-        if (!mounted) return;
-        final choix = await demanderProtectionPdf(context);
-        if (choix == null) return;
-        descripteur = DescripteurSensible(protection: choix.protection);
-      }
+    // Les PDF sensibles : l'expéditeur règle UNE FOIS, pour tous ceux de
+    // l'envoi, la protection de la copie qui sortira (impression, mots de
+    // passe).
+    bool pdfSensible(AlbumSendItem i) =>
+        i.sensible != null &&
+        (i.mediaName ?? i.file.path).toLowerCase().endsWith('.pdf');
+    final nbPdf = items.where(pdfSensible).length;
+    if (nbPdf > 0) {
+      if (!mounted) return;
+      final choix = await demanderProtectionPdf(context, nombre: nbPdf);
+      if (choix == null) return;
+      items = [
+        for (final i in items)
+          pdfSensible(i)
+              ? i.avecSensible(DescripteurSensible(protection: choix.protection))
+              : i,
+      ];
     }
 
-    await _sendMediaFile(
-      File(path),
-      type: typeMessagePourFichier(picked.name),
-      name: picked.name,
-      sensible: descripteur,
+    // Aperçu : passer d'un fichier à l'autre, en retirer, ajouter une légende.
+    if (!mounted) return;
+    final result = await Navigator.push<ApercuDocumentsResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ApercuDocumentsSensibles(
+          items: items,
+          recipientName: widget.userName,
+        ),
+        fullscreenDialog: true,
+      ),
     );
+    if (result == null || result.items.isEmpty || !mounted) return;
+
+    final convId = await _ensureConversation();
+    if (convId == null) return;
+    _dismissUnreadSeparator();
+    await _chat.repository.sendMediaFiles(
+      conversationID: convId,
+      items: result.items,
+      content: result.caption,
+    );
+    _scrollToBottom();
   }
 
   /// Import de morceaux : envoyés en `type = 3` comme un vocal, c'est le nom
@@ -1598,7 +1683,6 @@ extension _ChatActions on _ChatDetailScreenState {
     int? duration,
     bool viewOnce = false,
     String? content,
-    DescripteurSensible? sensible,
   }) async {
     if (_myId == null) return;
 
@@ -1628,7 +1712,6 @@ extension _ChatActions on _ChatDetailScreenState {
       mediaDuration: duration,
       content: content,
       isViewOnce: viewOnce,
-      sensible: sensible,
     );
     _scrollToBottom();
   }

@@ -128,6 +128,7 @@ import '../../core/utils/message_deletion_policy.dart';
 import '../../core/utils/contact_aliases.dart';
 import '../../core/services/documents_sensibles/descripteur_sensible.dart';
 import 'visionneuse_document_sensible.dart';
+import 'apercu_documents_sensibles.dart';
 import '../../core/services/documents_sensibles/sortie_document_sensible.dart';
 import '../../core/services/documents_sensibles/detecteur_copie_signee.dart';
 import '../../widgets/documents_sensibles/dialogue_protection_pdf.dart';

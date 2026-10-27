@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import '../services/documents_sensibles/descripteur_sensible.dart';
 import '../db/app_database.dart';
 import '../theme/locale_controller.dart';
 import 'system_event_payload.dart';
@@ -185,12 +186,32 @@ class AlbumSendItem {
     required this.type,
     this.mediaName,
     this.duration,
+    this.sensible,
   });
 
   final File file;
   final int type; // 1=image 2=vidéo
   final String? mediaName;
   final int? duration;
+
+  /// Document sensible (envoi fichier par fichier seulement) ; `null` pour un
+  /// fichier ordinaire.
+  final DescripteurSensible? sensible;
+
+  AlbumSendItem sansSensible() => AlbumSendItem(
+        file: file,
+        type: type,
+        mediaName: mediaName,
+        duration: duration,
+      );
+
+  AlbumSendItem avecSensible(DescripteurSensible descripteur) => AlbumSendItem(
+        file: file,
+        type: type,
+        mediaName: mediaName,
+        duration: duration,
+        sensible: descripteur,
+      );
 }
 
 String newAlbumId() =>

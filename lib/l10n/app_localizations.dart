@@ -3649,7 +3649,7 @@ abstract class AppLocalizations {
   /// No description provided for @sensitiveAlreadySignedBody.
   ///
   /// In fr, this message translates to:
-  /// **'Ce fichier est la copie signée d\'un document sensible. Il ne peut pas repartir en sensible : il serait signé à nouveau et perdrait l\'empreinte de la personne qui l\'a fait sortir. Vous pouvez l\'envoyer en document ordinaire, qui la garde.'**
+  /// **'Ces fichiers sont des copies signées de documents sensibles. Ils ne peuvent pas repartir en sensible : signés à nouveau, ils perdraient l\'empreinte de la personne qui les a fait sortir. Ils peuvent partir en documents ordinaires, qui la gardent :'**
   String get sensitiveAlreadySignedBody;
 
   /// No description provided for @sensitiveSendAsOrdinary.
@@ -3885,6 +3885,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La protection du PDF a échoué : aucune copie n\'est sortie.'**
   String get pdfProtectionFailed;
+
+  /// No description provided for @sensitivePreviewTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Document sensible'**
+  String get sensitivePreviewTitle;
+
+  /// No description provided for @sensitivePreviewTitleMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n} documents sensibles'**
+  String sensitivePreviewTitleMany(int n);
+
+  /// No description provided for @sensitivePreviewRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ce fichier'**
+  String get sensitivePreviewRemove;
+
+  /// No description provided for @sensitivePreviewBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'ouvrira seulement dans la visionneuse protégée d\'Alanya. Ni transfert ni partage ; toute copie enregistrée sera signée.'**
+  String get sensitivePreviewBanner;
+
+  /// No description provided for @sensitivePreviewOrdinary.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie déjà signée : elle partira en document ordinaire, avec son empreinte d\'origine.'**
+  String get sensitivePreviewOrdinary;
+
+  /// No description provided for @pdfProtectionIntroMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces réglages valent pour les {n} PDF de cet envoi, et s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, les documents restent lisibles dans la visionneuse protégée.'**
+  String pdfProtectionIntroMany(int n);
 
   /// No description provided for @comingSoon.
   ///

@@ -1906,7 +1906,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sensitiveAlreadySignedBody =>
-      '此文件是敏感文件的签名副本，不能再次作为敏感文件发送：它会被重新签名，并丢失导出者的指纹。您可以将其作为普通文件发送，指纹会保留。';
+      '以下文件是敏感文件的签名副本，不能再次作为敏感文件发送：重新签名会丢失导出者的指纹。它们可以作为普通文件发送，指纹会保留：';
 
   @override
   String get sensitiveSendAsOrdinary => '作为普通文件发送';
@@ -2028,6 +2028,29 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pdfProtectionFailed => 'PDF 保护失败：未保存任何副本。';
+
+  @override
+  String get sensitivePreviewTitle => '敏感文件';
+
+  @override
+  String sensitivePreviewTitleMany(int n) {
+    return '$n 个敏感文件';
+  }
+
+  @override
+  String get sensitivePreviewRemove => '移除此文件';
+
+  @override
+  String get sensitivePreviewBanner =>
+      '只能在 Alanya 的受保护查看器中打开。不可转发或分享；任何保存的副本都会被签名。';
+
+  @override
+  String get sensitivePreviewOrdinary => '已签名的副本：将作为普通文件发送，保留其原始指纹。';
+
+  @override
+  String pdfProtectionIntroMany(int n) {
+    return '这些设置适用于本次发送的 $n 个 PDF，以及收件人保存到 Alanya 之外的副本。在 Alanya 内，文件仍可在受保护的查看器中阅读。';
+  }
 
   @override
   String get comingSoon => '即将推出';

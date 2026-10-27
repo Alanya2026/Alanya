@@ -1991,7 +1991,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sensitiveAlreadySignedBody =>
-      'Ce fichier est la copie signée d\'un document sensible. Il ne peut pas repartir en sensible : il serait signé à nouveau et perdrait l\'empreinte de la personne qui l\'a fait sortir. Vous pouvez l\'envoyer en document ordinaire, qui la garde.';
+      'Ces fichiers sont des copies signées de documents sensibles. Ils ne peuvent pas repartir en sensible : signés à nouveau, ils perdraient l\'empreinte de la personne qui les a fait sortir. Ils peuvent partir en documents ordinaires, qui la gardent :';
 
   @override
   String get sensitiveSendAsOrdinary => 'Envoyer en ordinaire';
@@ -2121,6 +2121,30 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get pdfProtectionFailed =>
       'La protection du PDF a échoué : aucune copie n\'est sortie.';
+
+  @override
+  String get sensitivePreviewTitle => 'Document sensible';
+
+  @override
+  String sensitivePreviewTitleMany(int n) {
+    return '$n documents sensibles';
+  }
+
+  @override
+  String get sensitivePreviewRemove => 'Retirer ce fichier';
+
+  @override
+  String get sensitivePreviewBanner =>
+      'S\'ouvrira seulement dans la visionneuse protégée d\'Alanya. Ni transfert ni partage ; toute copie enregistrée sera signée.';
+
+  @override
+  String get sensitivePreviewOrdinary =>
+      'Copie déjà signée : elle partira en document ordinaire, avec son empreinte d\'origine.';
+
+  @override
+  String pdfProtectionIntroMany(int n) {
+    return 'Ces réglages valent pour les $n PDF de cet envoi, et s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, les documents restent lisibles dans la visionneuse protégée.';
+  }
 
   @override
   String get comingSoon => 'Bientôt';

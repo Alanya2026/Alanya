@@ -13,13 +13,17 @@ typedef ChoixProtectionPdf = ({ProtectionPdf? protection});
 ///
 /// Rend `null` si l'expéditeur renonce : l'envoi n'a pas lieu.
 ///
-/// Elles s'appliquent à la copie qui SORT d'Alanya (enregistrement) ; dans
-/// l'application, le document reste lisible dans la visionneuse protégée.
-Future<ChoixProtectionPdf?> demanderProtectionPdf(BuildContext context) {
+/// Elles valent pour les [nombre] PDF sensibles de l'envoi, et s'appliquent
+/// à la copie qui SORT d'Alanya (enregistrement) ; dans l'application, le
+/// document reste lisible dans la visionneuse protégée.
+Future<ChoixProtectionPdf?> demanderProtectionPdf(
+  BuildContext context, {
+  int nombre = 1,
+}) {
   return showDialog<ChoixProtectionPdf>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => const DialogueProtectionPdf(),
+    builder: (_) => DialogueProtectionPdf(nombre: nombre),
   );
 }
 
@@ -28,7 +32,10 @@ Future<ChoixProtectionPdf?> demanderProtectionPdf(BuildContext context) {
 const longueurMinMotDePassePdf = 4;
 
 class DialogueProtectionPdf extends StatefulWidget {
-  const DialogueProtectionPdf({super.key});
+  const DialogueProtectionPdf({super.key, this.nombre = 1});
+
+  /// Le nombre de PDF sensibles concernés.
+  final int nombre;
 
   @override
   State<DialogueProtectionPdf> createState() => _DialogueProtectionPdfState();
@@ -132,7 +139,9 @@ class _DialogueProtectionPdfState extends State<DialogueProtectionPdf> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.pdfProtectionIntro,
+              widget.nombre > 1
+                  ? l10n.pdfProtectionIntroMany(widget.nombre)
+                  : l10n.pdfProtectionIntro,
               style: context.text.bodySmall
                   ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
