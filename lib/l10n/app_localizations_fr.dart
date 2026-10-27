@@ -1958,6 +1958,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get file2 => 'Fichier';
 
   @override
+  String get sensitiveDocument => 'Sensible';
+
+  @override
+  String get sensitiveDocumentBadge => 'Document sensible';
+
+  @override
   String get comingSoon => 'Bientôt';
 
   @override

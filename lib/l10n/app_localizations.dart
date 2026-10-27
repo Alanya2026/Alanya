@@ -3592,6 +3592,18 @@ abstract class AppLocalizations {
   /// **'Fichier'**
   String get file2;
 
+  /// No description provided for @sensitiveDocument.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sensible'**
+  String get sensitiveDocument;
+
+  /// No description provided for @sensitiveDocumentBadge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Document sensible'**
+  String get sensitiveDocumentBadge;
+
   /// No description provided for @comingSoon.
   ///
   /// In fr, this message translates to:

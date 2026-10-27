@@ -1939,6 +1939,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get file2 => 'File';
 
   @override
+  String get sensitiveDocument => 'Sensitive';
+
+  @override
+  String get sensitiveDocumentBadge => 'Sensitive document';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

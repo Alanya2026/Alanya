@@ -150,6 +150,15 @@ class LocalMessages extends Table {
   /// Média à vue unique (« view once »).
   BoolColumn get isViewOnce => boolean().withDefault(const Constant(false))();
 
+  /// Document sensible : visionneuse protégée seulement, ni transfert ni
+  /// partage, copie signée à l'enregistrement (`DescripteurSensible`).
+  BoolColumn get isSensitive => boolean().withDefault(const Constant(false))();
+
+  /// Le descripteur sensible sérialisé (`{sensible, protection?}`), miroir de
+  /// `message.mediaProtection`. Le jour où les médias seront chiffrés, il
+  /// viendra de l'enveloppe au lieu du serveur.
+  TextColumn get mediaProtection => text().nullable()();
+
   /// Instant où CE média vue unique a été consommé (ouvert par moi, ou signalé
   /// « vu » via socket). Non nul ⇒ le média n'est plus ré-ouvrable.
   DateTimeColumn get viewedAt => dateTime().nullable()();
@@ -617,7 +626,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -890,6 +899,13 @@ class AppDatabase extends _$AppDatabase {
             // Téléphone de test passé en v27/v28 par l'ancienne numérotation
             // des stickers : il a sauté le nom personnalisé.
             await _addColumnIfMissing(m, localUsers, localUsers.preferredName);
+          }
+          if (from < 30) {
+            // Documents sensibles (migration serveur 110). Deux colonnes à
+            // défaut ou nulles : aucun message existant n'est touché.
+            await _addColumnIfMissing(m, localMessages, localMessages.isSensitive);
+            await _addColumnIfMissing(
+                m, localMessages, localMessages.mediaProtection);
           }
         },
       );

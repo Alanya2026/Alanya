@@ -2066,6 +2066,32 @@ class $LocalMessagesTable extends LocalMessages
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isSensitiveMeta = const VerificationMeta(
+    'isSensitive',
+  );
+  @override
+  late final GeneratedColumn<bool> isSensitive = GeneratedColumn<bool>(
+    'is_sensitive',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_sensitive" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _mediaProtectionMeta = const VerificationMeta(
+    'mediaProtection',
+  );
+  @override
+  late final GeneratedColumn<String> mediaProtection = GeneratedColumn<String>(
+    'media_protection',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _viewedAtMeta = const VerificationMeta(
     'viewedAt',
   );
@@ -2269,6 +2295,8 @@ class $LocalMessagesTable extends LocalMessages
     isForwarded,
     isPinned,
     isViewOnce,
+    isSensitive,
+    mediaProtection,
     viewedAt,
     clickSentAt,
     messageTz,
@@ -2503,6 +2531,24 @@ class $LocalMessagesTable extends LocalMessages
         isViewOnce.isAcceptableOrUnknown(
           data['is_view_once']!,
           _isViewOnceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_sensitive')) {
+      context.handle(
+        _isSensitiveMeta,
+        isSensitive.isAcceptableOrUnknown(
+          data['is_sensitive']!,
+          _isSensitiveMeta,
+        ),
+      );
+    }
+    if (data.containsKey('media_protection')) {
+      context.handle(
+        _mediaProtectionMeta,
+        mediaProtection.isAcceptableOrUnknown(
+          data['media_protection']!,
+          _mediaProtectionMeta,
         ),
       );
     }
@@ -2747,6 +2793,14 @@ class $LocalMessagesTable extends LocalMessages
         DriftSqlType.bool,
         data['${effectivePrefix}is_view_once'],
       )!,
+      isSensitive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_sensitive'],
+      )!,
+      mediaProtection: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}media_protection'],
+      ),
       viewedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}viewed_at'],
@@ -2870,6 +2924,15 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
   /// Média à vue unique (« view once »).
   final bool isViewOnce;
 
+  /// Document sensible : visionneuse protégée seulement, ni transfert ni
+  /// partage, copie signée à l'enregistrement (`DescripteurSensible`).
+  final bool isSensitive;
+
+  /// Le descripteur sensible sérialisé (`{sensible, protection?}`), miroir de
+  /// `message.mediaProtection`. Le jour où les médias seront chiffrés, il
+  /// viendra de l'enveloppe au lieu du serveur.
+  final String? mediaProtection;
+
   /// Instant où CE média vue unique a été consommé (ouvert par moi, ou signalé
   /// « vu » via socket). Non nul ⇒ le média n'est plus ré-ouvrable.
   final DateTime? viewedAt;
@@ -2963,6 +3026,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     required this.isForwarded,
     required this.isPinned,
     required this.isViewOnce,
+    required this.isSensitive,
+    this.mediaProtection,
     this.viewedAt,
     this.clickSentAt,
     this.messageTz,
@@ -3040,6 +3105,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     map['is_forwarded'] = Variable<bool>(isForwarded);
     map['is_pinned'] = Variable<bool>(isPinned);
     map['is_view_once'] = Variable<bool>(isViewOnce);
+    map['is_sensitive'] = Variable<bool>(isSensitive);
+    if (!nullToAbsent || mediaProtection != null) {
+      map['media_protection'] = Variable<String>(mediaProtection);
+    }
     if (!nullToAbsent || viewedAt != null) {
       map['viewed_at'] = Variable<DateTime>(viewedAt);
     }
@@ -3142,6 +3211,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isForwarded: Value(isForwarded),
       isPinned: Value(isPinned),
       isViewOnce: Value(isViewOnce),
+      isSensitive: Value(isSensitive),
+      mediaProtection: mediaProtection == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mediaProtection),
       viewedAt: viewedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(viewedAt),
@@ -3220,6 +3293,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isForwarded: serializer.fromJson<bool>(json['isForwarded']),
       isPinned: serializer.fromJson<bool>(json['isPinned']),
       isViewOnce: serializer.fromJson<bool>(json['isViewOnce']),
+      isSensitive: serializer.fromJson<bool>(json['isSensitive']),
+      mediaProtection: serializer.fromJson<String?>(json['mediaProtection']),
       viewedAt: serializer.fromJson<DateTime?>(json['viewedAt']),
       clickSentAt: serializer.fromJson<DateTime?>(json['clickSentAt']),
       messageTz: serializer.fromJson<String?>(json['messageTz']),
@@ -3271,6 +3346,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       'isForwarded': serializer.toJson<bool>(isForwarded),
       'isPinned': serializer.toJson<bool>(isPinned),
       'isViewOnce': serializer.toJson<bool>(isViewOnce),
+      'isSensitive': serializer.toJson<bool>(isSensitive),
+      'mediaProtection': serializer.toJson<String?>(mediaProtection),
       'viewedAt': serializer.toJson<DateTime?>(viewedAt),
       'clickSentAt': serializer.toJson<DateTime?>(clickSentAt),
       'messageTz': serializer.toJson<String?>(messageTz),
@@ -3318,6 +3395,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     bool? isForwarded,
     bool? isPinned,
     bool? isViewOnce,
+    bool? isSensitive,
+    Value<String?> mediaProtection = const Value.absent(),
     Value<DateTime?> viewedAt = const Value.absent(),
     Value<DateTime?> clickSentAt = const Value.absent(),
     Value<String?> messageTz = const Value.absent(),
@@ -3372,6 +3451,10 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     isForwarded: isForwarded ?? this.isForwarded,
     isPinned: isPinned ?? this.isPinned,
     isViewOnce: isViewOnce ?? this.isViewOnce,
+    isSensitive: isSensitive ?? this.isSensitive,
+    mediaProtection: mediaProtection.present
+        ? mediaProtection.value
+        : this.mediaProtection,
     viewedAt: viewedAt.present ? viewedAt.value : this.viewedAt,
     clickSentAt: clickSentAt.present ? clickSentAt.value : this.clickSentAt,
     messageTz: messageTz.present ? messageTz.value : this.messageTz,
@@ -3448,6 +3531,12 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
       isViewOnce: data.isViewOnce.present
           ? data.isViewOnce.value
           : this.isViewOnce,
+      isSensitive: data.isSensitive.present
+          ? data.isSensitive.value
+          : this.isSensitive,
+      mediaProtection: data.mediaProtection.present
+          ? data.mediaProtection.value
+          : this.mediaProtection,
       viewedAt: data.viewedAt.present ? data.viewedAt.value : this.viewedAt,
       clickSentAt: data.clickSentAt.present
           ? data.clickSentAt.value
@@ -3521,6 +3610,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           ..write('isForwarded: $isForwarded, ')
           ..write('isPinned: $isPinned, ')
           ..write('isViewOnce: $isViewOnce, ')
+          ..write('isSensitive: $isSensitive, ')
+          ..write('mediaProtection: $mediaProtection, ')
           ..write('viewedAt: $viewedAt, ')
           ..write('clickSentAt: $clickSentAt, ')
           ..write('messageTz: $messageTz, ')
@@ -3570,6 +3661,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
     isForwarded,
     isPinned,
     isViewOnce,
+    isSensitive,
+    mediaProtection,
     viewedAt,
     clickSentAt,
     messageTz,
@@ -3618,6 +3711,8 @@ class LocalMessage extends DataClass implements Insertable<LocalMessage> {
           other.isForwarded == this.isForwarded &&
           other.isPinned == this.isPinned &&
           other.isViewOnce == this.isViewOnce &&
+          other.isSensitive == this.isSensitive &&
+          other.mediaProtection == this.mediaProtection &&
           other.viewedAt == this.viewedAt &&
           other.clickSentAt == this.clickSentAt &&
           other.messageTz == this.messageTz &&
@@ -3664,6 +3759,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
   final Value<bool> isForwarded;
   final Value<bool> isPinned;
   final Value<bool> isViewOnce;
+  final Value<bool> isSensitive;
+  final Value<String?> mediaProtection;
   final Value<DateTime?> viewedAt;
   final Value<DateTime?> clickSentAt;
   final Value<String?> messageTz;
@@ -3709,6 +3806,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.isForwarded = const Value.absent(),
     this.isPinned = const Value.absent(),
     this.isViewOnce = const Value.absent(),
+    this.isSensitive = const Value.absent(),
+    this.mediaProtection = const Value.absent(),
     this.viewedAt = const Value.absent(),
     this.clickSentAt = const Value.absent(),
     this.messageTz = const Value.absent(),
@@ -3755,6 +3854,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     this.isForwarded = const Value.absent(),
     this.isPinned = const Value.absent(),
     this.isViewOnce = const Value.absent(),
+    this.isSensitive = const Value.absent(),
+    this.mediaProtection = const Value.absent(),
     this.viewedAt = const Value.absent(),
     this.clickSentAt = const Value.absent(),
     this.messageTz = const Value.absent(),
@@ -3804,6 +3905,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Expression<bool>? isForwarded,
     Expression<bool>? isPinned,
     Expression<bool>? isViewOnce,
+    Expression<bool>? isSensitive,
+    Expression<String>? mediaProtection,
     Expression<DateTime>? viewedAt,
     Expression<DateTime>? clickSentAt,
     Expression<String>? messageTz,
@@ -3850,6 +3953,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       if (isForwarded != null) 'is_forwarded': isForwarded,
       if (isPinned != null) 'is_pinned': isPinned,
       if (isViewOnce != null) 'is_view_once': isViewOnce,
+      if (isSensitive != null) 'is_sensitive': isSensitive,
+      if (mediaProtection != null) 'media_protection': mediaProtection,
       if (viewedAt != null) 'viewed_at': viewedAt,
       if (clickSentAt != null) 'click_sent_at': clickSentAt,
       if (messageTz != null) 'message_tz': messageTz,
@@ -3898,6 +4003,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     Value<bool>? isForwarded,
     Value<bool>? isPinned,
     Value<bool>? isViewOnce,
+    Value<bool>? isSensitive,
+    Value<String?>? mediaProtection,
     Value<DateTime?>? viewedAt,
     Value<DateTime?>? clickSentAt,
     Value<String?>? messageTz,
@@ -3944,6 +4051,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
       isForwarded: isForwarded ?? this.isForwarded,
       isPinned: isPinned ?? this.isPinned,
       isViewOnce: isViewOnce ?? this.isViewOnce,
+      isSensitive: isSensitive ?? this.isSensitive,
+      mediaProtection: mediaProtection ?? this.mediaProtection,
       viewedAt: viewedAt ?? this.viewedAt,
       clickSentAt: clickSentAt ?? this.clickSentAt,
       messageTz: messageTz ?? this.messageTz,
@@ -4050,6 +4159,12 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
     if (isViewOnce.present) {
       map['is_view_once'] = Variable<bool>(isViewOnce.value);
     }
+    if (isSensitive.present) {
+      map['is_sensitive'] = Variable<bool>(isSensitive.value);
+    }
+    if (mediaProtection.present) {
+      map['media_protection'] = Variable<String>(mediaProtection.value);
+    }
     if (viewedAt.present) {
       map['viewed_at'] = Variable<DateTime>(viewedAt.value);
     }
@@ -4132,6 +4247,8 @@ class LocalMessagesCompanion extends UpdateCompanion<LocalMessage> {
           ..write('isForwarded: $isForwarded, ')
           ..write('isPinned: $isPinned, ')
           ..write('isViewOnce: $isViewOnce, ')
+          ..write('isSensitive: $isSensitive, ')
+          ..write('mediaProtection: $mediaProtection, ')
           ..write('viewedAt: $viewedAt, ')
           ..write('clickSentAt: $clickSentAt, ')
           ..write('messageTz: $messageTz, ')
@@ -13356,6 +13473,8 @@ typedef $$LocalMessagesTableCreateCompanionBuilder =
       Value<bool> isForwarded,
       Value<bool> isPinned,
       Value<bool> isViewOnce,
+      Value<bool> isSensitive,
+      Value<String?> mediaProtection,
       Value<DateTime?> viewedAt,
       Value<DateTime?> clickSentAt,
       Value<String?> messageTz,
@@ -13403,6 +13522,8 @@ typedef $$LocalMessagesTableUpdateCompanionBuilder =
       Value<bool> isForwarded,
       Value<bool> isPinned,
       Value<bool> isViewOnce,
+      Value<bool> isSensitive,
+      Value<String?> mediaProtection,
       Value<DateTime?> viewedAt,
       Value<DateTime?> clickSentAt,
       Value<String?> messageTz,
@@ -13567,6 +13688,16 @@ class $$LocalMessagesTableFilterComposer
 
   ColumnFilters<bool> get isViewOnce => $composableBuilder(
     column: $table.isViewOnce,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSensitive => $composableBuilder(
+    column: $table.isSensitive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mediaProtection => $composableBuilder(
+    column: $table.mediaProtection,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13795,6 +13926,16 @@ class $$LocalMessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isSensitive => $composableBuilder(
+    column: $table.isSensitive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mediaProtection => $composableBuilder(
+    column: $table.mediaProtection,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get viewedAt => $composableBuilder(
     column: $table.viewedAt,
     builder: (column) => ColumnOrderings(column),
@@ -13988,6 +14129,16 @@ class $$LocalMessagesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isSensitive => $composableBuilder(
+    column: $table.isSensitive,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mediaProtection => $composableBuilder(
+    column: $table.mediaProtection,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get viewedAt =>
       $composableBuilder(column: $table.viewedAt, builder: (column) => column);
 
@@ -14117,6 +14268,8 @@ class $$LocalMessagesTableTableManager
                 Value<bool> isForwarded = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isViewOnce = const Value.absent(),
+                Value<bool> isSensitive = const Value.absent(),
+                Value<String?> mediaProtection = const Value.absent(),
                 Value<DateTime?> viewedAt = const Value.absent(),
                 Value<DateTime?> clickSentAt = const Value.absent(),
                 Value<String?> messageTz = const Value.absent(),
@@ -14162,6 +14315,8 @@ class $$LocalMessagesTableTableManager
                 isForwarded: isForwarded,
                 isPinned: isPinned,
                 isViewOnce: isViewOnce,
+                isSensitive: isSensitive,
+                mediaProtection: mediaProtection,
                 viewedAt: viewedAt,
                 clickSentAt: clickSentAt,
                 messageTz: messageTz,
@@ -14209,6 +14364,8 @@ class $$LocalMessagesTableTableManager
                 Value<bool> isForwarded = const Value.absent(),
                 Value<bool> isPinned = const Value.absent(),
                 Value<bool> isViewOnce = const Value.absent(),
+                Value<bool> isSensitive = const Value.absent(),
+                Value<String?> mediaProtection = const Value.absent(),
                 Value<DateTime?> viewedAt = const Value.absent(),
                 Value<DateTime?> clickSentAt = const Value.absent(),
                 Value<String?> messageTz = const Value.absent(),
@@ -14254,6 +14411,8 @@ class $$LocalMessagesTableTableManager
                 isForwarded: isForwarded,
                 isPinned: isPinned,
                 isViewOnce: isViewOnce,
+                isSensitive: isSensitive,
+                mediaProtection: mediaProtection,
                 viewedAt: viewedAt,
                 clickSentAt: clickSentAt,
                 messageTz: messageTz,

@@ -609,6 +609,8 @@
   "next": "下一步",
   "dismiss": "忽略",
   "file2": "文件",
+  "sensitiveDocument": "敏感文件",
+  "sensitiveDocumentBadge": "敏感文件",
   "comingSoon": "即将推出",
   "recent": "最近",
   "label": "标签",

@@ -1016,6 +1016,8 @@
   "next": "Suivant",
   "dismiss": "Ignorer",
   "file2": "Fichier",
+  "sensitiveDocument": "Sensible",
+  "sensitiveDocumentBadge": "Document sensible",
   "comingSoon": "Bientôt",
   "recent": "Récents",
   "label": "Libellé",

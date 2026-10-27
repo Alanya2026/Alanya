@@ -630,6 +630,8 @@
   "next": "Next",
   "dismiss": "Dismiss",
   "file2": "File",
+  "sensitiveDocument": "Sensitive",
+  "sensitiveDocumentBadge": "Sensitive document",
   "comingSoon": "Coming soon",
   "recent": "Recent",
   "label": "Label",

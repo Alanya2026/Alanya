@@ -1233,6 +1233,20 @@ extension _ChatActions on _ChatDetailScreenState {
                   ),
                 ],
               ),
+              AppSpacing.vGapMd,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Document sensible : visionneuse protégée seulement, ni
+                  // transfert ni partage, copie signée à l'enregistrement.
+                  _attachOption(
+                    Icons.lock_outline,
+                    context.l10n.sensitiveDocument,
+                    context.colors.error,
+                    _pickSensitive,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1435,6 +1449,22 @@ extension _ChatActions on _ChatDetailScreenState {
     await _sendPickedFiles(res?.files, type: 4);
   }
 
+  /// Document sensible : un seul fichier, de n'importe quel type. Le type de
+  /// message suit le fichier (image, vidéo, audio, sinon document), pour que
+  /// la visionneuse protégée sache l'afficher.
+  Future<void> _pickSensitive() async {
+    final res = await FilePicker.platform.pickFiles(withData: false);
+    final picked = res?.files.firstOrNull;
+    final path = picked?.path;
+    if (picked == null || path == null) return;
+    await _sendMediaFile(
+      File(path),
+      type: typeMessagePourFichier(picked.name),
+      name: picked.name,
+      sensible: const DescripteurSensible(),
+    );
+  }
+
   /// Import de morceaux : envoyés en `type = 3` comme un vocal, c'est le nom
   /// de fichier qui les distinguera à l'affichage.
   Future<void> _pickMusic() async {
@@ -1515,6 +1545,7 @@ extension _ChatActions on _ChatDetailScreenState {
     int? duration,
     bool viewOnce = false,
     String? content,
+    DescripteurSensible? sensible,
   }) async {
     if (_myId == null) return;
 
@@ -1544,6 +1575,7 @@ extension _ChatActions on _ChatDetailScreenState {
       mediaDuration: duration,
       content: content,
       isViewOnce: viewOnce,
+      sensible: sensible,
     );
     _scrollToBottom();
   }

@@ -126,6 +126,7 @@ import '../../core/errors/error_presenter.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/utils/message_deletion_policy.dart';
 import '../../core/utils/contact_aliases.dart';
+import '../../core/services/documents_sensibles/descripteur_sensible.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

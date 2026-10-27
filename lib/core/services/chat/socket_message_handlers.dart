@@ -188,9 +188,14 @@ class SocketMessageHandlers {
     final mediaUrl = json['mediaUrl']?.toString();
     final msgID = _toInt(json['msgID']);
     // Auto-download des médias reçus (pas les miens — déjà return plus haut).
+    // Document sensible : téléchargé seulement à l'ouverture, dans la
+    // visionneuse protégée — jamais exporté vers la galerie.
+    final isSensitive =
+        json['isSensitive'] == 1 || json['isSensitive'] == true;
     if (mediaUrl != null &&
         msgID != 0 &&
         !isViewOnce &&
+        !isSensitive &&
         MediaDownloadPreferences.isAutoDownloadEnabled) {
       final mediaName = json['mediaName']?.toString();
       final mediaSize = _toInt(json['mediaSize']);

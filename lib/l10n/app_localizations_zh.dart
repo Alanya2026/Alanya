@@ -1876,6 +1876,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get file2 => '文件';
 
   @override
+  String get sensitiveDocument => '敏感文件';
+
+  @override
+  String get sensitiveDocumentBadge => '敏感文件';
+
+  @override
   String get comingSoon => '即将推出';
 
   @override
