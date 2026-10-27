@@ -1973,6 +1973,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fingerprintActionForward => '转发';
 
   @override
+  String get pdfProtectionTitle => '保护 PDF 副本';
+
+  @override
+  String get pdfProtectionIntro =>
+      '这些设置适用于收件人保存到 Alanya 之外的副本。在 Alanya 内，文件仍可在受保护的查看器中阅读。';
+
+  @override
+  String get pdfProtectionAllowPrint => '允许打印';
+
+  @override
+  String get pdfProtectionPassword => '使用密码保护';
+
+  @override
+  String get pdfProtectionPasswordHelp => '副本将被加密；需要打开密码才能阅读。';
+
+  @override
+  String get pdfOpenPassword => '打开密码';
+
+  @override
+  String get pdfOpenPasswordHelp => '仅向收件人显示一次。';
+
+  @override
+  String get pdfOwnerPassword => '所有者密码';
+
+  @override
+  String get pdfOwnerPasswordHelp => '解除限制（打印）。从不向收件人显示。';
+
+  @override
+  String pdfPasswordTooShort(int n) {
+    return '至少 $n 个字符。';
+  }
+
+  @override
+  String get pdfProtectionSend => '发送';
+
+  @override
+  String get pdfPrintForbidden => '禁止打印';
+
+  @override
+  String get pdfPasswordShowOnce => '查看密码（仅一次）';
+
+  @override
+  String get pdfPasswordAlreadySeen => '密码已显示过';
+
+  @override
+  String get pdfPasswordOnceNotice => '请记下：它将不再显示。它用于打开此 PDF 的已保存副本。';
+
+  @override
+  String get pdfPasswordCopy => '复制';
+
+  @override
+  String get pdfPasswordDone => '已记下';
+
+  @override
+  String get pdfProtectionFailed => 'PDF 保护失败：未保存任何副本。';
+
+  @override
   String get comingSoon => '即将推出';
 
   @override

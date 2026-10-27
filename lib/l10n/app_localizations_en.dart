@@ -2043,6 +2043,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fingerprintActionForward => 'Forward';
 
   @override
+  String get pdfProtectionTitle => 'Protect the PDF copy';
+
+  @override
+  String get pdfProtectionIntro =>
+      'These settings apply to the copy the recipient saves outside Alanya. Inside Alanya, the document stays readable in the protected viewer.';
+
+  @override
+  String get pdfProtectionAllowPrint => 'Allow printing';
+
+  @override
+  String get pdfProtectionPassword => 'Protect with a password';
+
+  @override
+  String get pdfProtectionPasswordHelp =>
+      'The copy will be encrypted; the opening password will be needed to read it.';
+
+  @override
+  String get pdfOpenPassword => 'Opening password';
+
+  @override
+  String get pdfOpenPasswordHelp => 'Shown only once to the recipient.';
+
+  @override
+  String get pdfOwnerPassword => 'Owner password';
+
+  @override
+  String get pdfOwnerPasswordHelp =>
+      'Lifts the restrictions (printing). Never shown to the recipient.';
+
+  @override
+  String pdfPasswordTooShort(int n) {
+    return 'At least $n characters.';
+  }
+
+  @override
+  String get pdfProtectionSend => 'Send';
+
+  @override
+  String get pdfPrintForbidden => 'Printing not allowed';
+
+  @override
+  String get pdfPasswordShowOnce => 'Show the password (once only)';
+
+  @override
+  String get pdfPasswordAlreadySeen => 'Password already shown';
+
+  @override
+  String get pdfPasswordOnceNotice =>
+      'Write it down: it won\'t be shown again. It opens the saved copy of this PDF.';
+
+  @override
+  String get pdfPasswordCopy => 'Copy';
+
+  @override
+  String get pdfPasswordDone => 'Got it';
+
+  @override
+  String get pdfProtectionFailed =>
+      'Protecting the PDF failed: no copy was saved.';
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

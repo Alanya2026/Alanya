@@ -3778,6 +3778,114 @@ abstract class AppLocalizations {
   /// **'Transfert'**
   String get fingerprintActionForward;
 
+  /// No description provided for @pdfProtectionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protéger la copie du PDF'**
+  String get pdfProtectionTitle;
+
+  /// No description provided for @pdfProtectionIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces réglages s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, le document reste lisible dans la visionneuse protégée.'**
+  String get pdfProtectionIntro;
+
+  /// No description provided for @pdfProtectionAllowPrint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser l\'impression'**
+  String get pdfProtectionAllowPrint;
+
+  /// No description provided for @pdfProtectionPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protéger par mot de passe'**
+  String get pdfProtectionPassword;
+
+  /// No description provided for @pdfProtectionPasswordHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie sera chiffrée ; il faudra le mot de passe d\'ouverture pour la lire.'**
+  String get pdfProtectionPasswordHelp;
+
+  /// No description provided for @pdfOpenPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe d\'ouverture'**
+  String get pdfOpenPassword;
+
+  /// No description provided for @pdfOpenPasswordHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montré une seule fois au destinataire.'**
+  String get pdfOpenPasswordHelp;
+
+  /// No description provided for @pdfOwnerPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe propriétaire'**
+  String get pdfOwnerPassword;
+
+  /// No description provided for @pdfOwnerPasswordHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lève les restrictions (l\'impression). Jamais montré au destinataire.'**
+  String get pdfOwnerPasswordHelp;
+
+  /// No description provided for @pdfPasswordTooShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n} caractères au moins.'**
+  String pdfPasswordTooShort(int n);
+
+  /// No description provided for @pdfProtectionSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get pdfProtectionSend;
+
+  /// No description provided for @pdfPrintForbidden.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impression interdite'**
+  String get pdfPrintForbidden;
+
+  /// No description provided for @pdfPasswordShowOnce.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le mot de passe (une seule fois)'**
+  String get pdfPasswordShowOnce;
+
+  /// No description provided for @pdfPasswordAlreadySeen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe déjà affiché'**
+  String get pdfPasswordAlreadySeen;
+
+  /// No description provided for @pdfPasswordOnceNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notez-le : il ne sera plus affiché. Il ouvre la copie enregistrée de ce PDF.'**
+  String get pdfPasswordOnceNotice;
+
+  /// No description provided for @pdfPasswordCopy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier'**
+  String get pdfPasswordCopy;
+
+  /// No description provided for @pdfPasswordDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai noté'**
+  String get pdfPasswordDone;
+
+  /// No description provided for @pdfProtectionFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La protection du PDF a échoué : aucune copie n\'est sortie.'**
+  String get pdfProtectionFailed;
+
   /// No description provided for @comingSoon.
   ///
   /// In fr, this message translates to:

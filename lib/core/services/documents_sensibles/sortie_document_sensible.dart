@@ -5,6 +5,7 @@ import 'package:mime/mime.dart';
 
 import '../../../talky_api_client.dart';
 import '../alanya_media_export_service.dart';
+import 'descripteur_sensible.dart';
 import 'signature_document.dart';
 
 /// Le résultat d'un enregistrement : la copie, et si elle a pu être rangée.
@@ -33,12 +34,17 @@ class SortieDocumentSensible {
   /// pour une photo ou une vidéo), puis note le geste. Une signature
   /// impossible n'empêche pas l'enregistrement (`copie.signee` vaut faux) ;
   /// la trace, elle, n'est notée que si la copie est bien sortie.
+  ///
+  /// ⚠️ SAUF un PDF protégé ([protection]) dont la protection échoue :
+  /// [ProtectionImpossible] est levée avant tout enregistrement et toute
+  /// trace, puisque rien n'est sorti.
   Future<CopieEnregistree> enregistrer({
     required File clair,
     required int msgID,
     required int type,
     required String nom,
     required bool jeSuisExpediteur,
+    ProtectionPdf? protection,
   }) async {
     final signature = SignatureSortie.nouvelle(
       geste: GesteSortie.telechargement,
@@ -53,6 +59,7 @@ class SortieDocumentSensible {
       nom: nom,
       mime: lookupMimeType(nom) ?? '',
       signature: signature,
+      protection: protection,
     );
     final ok = await AlanyaMediaExportService.instance.saveNow(
       // Un audio n'a pas de dossier à lui : il rejoint les documents.

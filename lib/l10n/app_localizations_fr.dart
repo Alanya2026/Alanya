@@ -2062,6 +2062,67 @@ class AppLocalizationsFr extends AppLocalizations {
   String get fingerprintActionForward => 'Transfert';
 
   @override
+  String get pdfProtectionTitle => 'Protéger la copie du PDF';
+
+  @override
+  String get pdfProtectionIntro =>
+      'Ces réglages s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, le document reste lisible dans la visionneuse protégée.';
+
+  @override
+  String get pdfProtectionAllowPrint => 'Autoriser l\'impression';
+
+  @override
+  String get pdfProtectionPassword => 'Protéger par mot de passe';
+
+  @override
+  String get pdfProtectionPasswordHelp =>
+      'La copie sera chiffrée ; il faudra le mot de passe d\'ouverture pour la lire.';
+
+  @override
+  String get pdfOpenPassword => 'Mot de passe d\'ouverture';
+
+  @override
+  String get pdfOpenPasswordHelp => 'Montré une seule fois au destinataire.';
+
+  @override
+  String get pdfOwnerPassword => 'Mot de passe propriétaire';
+
+  @override
+  String get pdfOwnerPasswordHelp =>
+      'Lève les restrictions (l\'impression). Jamais montré au destinataire.';
+
+  @override
+  String pdfPasswordTooShort(int n) {
+    return '$n caractères au moins.';
+  }
+
+  @override
+  String get pdfProtectionSend => 'Envoyer';
+
+  @override
+  String get pdfPrintForbidden => 'Impression interdite';
+
+  @override
+  String get pdfPasswordShowOnce => 'Voir le mot de passe (une seule fois)';
+
+  @override
+  String get pdfPasswordAlreadySeen => 'Mot de passe déjà affiché';
+
+  @override
+  String get pdfPasswordOnceNotice =>
+      'Notez-le : il ne sera plus affiché. Il ouvre la copie enregistrée de ce PDF.';
+
+  @override
+  String get pdfPasswordCopy => 'Copier';
+
+  @override
+  String get pdfPasswordDone => 'J\'ai noté';
+
+  @override
+  String get pdfProtectionFailed =>
+      'La protection du PDF a échoué : aucune copie n\'est sortie.';
+
+  @override
   String get comingSoon => 'Bientôt';
 
   @override

@@ -7,9 +7,19 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
+// Le dictionnaire Info d'un PDF n'a pas d'accès public pour des champs
+// libres : on passe par l'aide interne de la bibliothèque (voir
+// [_ecrireMetaPdf]), comme Alanya Work.
+// ignore: implementation_imports
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/pdf_document/pdf_document_information.dart'
+    show PdfDocumentInformationHelper;
+// ignore: implementation_imports
+import 'package:syncfusion_flutter_pdf/src/pdf/implementation/primitives/pdf_dictionary.dart'
+    show PdfDictionary;
 
 import '../../utils/alanya_phone_formatter.dart';
 import 'audio_metadonnees.dart';
+import 'descripteur_sensible.dart' show ProtectionPdf;
 import 'mp4_metadonnees.dart';
 
 /// Ce qu'on fait sortir d'Alanya : le geste noté par le serveur.
@@ -310,30 +320,45 @@ class SignatureDocument {
   ///
   /// Ne lève jamais : un échec rend la copie telle quelle, avec
   /// `signee: false` — le geste a été demandé, il n'est pas refusé.
+  ///
+  /// 🔴 SAUF POUR UN PDF PROTÉGÉ ([protection]) : là, un échec LÈVE
+  /// [ProtectionImpossible]. Rendre la copie telle quelle ferait sortir sans
+  /// mot de passe ni restriction un document que l'expéditeur a voulu
+  /// protéger — l'enregistrement échoue plutôt.
   static Future<CopieSignee> signer({
     required File source,
     required String nom,
     required String mime,
     required SignatureSortie signature,
     Directory? cache,
+    ProtectionPdf? protection,
   }) async {
     final base = cache ?? await getTemporaryDirectory();
     // Un dossier par empreinte : la copie garde son nom d'origine.
     final dossier = Directory('${base.path}/sorties/${signature.code}');
     await dossier.create(recursive: true);
     final cible = File('${dossier.path}/$nom');
+    final nature = natureSignature(mime, nom);
+    if (protection != null && nature == NatureSignature.pdf) {
+      try {
+        final octets = await compute(
+          signerPdf,
+          _travailPdf(await source.readAsBytes(), signature, protection),
+        );
+        await cible.writeAsBytes(octets, flush: true);
+        return CopieSignee(fichier: cible, nom: nom, signee: true);
+      } catch (e) {
+        debugPrint('[Alanya] PDF non protégé ($nom) : $e');
+        if (await cible.exists()) await cible.delete();
+        throw ProtectionImpossible(e);
+      }
+    }
     try {
-      switch (natureSignature(mime, nom)) {
+      switch (nature) {
         case NatureSignature.pdf:
           final octets = await compute(
             signerPdf,
-            TravailPdf(
-              octets: await source.readAsBytes(),
-              bords: signature.texteBordsPdf,
-              auteur: asciiStrict('Alanya ${signature.alanyaId}'),
-              sujet: asciiStrict(signature.texteBordsPdf),
-              motsCles: signature.ligneMetadonnees,
-            ),
+            _travailPdf(await source.readAsBytes(), signature, null),
           );
           await cible.writeAsBytes(octets, flush: true);
           return CopieSignee(fichier: cible, nom: nom, signee: true);
@@ -375,6 +400,22 @@ class SignatureDocument {
     final copie = await source.copy(cible.path);
     return CopieSignee(fichier: copie, nom: nom, signee: false);
   }
+
+  static TravailPdf _travailPdf(
+    Uint8List octets,
+    SignatureSortie signature,
+    ProtectionPdf? protection,
+  ) =>
+      TravailPdf(
+        octets: octets,
+        bords: signature.texteBordsPdf,
+        coin: signature.codeLisible,
+        auteur: asciiStrict('Alanya ${signature.alanyaId}'),
+        sujet: asciiStrict(signature.texteBordsPdf),
+        motsCles: signature.ligneMetadonnees,
+        meta: signature.metadonnees.map((k, v) => MapEntry(k, asciiStrict(v))),
+        protection: protection,
+      );
 
   static bool _estJpeg(String nom) =>
       const {'jpg', 'jpeg'}.contains(_extension(nom));
@@ -422,65 +463,59 @@ class TravailPdf {
   const TravailPdf({
     required this.octets,
     required this.bords,
+    required this.coin,
     required this.auteur,
     required this.sujet,
     required this.motsCles,
+    required this.meta,
+    this.protection,
   });
 
   final Uint8List octets;
   final String bords;
+
+  /// L'empreinte lisible, écrite seule en haut à droite d'un PDF protégé par
+  /// mot de passe.
+  final String coin;
   final String auteur;
   final String sujet;
   final String motsCles;
+
+  /// Les champs libres du dictionnaire Info (`CleMeta`), en ASCII.
+  final Map<String, String> meta;
+  final ProtectionPdf? protection;
 }
 
-/// Le texte des bords sur chaque page, et les propriétés du document. Un PDF
-/// chiffré ou illisible lève : l'appelant fait sortir la copie telle quelle.
+/// Gris de la signature aux bords ; rouge de l'empreinte seule au coin.
+final _gris = PdfColor(110, 110, 110);
+final _rouge = PdfColor(0xE5, 0x39, 0x35);
+
+/// La copie signée d'un PDF, en une passe.
+///
+/// * Sans protection, ou protégé SANS mot de passe (impression interdite) :
+///   texte aux quatre bords de chaque page.
+/// * Protégé AVEC mot de passe : plus de texte aux bords, seulement
+///   l'empreinte en haut à droite (Alanya Work, 24–25/10/2026).
+/// * Toujours : les propriétés et les champs libres du dictionnaire Info.
+/// * Protégé : chiffré en AES-256, impression permise ou non.
+///
+/// 🔴 LES CHAMPS RESTENT RECONNAISSABLES. `DetecteurCopieSignee` cherche le
+/// NOM de champ « Empreinte#20numerique » : un nom de PDF n'est jamais
+/// chiffré (seules les chaînes le sont), et la table de références classique
+/// garde le dictionnaire Info hors des flux compressés.
+///
+/// Un PDF chiffré ou illisible lève : l'appelant décide.
 Uint8List signerPdf(TravailPdf t) {
   final doc = PdfDocument(inputBytes: t.octets);
   try {
-    final brosse = PdfSolidBrush(PdfColor(110, 110, 110));
-    final format = PdfStringFormat(
-      alignment: PdfTextAlignment.center,
-      lineAlignment: PdfVerticalAlignment.middle,
-    );
+    final protection = t.protection;
+    final auCoin = protection != null && protection.avecMotDePasse;
     for (var i = 0; i < doc.pages.count; i++) {
-      final page = doc.pages[i];
-      final taille = page.getClientSize();
-      final l = taille.width;
-      final h = taille.height;
-      // Assez petit pour tenir sur la largeur, pas plus grand que 8 pt.
-      final corps = min(8.0, max(4.0, min(l, h) / 75));
-      final police = PdfStandardFont(PdfFontFamily.helvetica, corps);
-      final bande = corps * 1.6;
-      final g = page.graphics;
-
-      g.drawString(t.bords, police,
-          brush: brosse,
-          bounds: Rect.fromLTWH(bande, 0, l - 2 * bande, bande),
-          format: format);
-      g.drawString(t.bords, police,
-          brush: brosse,
-          bounds: Rect.fromLTWH(bande, h - bande, l - 2 * bande, bande),
-          format: format);
-      // Les côtés laissent libres, à leurs deux bouts, la bande du texte
-      // perpendiculaire : les coins ne se chevauchent pas.
-      g.save();
-      g.translateTransform(0, h - bande);
-      g.rotateTransform(-90);
-      g.drawString(t.bords, police,
-          brush: brosse,
-          bounds: Rect.fromLTWH(0, 0, h - 2 * bande, bande),
-          format: format);
-      g.restore();
-      g.save();
-      g.translateTransform(l, bande);
-      g.rotateTransform(90);
-      g.drawString(t.bords, police,
-          brush: brosse,
-          bounds: Rect.fromLTWH(0, 0, h - 2 * bande, bande),
-          format: format);
-      g.restore();
+      if (auCoin) {
+        _ecrireCoin(doc.pages[i], t.coin);
+      } else {
+        _ecrireBords(doc.pages[i], t.bords);
+      }
     }
     final info = doc.documentInformation;
     info.author = t.auteur;
@@ -488,10 +523,114 @@ Uint8List signerPdf(TravailPdf t) {
     info.producer = SignatureSortie.application;
     info.subject = t.sujet;
     info.keywords = t.motsCles;
+    _ecrireMetaPdf(doc, t.meta);
+
+    doc.fileStructure
+      ..incrementalUpdate = false
+      ..crossReferenceType = PdfCrossReferenceType.crossReferenceTable;
+
+    if (protection != null) {
+      final s = doc.security
+        ..algorithm = PdfEncryptionAlgorithm.aesx256BitRevision6
+        ..ownerPassword = protection.proprietaire
+        ..userPassword = protection.ouverture ?? '';
+      s.permissions.clear();
+      s.permissions.addAll([
+        // Les lecteurs d'écran gardent l'accès au texte.
+        PdfPermissionsFlags.accessibilityCopyContent,
+        if (protection.imprimer) ...[
+          PdfPermissionsFlags.print,
+          PdfPermissionsFlags.fullQualityPrint,
+        ],
+      ]);
+    }
     return Uint8List.fromList(doc.saveSync());
   } finally {
     doc.dispose();
   }
+}
+
+void _ecrireBords(PdfPage page, String texte) {
+  final brosse = PdfSolidBrush(_gris);
+  final format = PdfStringFormat(
+    alignment: PdfTextAlignment.center,
+    lineAlignment: PdfVerticalAlignment.middle,
+  );
+  final taille = page.getClientSize();
+  final l = taille.width;
+  final h = taille.height;
+  // Assez petit pour tenir sur la largeur, pas plus grand que 8 pt.
+  final corps = min(8.0, max(4.0, min(l, h) / 75));
+  final police = PdfStandardFont(PdfFontFamily.helvetica, corps);
+  final bande = corps * 1.6;
+  final g = page.graphics;
+
+  g.drawString(texte, police,
+      brush: brosse,
+      bounds: Rect.fromLTWH(bande, 0, l - 2 * bande, bande),
+      format: format);
+  g.drawString(texte, police,
+      brush: brosse,
+      bounds: Rect.fromLTWH(bande, h - bande, l - 2 * bande, bande),
+      format: format);
+  // Les côtés laissent libres, à leurs deux bouts, la bande du texte
+  // perpendiculaire : les coins ne se chevauchent pas.
+  g.save();
+  g.translateTransform(0, h - bande);
+  g.rotateTransform(-90);
+  g.drawString(texte, police,
+      brush: brosse,
+      bounds: Rect.fromLTWH(0, 0, h - 2 * bande, bande),
+      format: format);
+  g.restore();
+  g.save();
+  g.translateTransform(l, bande);
+  g.rotateTransform(90);
+  g.drawString(texte, police,
+      brush: brosse,
+      bounds: Rect.fromLTWH(0, 0, h - 2 * bande, bande),
+      format: format);
+  g.restore();
+}
+
+/// L'empreinte en haut à droite de la page, par-dessus le contenu.
+void _ecrireCoin(PdfPage page, String texte) {
+  final taille = page.getClientSize();
+  final court = min(taille.width, taille.height);
+  final corps = (court / 50).clamp(7.0, 12.0);
+  final police =
+      PdfStandardFont(PdfFontFamily.helvetica, corps, style: PdfFontStyle.bold);
+  final mesure = police.measureString(texte);
+  final marge = corps * 1.2;
+  page.graphics.drawString(
+    texte,
+    police,
+    brush: PdfSolidBrush(_rouge),
+    bounds: Rect.fromLTWH(
+      taille.width - marge - mesure.width,
+      marge,
+      mesure.width + 1,
+      mesure.height,
+    ),
+  );
+}
+
+/// Les champs libres du dictionnaire Info, sous les noms de `CleMeta`.
+void _ecrireMetaPdf(PdfDocument doc, Map<String, String> meta) {
+  if (meta.isEmpty) return;
+  final info =
+      PdfDocumentInformationHelper.getHelper(doc.documentInformation).element;
+  if (info is! PdfDictionary) return;
+  meta.forEach(info.setString);
+}
+
+/// La copie protégée d'un PDF n'a pas pu être faite : rien ne sort.
+class ProtectionImpossible implements Exception {
+  const ProtectionImpossible(this.cause);
+  final Object cause;
+
+  @override
+  String toString() => 'ProtectionImpossible($cause)';
 }
 
 // ── Images (paquet `image`, dans un isolat) ─────────────────────────────────

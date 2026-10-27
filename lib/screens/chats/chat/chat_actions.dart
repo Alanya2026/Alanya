@@ -1497,11 +1497,24 @@ extension _ChatActions on _ChatDetailScreenState {
       sensible = false;
     }
 
+    // Un PDF sensible : l'expéditeur règle une fois la protection de la
+    // copie qui sortira (impression, mots de passe).
+    DescripteurSensible? descripteur;
+    if (sensible) {
+      descripteur = const DescripteurSensible();
+      if (picked.name.toLowerCase().endsWith('.pdf')) {
+        if (!mounted) return;
+        final choix = await demanderProtectionPdf(context);
+        if (choix == null) return;
+        descripteur = DescripteurSensible(protection: choix.protection);
+      }
+    }
+
     await _sendMediaFile(
       File(path),
       type: typeMessagePourFichier(picked.name),
       name: picked.name,
-      sensible: sensible ? const DescripteurSensible() : null,
+      sensible: descripteur,
     );
   }
 
@@ -2687,6 +2700,10 @@ extension _ChatActions on _ChatDetailScreenState {
         type: msg.type,
         nom: msg.mediaName ?? path.split('/').last,
         jeSuisExpediteur: msg.senderID == _myId,
+        protection: DescripteurSensible.duMessage(
+          isSensitive: msg.isSensitive,
+          mediaProtection: msg.mediaProtection,
+        )?.protection,
       );
       messenger.showSnackBar(SnackBar(
         content: Text(!r.enregistree
@@ -2695,6 +2712,12 @@ extension _ChatActions on _ChatDetailScreenState {
                 ? l10n.sensitiveSavedSigned
                 : l10n.sensitiveSavedUnsigned),
         backgroundColor: r.enregistree ? null : AppColors.error,
+      ));
+    } on ProtectionImpossible {
+      // L'expéditeur a voulu un PDF protégé : sans protection, rien ne sort.
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.pdfProtectionFailed),
+        backgroundColor: AppColors.error,
       ));
     } catch (_) {
       messenger.showSnackBar(SnackBar(

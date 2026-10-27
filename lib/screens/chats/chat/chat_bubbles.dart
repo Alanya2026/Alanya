@@ -1980,7 +1980,12 @@ extension _ChatBubbles on _ChatDetailScreenState {
       _ => Icons.description_outlined,
     };
 
-    return GestureDetector(
+    final protection = DescripteurSensible.duMessage(
+      isSensitive: true,
+      mediaProtection: msg.mediaProtection,
+    )?.protection;
+
+    final carte = GestureDetector(
       onTap: uploading ? null : () => _openSensitive(msg),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2043,6 +2048,22 @@ extension _ChatBubbles on _ChatDetailScreenState {
           ),
         ],
       ),
+    );
+    if (protection == null) return carte;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        carte,
+        InfosProtectionPdf(
+          protection: protection,
+          // Le msgID est le même sur tous les appareils ; avant l'accusé,
+          // seul l'expéditeur voit la bulle, et il n'a pas de vue unique.
+          idMessage: msg.msgID > 0 ? 'm${msg.msgID}' : msg.clientId,
+          isMe: isMe,
+          couleurDiscrete: textColor.withAlpha(190),
+        ),
+      ],
     );
   }
 
