@@ -16,6 +16,9 @@ import '../../utils/media_album.dart';
 ///
 /// Une liste noire laisserait un futur type 10 filer au traducteur par défaut ;
 /// ici il reste exclu tant que personne ne l'a explicitement autorisé.
+///
+/// Type 10 (sticker) : « inutile » — son `content` est un JSON d'identifiants,
+/// l'emoji ne se traduit pas. Garanti par `test/sticker_integration_test.dart`.
 const Set<int> kTranslatableMessageTypes = {0, 1, 2, 3, 4};
 
 /// En deçà, l'identification de langue devine plus qu'elle ne détecte.

@@ -84,7 +84,11 @@ class MediaExportJob {
   final ChatDao dao;
   final ExportZipBuilder builder;
 
-  MediaExportJob(this.dao, {ExportZipBuilder? builder})
+  /// Résout le fichier d'un sticker (cache dédié). Optionnel : absent, un
+  /// sticker est déclaré manquant plutôt qu'omis. Voir [StickerFileResolver].
+  final StickerFileResolver? stickerFile;
+
+  MediaExportJob(this.dao, {ExportZipBuilder? builder, this.stickerFile})
       : builder = builder ?? ExportZipBuilder();
 
   bool _cancelled = false;
@@ -110,9 +114,9 @@ class MediaExportJob {
     int? conversationID,
     DateTime? from,
     DateTime? until,
-    List<int> types = kMyMediaTypes,
+    List<int> types = kExportMediaTypes,
   }) {
-    return ExportScanner(dao).scan(
+    return ExportScanner(dao, stickerFile: stickerFile).scan(
       myId,
       mineOnly: mineOnly,
       conversationID: conversationID,
@@ -136,7 +140,7 @@ class MediaExportJob {
     String? conversationName,
     DateTime? from,
     DateTime? until,
-    List<int> types = kMyMediaTypes,
+    List<int> types = kExportMediaTypes,
     int? availableBytes,
     MediaRecoverer? recoverMissing,
     void Function(ExportStatus)? onStatus,
@@ -144,7 +148,7 @@ class MediaExportJob {
     _throwIfCancelled();
     onStatus?.call(const ExportStatus(phase: ExportPhase.scanning));
 
-    var scan = await ExportScanner(dao).scan(
+    var scan = await ExportScanner(dao, stickerFile: stickerFile).scan(
       myId,
       mineOnly: mineOnly,
       conversationID: conversationID,
@@ -161,7 +165,7 @@ class MediaExportJob {
       // récupérés doivent être mesurés, nommés et numérotés exactement comme
       // les autres. Rejouer le scan est bien moins risqué que de rejouer sa
       // logique à la main.
-      scan = await ExportScanner(dao).scan(
+      scan = await ExportScanner(dao, stickerFile: stickerFile).scan(
         myId,
         mineOnly: mineOnly,
         conversationID: conversationID,
@@ -228,7 +232,13 @@ class MediaExportJob {
       try {
         final path = await recover(targets[i].clientId);
         if (path != null && path.isNotEmpty) {
-          await dao.setLocalMediaPathByClientId(targets[i].clientId, path);
+          // Un sticker vit dans son cache dédié, indexé par URL : il n'a pas
+          // de `localMediaPath` à renseigner, et le lui écrire ferait pointer
+          // la base vers un fichier qui n'est pas du cache média. Le scan le
+          // retrouve de toute façon par le résolveur de vignettes.
+          if (!targets[i].isSticker) {
+            await dao.setLocalMediaPathByClientId(targets[i].clientId, path);
+          }
         }
       } catch (_) {
         // Réseau coupé, serveur indisponible, média finalement purgé : on

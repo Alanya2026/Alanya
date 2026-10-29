@@ -7,6 +7,7 @@ import '../../utils/audio_message_kind.dart';
 import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/media_album.dart';
+import '../../utils/sticker_payload.dart';
 import '../../utils/system_event_payload.dart';
 import '../../utils/trip_payload.dart';
 import '../../utils/welcome_cta_payload.dart';
@@ -142,6 +143,9 @@ class ConversationMerge {
     String? mediaName, {
     bool isViewOnce = false,
   }) {
+    // type=10 : JSON sticker — « 😂 Sticker », jamais le content brut (même
+    // cassé ou d'une version future).
+    if (type == kStickerMessageType) return stickerPreviewLabel(content);
     // type=5 : JSON lat/lng — ne jamais exposer le content brut.
     if (type == 5) return locationPreviewLabel(content);
     // type=6 : JSON événement de groupe — ne jamais exposer le content brut.

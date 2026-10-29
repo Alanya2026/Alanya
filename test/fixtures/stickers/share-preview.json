@@ -1,0 +1,4 @@
+{"name":"Les copains","description":null,"version":2,"cover":"https://<bucket>/stickers/u/12/1111aaaa2222bbbb_ee55ff66_t.webp","count":2,"mine":false,"added":false,"addedPackId":null,
+ "stickers":[
+  {"id":701,"position":0,"emoji":"😎","name":"Cool","url":"https://<bucket>/stickers/u/12/1111aaaa2222bbbb_ee55ff66.webp","thumb":"https://<bucket>/stickers/u/12/1111aaaa2222bbbb_ee55ff66_t.webp","w":512,"h":512,"animated":false,"bytes":30100},
+  {"id":702,"position":1,"emoji":"🙌","name":"","url":"https://<bucket>/stickers/u/12/3333cccc4444dddd_aa77bb88.webp","thumb":"https://<bucket>/stickers/u/12/3333cccc4444dddd_aa77bb88_t.webp","w":512,"h":512,"animated":false,"bytes":28800}]}

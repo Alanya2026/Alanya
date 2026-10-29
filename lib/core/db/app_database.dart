@@ -502,6 +502,96 @@ class LocalTripEvents extends Table {
   Set<Column> get primaryKey => {tripId, seq};
 }
 
+
+// ── Stickers (type de message 10) ─────────────────────────────────────
+//
+// Miroir local de l'état serveur : le serveur tranche (droits, quotas, URLs),
+// ces tables ne font que permettre l'affichage hors ligne. `local_messages` ne
+// change pas : un message sticker est un message de type 10 dont `content` est
+// un JSON (cf. `core/utils/sticker_payload.dart`).
+
+/// Pack de stickers : catalogue officiel (`/stickers/catalog`) et état
+/// « installé » de l'utilisateur (`/stickers/me`).
+class LocalStickerPacks extends Table {
+  IntColumn get packId => integer()();
+  TextColumn get code => text()();
+
+  /// Nom et description **déjà résolus** par le serveur (langue du profil).
+  TextColumn get name => text().withDefault(const Constant(''))();
+  TextColumn get description => text().nullable()();
+  TextColumn get coverUrl => text().nullable()();
+  IntColumn get stickerCount => integer().withDefault(const Constant(0))();
+  BoolColumn get isPremium => boolean().withDefault(const Constant(false))();
+
+  /// Pack Plus dont le droit manque (valeur du serveur, jamais recalculée).
+  BoolColumn get locked => boolean().withDefault(const Constant(false))();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  BoolColumn get installedByDefault =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Pack dans « Mes packs ».
+  BoolColumn get installed => boolean().withDefault(const Constant(false))();
+
+  /// Rang dans « Mes packs » (ordre choisi par l'utilisateur).
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  /// Rang dans le catalogue (ordre du serveur).
+  IntColumn get catalogPosition => integer().withDefault(const Constant(0))();
+
+  /// Pack **que j'ai créé** (V1b : `GET /stickers/me/created`, y compris la
+  /// copie d'un lien de partage, qui m'appartient). Ces packs n'entrent ni dans
+  /// le catalogue ni dans « installés » : ils ont leur propre liste.
+  BoolColumn get owned => boolean().withDefault(const Constant(false))();
+
+  /// Jeton du lien de partage d'un pack à moi, ou nul (pack privé). Le serveur
+  /// ne le rend qu'à son propriétaire.
+  TextColumn get shareToken => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {packId};
+}
+
+/// Sticker d'un pack (`/stickers/packs/:code`).
+class LocalStickers extends Table {
+  IntColumn get stickerId => integer()();
+  IntColumn get packId => integer()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+  TextColumn get emoji => text().withDefault(const Constant(''))();
+  TextColumn get name => text().nullable()();
+  TextColumn get url => text()();
+  TextColumn get thumbUrl => text().nullable()();
+  IntColumn get width => integer().withDefault(const Constant(512))();
+  IntColumn get height => integer().withDefault(const Constant(512))();
+  BoolColumn get animated => boolean().withDefault(const Constant(false))();
+  IntColumn get bytes => integer().nullable()();
+
+  /// Identifiant de l'actif (fichier) : connu seulement pour mes propres
+  /// stickers (`/me/created`). Nécessaire pour signaler ou copier.
+  IntColumn get assetId => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {stickerId};
+}
+
+/// Favoris (identifiants seulement côté serveur ; les détails viennent de
+/// [LocalStickers]).
+class LocalStickerFavorites extends Table {
+  IntColumn get stickerId => integer()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {stickerId};
+}
+
+/// Stickers récemment envoyés — **local à l'appareil**, jamais synchronisé.
+class LocalStickerRecents extends Table {
+  IntColumn get stickerId => integer()();
+  DateTimeColumn get usedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {stickerId};
+}
+
 @DriftDatabase(
   tables: [
     LocalConversations,
@@ -516,6 +606,10 @@ class LocalTripEvents extends Table {
     LocalTrips,
     LocalTripPoints,
     LocalTripEvents,
+    LocalStickerPacks,
+    LocalStickers,
+    LocalStickerFavorites,
+    LocalStickerRecents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -523,7 +617,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 29;
 
   static const _legacyHttps = 'https://158.220.107.211';
   static const _httpHost = 'http://158.220.107.211';
@@ -772,6 +866,31 @@ class AppDatabase extends _$AppDatabase {
             // Une colonne nullable : le cache existant n'est pas vidé.
             await _addColumnIfMissing(m, localUsers, localUsers.preferredName);
           }
+          // Stickers : v27 et v28 sur la branche des stickers, décalées en 28
+          // et 29 à la fusion (27 était déjà le nom personnalisé sur main).
+          // Un téléphone de test passé par ces anciennes versions a déjà les
+          // tables : on ne crée que ce qui manque.
+          if (from < 28) {
+            // Stickers (migration serveur 097). Quatre créations de tables :
+            // rien du cache existant n'est touché, `local_messages` non plus.
+            await _createTableIfMissing(m, localStickerPacks);
+            await _createTableIfMissing(m, localStickers);
+            await _createTableIfMissing(m, localStickerFavorites);
+            await _createTableIfMissing(m, localStickerRecents);
+          }
+          if (from < 29) {
+            // Stickers V1b : mes packs créés (`owned`, jeton de partage) et
+            // l'identifiant d'actif de mes stickers. Trois colonnes à défaut
+            // ou nulles ; sur une base où `from < 28` vient de créer les
+            // tables, elles y sont déjà, d'où le test avant ALTER.
+            await _addColumnIfMissing(m, localStickerPacks, localStickerPacks.owned);
+            await _addColumnIfMissing(
+                m, localStickerPacks, localStickerPacks.shareToken);
+            await _addColumnIfMissing(m, localStickers, localStickers.assetId);
+            // Téléphone de test passé en v27/v28 par l'ancienne numérotation
+            // des stickers : il a sauté le nom personnalisé.
+            await _addColumnIfMissing(m, localUsers, localUsers.preferredName);
+          }
         },
       );
 
@@ -791,6 +910,22 @@ class AppDatabase extends _$AppDatabase {
   /// n'est jamais incrémenté, la même migration replante à chaque lancement,
   /// jusqu'à l'effacement des données. Tester avant d'ALTER rend chaque barreau
   /// rejouable et répare au passage les bases déjà bloquées.
+  /// Crée [table] seulement si elle n'existe pas encore (`createTable` échoue
+  /// sur une table déjà là).
+  static Future<void> _createTableIfMissing(
+    Migrator m,
+    TableInfo table,
+  ) async {
+    final rows = await m.database
+        .customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+          variables: [Variable.withString(table.actualTableName)],
+        )
+        .get();
+    if (rows.isNotEmpty) return;
+    await m.createTable(table);
+  }
+
   static Future<void> _addColumnIfMissing(
     Migrator m,
     TableInfo table,

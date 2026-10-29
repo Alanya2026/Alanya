@@ -4144,6 +4144,410 @@
       }
     }
   },
+  "stickerWord": "Sticker",
+  "stickerPreview": "{emoji} Sticker",
+  "@stickerPreview": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerRemoved": "Sticker retiré",
+  "stickerUnsupported": "Sticker non pris en charge — mettez à jour l'application",
+  "stickerTabEmojis": "Émojis",
+  "stickerTabStickers": "Stickers",
+  "stickerRecents": "Récents",
+  "stickerFavorites": "Favoris",
+  "stickerEmptyRecents": "Vos stickers récents apparaîtront ici.",
+  "stickerEmptyFavorites": "Touchez ★ dans la fiche d'un sticker pour l'ajouter à vos favoris.",
+  "stickerLoadError": "Impossible de charger les stickers.",
+  "stickerRetry": "Réessayer",
+  "stickerLockedBanner": "Ce pack est réservé à Alanya Plus.",
+  "stickerUnlockCta": "Découvrir Alanya Plus",
+  "stickerLockedLabel": "Pack {name}, verrouillé",
+  "@stickerLockedLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerBadgeOfficial": "Officiel",
+  "stickerBadgePlus": "Plus",
+  "stickerFavoriteAdd": "Ajouter aux favoris",
+  "stickerFavoriteRemove": "Retirer des favoris",
+  "stickerViewPack": "Voir le pack",
+  "stickerForward": "Transférer",
+  "stickerSheetPack": "Pack : {name}",
+  "@stickerSheetPack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSender": "Envoyé par {name}",
+  "@stickerSheetSender": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSize": "{w} × {h} px",
+  "@stickerSheetSize": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      },
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerSheetWeight": "Poids : {size}",
+  "@stickerSheetWeight": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerAddPack": "Ajouter",
+  "stickerRemovePack": "Retirer",
+  "stickerAdded": "Pack ajouté.",
+  "stickerPackRemoved": "Pack retiré.",
+  "stickerMyPacks": "Mes packs",
+  "stickerCatalog": "Catalogue",
+  "stickerManage": "Gérer les stickers",
+  "stickerPackCount": "{count} stickers",
+  "@stickerPackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerPackInstalled": "Installé",
+  "stickerSendLockedPlus": "Ce sticker nécessite Alanya Plus.",
+  "stickerDomainError": "Les stickers ne sont pas disponibles pour le moment.",
+  "errCodeStickerNotFound": "Ce sticker n'existe plus.",
+  "errCodeStickerPackUnavailable": "Ce pack n'est plus disponible.",
+  "errCodeStickerInvalidPayload": "Ce sticker n'a pas pu être envoyé.",
+  "errCodeStickerAssetInvalid": "Cette image ne peut pas devenir un sticker.",
+  "errCodeStickerAssetBlocked": "Cette image est bloquée et ne peut pas être utilisée.",
+  "errCodeStickerQuotaExceeded": "Vous avez atteint votre limite de 200 stickers.",
+  "errCodeStickerPackLimit": "Vous avez atteint la limite de packs ou de stickers par pack.",
+  "plusFeatureStickers": "Stickers Royal",
+  "paywallStickersTitle": "Les stickers Royal",
+  "paywallStickersBody": "Le pack Royal fait partie d'Alanya Plus : couronnes, trophées et paillettes pour vos conversations.",
+  "stickerTrayLabel": "Stickers",
+  "stickerNoPacks": "Aucun pack installé. Ouvrez le catalogue pour en ajouter.",
+  "stickerPreviewTitle": "Aperçu du sticker",
+  "stickerReplyQuote": "Sticker",
+  "stickerSemantics": "Sticker {emoji}",
+  "@stickerSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerPackLockedSemantics": "Verrouillé, Alanya Plus requis",
+  "stickerSendFailed": "Le sticker n'a pas pu être envoyé.",
+  "stickerPackReorderHint": "Maintenez et glissez pour réordonner",
+  "stickerPackActions": "Actions du pack",
+  "stickerMoveUp": "Monter",
+  "stickerMoveDown": "Descendre",
+  "stickerNoFavorites": "Aucun favori",
+  "stickerOfficialPackName": "Pack officiel",
+  "stickerTabInstalled": "Installés",
+  "stickerMyCreations": "Mes créations",
+  "stickerCreatedEmpty": "Vous n'avez encore créé aucun pack. Touchez ＋ pour commencer.",
+  "stickerNewPack": "Nouveau pack",
+  "stickerPackNameLabel": "Nom du pack",
+  "stickerDefaultPackName": "Mes stickers",
+  "stickerPrivacyTitle": "Avant de créer",
+  "stickerPrivacyBody": "Un sticker envoyé peut être vu par ses destinataires.",
+  "stickerPrivacyDetail": "Votre pack reste privé, mais chaque image est accessible à toute personne qui la reçoit dans une conversation.",
+  "stickerPrivacyConfirm": "J'ai compris",
+  "stickerRename": "Renommer",
+  "stickerDeletePack": "Supprimer le pack",
+  "stickerDeletePackBody": "Le pack sera supprimé et son lien de partage révoqué. Les stickers déjà envoyés peuvent s'afficher « Sticker retiré ».",
+  "stickerPackDeleted": "Pack supprimé.",
+  "stickerAddFromGallery": "Ajouter depuis la galerie",
+  "stickerAddedSticker": "Sticker ajouté au pack.",
+  "stickerAlreadyOwned": "Cette image est déjà dans vos stickers.",
+  "stickerRemoveFromPack": "Retirer du pack",
+  "stickerPackEmpty": "Ce pack est vide. Ajoutez une image depuis la galerie.",
+  "stickerImageFormat": "Image illisible. Choisissez une photo JPEG, PNG ou WebP.",
+  "stickerImageTooBig": "L'image dépasse 1 Mo.",
+  "stickerImageSize": "L'image doit mesurer exactement 512 × 512 px.",
+  "stickerImageNoAlpha": "L'image doit avoir un fond transparent (PNG ou WebP avec transparence).",
+  "stickerImageAnimated": "Les images animées (GIF, WebP animé) ne sont pas encore prises en charge.",
+  "stickerImageInputTooBig": "Cette image est trop grande (20 Mo ou 50 mégapixels au plus).",
+  "stickerPreviewTitle": "Aperçu du sticker",
+  "stickerPreviewHint": "L'image est ajustée dans un carré de 512 × 512 px. Le damier montre les zones transparentes.",
+  "stickerPreviewAdd": "Ajouter",
+  "stickerAddToPack": "Ajouter à un pack",
+  "stickerChoosePack": "Choisir un pack",
+  "stickerCopiedToPack": "Sticker ajouté à votre pack.",
+  "stickerReport": "Signaler",
+  "stickerReportTitle": "Pourquoi signaler ce sticker ?",
+  "stickerReportInappropriate": "Contenu inapproprié",
+  "stickerReportSpam": "Spam",
+  "stickerReportRights": "Atteinte à des droits",
+  "stickerReportOther": "Autre",
+  "stickerReported": "Merci, votre signalement a été envoyé.",
+  "stickerReportedAlready": "Vous avez déjà signalé ce sticker.",
+  "stickerShareByLink": "Partager par lien",
+  "stickerShareRevoke": "Révoquer le lien",
+  "stickerShareRevoked": "Lien révoqué.",
+  "stickerShareRevokeBody": "Le lien ne fonctionnera plus. Les personnes qui ont déjà ajouté le pack en gardent leur copie.",
+  "stickerShareEmpty": "Ajoutez au moins un sticker avant de partager.",
+  "stickerShared": "Partagé",
+  "stickerShareMessage": "Mon pack de stickers « {name} » sur Alanya : {link}\nCode : {code}",
+  "@stickerShareMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerOpenLink": "Ouvrir un lien de pack",
+  "stickerOpenLinkHint": "Collez un lien ou un code",
+  "stickerOpenLinkInvalid": "Ce lien ou ce code n'est pas celui d'un pack de stickers.",
+  "stickerSharedPackTitle": "Pack partagé",
+  "stickerShareInstall": "Ajouter à mes packs",
+  "stickerShareCopyInfo": "Vous recevez votre propre copie : elle reste à vous même si le lien est révoqué.",
+  "stickerShareAlreadyAdded": "Déjà ajouté",
+  "stickerShareMine": "C'est votre propre pack.",
+  "stickerShareDone": "Pack ajouté à vos créations.",
+  "stickerShareIgnored": "{count} image(s) ignorée(s) (bloquées ou retirées).",
+  "@stickerShareIgnored": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerCreatedCount": "{count}/{max}",
+  "@stickerCreatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "errCodeRateLimited": "Trop de demandes. Réessayez dans une minute.",
+  "stickerSetCover": "Définir comme couverture",
+  "stickerPaste": "Coller",
+  "stickerPreviewEdit": "Modifier",
+  "mediaEditorTitleSticker": "Modifier le sticker",
+  "mediaEditorTitlePhoto": "Retoucher l'image",
+  "mediaEditorDone": "Terminer",
+  "mediaEditorUndo": "Annuler",
+  "mediaEditorRedo": "Rétablir",
+  "mediaEditorTools": "Outils de retouche",
+  "mediaEditorToolCrop": "Rogner",
+  "mediaEditorToolDraw": "Crayon",
+  "mediaEditorToolText": "Texte",
+  "mediaEditorToolEmoji": "Emoji",
+  "mediaEditorPen": "Crayon",
+  "mediaEditorEraser": "Gomme",
+  "mediaEditorColor": "Couleur",
+  "mediaEditorColorBlack": "Noir",
+  "mediaEditorColorWhite": "Blanc",
+  "mediaEditorColorRed": "Rouge",
+  "mediaEditorColorOrange": "Orange",
+  "mediaEditorColorGreen": "Vert",
+  "mediaEditorColorBlue": "Bleu",
+  "mediaEditorColorIndigo": "Indigo",
+  "mediaEditorThickness": "Épaisseur du trait",
+  "mediaEditorCropHintSticker": "Pincez pour zoomer, glissez pour déplacer l'image dans le carré.",
+  "mediaEditorCropHintPhoto": "Pincez pour zoomer, glissez pour déplacer l'image dans le cadre.",
+  "mediaEditorFitContain": "Ajuster",
+  "mediaEditorFitCover": "Remplir",
+  "mediaEditorAspectOriginal": "Original",
+  "mediaEditorAddText": "Ajouter un texte",
+  "mediaEditorEditText": "Modifier le texte",
+  "mediaEditorTextHint": "Votre texte",
+  "mediaEditorFontStandard": "Standard",
+  "mediaEditorFontBold": "Gras",
+  "mediaEditorFontHandwriting": "Manuscrite",
+  "mediaEditorAddEmoji": "Ajouter un emoji",
+  "mediaEditorSize": "Taille",
+  "mediaEditorRotation": "Rotation",
+  "mediaEditorDeleteItem": "Supprimer l'élément",
+  "mediaEditorCanvas": "Zone de retouche de l'image",
+  "mediaEditorDiscardTitle": "Abandonner les modifications ?",
+  "mediaEditorDiscardBody": "Vos retouches seront perdues.",
+  "mediaEditorKeepEditing": "Continuer",
+  "mediaEditorDiscard": "Abandonner",
+  "mediaEditorExporting": "Préparation de l'image…",
+  "mediaEditorToolCutout": "Détourer",
+  "mediaEditorCutoutHint": "Détourage automatique : personnes. Pour le reste, utilisez le pinceau.",
+  "mediaEditorCutoutAuto": "Détourer les personnes",
+  "mediaEditorCutoutBusy": "Détourage en cours…",
+  "mediaEditorCutoutKeep": "Garder",
+  "mediaEditorCutoutErase": "Effacer",
+  "mediaEditorCutoutSize": "Taille du pinceau",
+  "mediaEditorCutoutSoft": "Bords doux",
+  "mediaEditorCutoutReset": "Réinitialiser le masque",
+  "mediaEditorCutoutNoPerson": "Aucune personne détectée sur cette image. Utilisez le pinceau pour détourer.",
+  "mediaEditorCutoutFailed": "Le détourage automatique a échoué. Utilisez le pinceau pour détourer.",
+  "stickerAnimatedSemantics": "Sticker animé {emoji}",
+  "@stickerAnimatedSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerReplay": "Rejouer l'animation",
+  "stickerOpenDetails": "Voir la fiche du sticker",
+  "stickerBadgeAnimated": "Animé",
+  "stickerAddAnimated": "Ajouter un sticker animé",
+  "stickerAnimatedTitle": "Sticker animé",
+  "stickerAnimatedShape": "Forme",
+  "stickerShapeCircle": "Cercle",
+  "stickerShapeRounded": "Carré arrondi",
+  "stickerShapeSquare": "Carré",
+  "stickerAnimatedHint": "Votre image sera recadrée en carré et limitée à 3 secondes environ. Dans la conversation, l'animation se joue une fois ; touchez le sticker pour la rejouer.",
+  "stickerAnimatedPreviewLabel": "Aperçu animé du sticker",
+  "stickerAnimatedConverting": "Conversion en cours…",
+  "stickerAnimatedConvertingHint": "Cela peut prendre une quinzaine de secondes.",
+  "stickerAnimatedAdded": "Sticker animé ajouté.",
+  "stickerAnimatedNotAnimated": "Ce fichier n'est pas animé. Choisissez un GIF ou un WebP animé.",
+  "stickerAnimatedFormat": "Seuls les GIF et les WebP animés sont acceptés.",
+  "stickerAnimatedTooBig": "Ce fichier dépasse 3 Mo.",
+  "stickerAnimatedInvalid": "Ce fichier est trop lourd ou n'est pas pris en charge. Essayez un GIF plus court ou plus petit.",
+  "stickerAnimatedRateLimited": "Vous avez créé beaucoup de stickers animés. Réessayez plus tard (10 par heure au plus).",
+  "stickerAnimatedBusy": "Le service est occupé. Réessayez dans un instant.",
+  "stickerAnimatedClosed": "Les stickers animés ne sont pas disponibles pour le moment.",
+  "mediaEditorCropHintRound": "Glissez et pincez pour cadrer la photo : elle s'affichera dans un cercle.",
+  "mediaEditorEditFailed": "Impossible de préparer la photo modifiée. Réessayez.",
+  "stickerCreateTile": "Créer",
+  "stickerCreateHint": "Créez un sticker à partir d'une photo de votre galerie.",
+  "stickerCreatedInMyStickers": "Ajouté à {name}",
+  "@stickerCreatedInMyStickers": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerView": "Voir",
+  "chatPanelExpand": "Agrandir le panneau",
+  "chatPanelCollapse": "Réduire le panneau",
+  "stickerVideoTitle": "Sticker depuis une vidéo",
+  "stickerVideoPreviewLabel": "Aperçu de la vidéo découpée",
+  "stickerVideoStart": "Début",
+  "stickerVideoDuration": "Durée",
+  "stickerVideoStartValue": "Début : {time}",
+  "@stickerVideoStartValue": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoDurationValue": "Durée : {seconds} s",
+  "@stickerVideoDurationValue": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoPlay": "Lecture",
+  "stickerVideoPause": "Pause",
+  "stickerVideoHint": "Choisissez les 3 secondes à garder (500 ms au minimum). La vidéo est découpée sur nos serveurs, sans le son.",
+  "stickerVideoTooBig": "Cette vidéo dépasse 20 Mo. Choisissez-en une plus courte.",
+  "stickerVideoFormat": "Format non pris en charge. Choisissez une vidéo MP4, MOV ou WebM.",
+  "stickerVideoUnsupported": "Les vidéos ne sont pas encore prises en charge.",
+  "stickerVideoTooShort": "Cette vidéo est trop courte (500 ms au minimum).",
+  "stickerVideoLoadFailed": "Impossible de lire cette vidéo.",
+  "stickerVideoConverting": "Envoi et conversion de la vidéo…",
+  "stickerVideoConvertingHint": "En données mobiles, cela peut prendre jusqu'à une minute.",
+  "stickerVideoInvalid": "Cette vidéo n'est pas prise en charge ou est trop détaillée. Essayez une vidéo plus courte ou plus simple.",
+  "mediaEditorToolFilters": "Filtres",
+  "mediaEditorBrushPen": "Stylo",
+  "mediaEditorBrushHighlighter": "Surligneur",
+  "mediaEditorBrushNeon": "Néon",
+  "mediaEditorBrushBlur": "Flou",
+  "mediaEditorBlurHint": "Passez le doigt sur un visage ou une plaque pour le flouter.",
+  "mediaEditorColorYellow": "Jaune",
+  "mediaEditorColorPink": "Rose",
+  "mediaEditorRotate90": "Pivoter",
+  "mediaEditorFlip": "Miroir",
+  "mediaEditorReset": "Réinitialiser",
+  "mediaEditorStraighten": "Redresser",
+  "mediaEditorTabFilters": "Filtres",
+  "mediaEditorTabAdjust": "Réglages",
+  "mediaEditorIntensity": "Intensité",
+  "mediaEditorBrightness": "Luminosité",
+  "mediaEditorContrast": "Contraste",
+  "mediaEditorSaturation": "Saturation",
+  "mediaEditorWarmth": "Chaleur",
+  "mediaEditorFilterNone": "Original",
+  "mediaEditorFilterVivid": "Vif",
+  "mediaEditorFilterWarm": "Chaud",
+  "mediaEditorFilterSoft": "Doux",
+  "mediaEditorFilterMono": "N&B",
+  "mediaEditorFilterNight": "Nuit",
+  "mediaEditorCompare": "Maintenir pour voir l'original",
+  "mediaEditorAlign": "Alignement du texte",
+  "mediaEditorTextBackground": "Fond du texte",
+  "mediaEditorItemHint": "Glissez pour déplacer, pincez pour agrandir ou tourner.",
+  "mediaSendRemoveItem": "Retirer de l'envoi",
+  "mediaSendAddMore": "Ajouter des médias",
+  "mediaSendUndoEdit": "Annuler la dernière retouche",
+  "mediaSendViewOnceOn": "Vue unique activée",
+  "mediaSendViewOnceOff": "Vue unique désactivée",
+  "mediaSendMute": "Couper le son",
+  "mediaSendUnmute": "Remettre le son",
+  "mediaSendEdits": "{count, plural, =1{1 retouche} other{{count} retouches}}",
+  "@mediaSendEdits": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "mediaSendItemLabel": "{kind} {index} sur {total}",
+  "@mediaSendItemLabel": {
+    "placeholders": {
+      "kind": { "type": "String" },
+      "index": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "cameraShutterHint": "Appuyer pour une photo, maintenir pour filmer",
+  "cameraTakePhoto": "Prendre une photo",
+  "cameraStartRecording": "Filmer",
+  "cameraStopRecording": "Arrêter l'enregistrement",
+  "cameraFlash": "Flash",
+  "cameraOpenGallery": "Ouvrir la galerie",
+  "videoTrimStart": "Début de la vidéo",
+  "videoTrimEnd": "Fin de la vidéo",
+  "videoRendering": "Préparation de la vidéo…",
+  "videoRenderFailed": "Impossible de préparer la vidéo. Réessayez.",
+  "videoFrameFailed": "Impossible de lire cette vidéo pour la retoucher.",
+  "videoTrimSummary": "{range} · {length} sur {total}",
+  "@videoTrimSummary": {
+    "placeholders": {
+      "range": { "type": "String" },
+      "length": { "type": "String" },
+      "total": { "type": "String" }
+    }
+  },
   "errCodeDeleteWindowExpired": "La suppression pour tous n'est possible que dans les 72 heures suivant l'envoi.",
   "clearChatTitle": "Effacer la discussion",
   "clearChatAllMessages": "Tous les messages",

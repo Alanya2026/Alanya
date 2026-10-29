@@ -3262,6 +3262,386 @@
   "receiptsNoReaders": "No one has read it yet",
   "receiptsLoadError": "Couldn't load read receipts.",
   "receiptsBarLabel": "{read} read, {delivered} delivered but unread, {pending} pending",
+  "stickerWord": "Sticker",
+  "stickerPreview": "{emoji} Sticker",
+  "@stickerPreview": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerRemoved": "Sticker removed",
+  "stickerUnsupported": "Unsupported sticker — update the app",
+  "stickerTabEmojis": "Emojis",
+  "stickerTabStickers": "Stickers",
+  "stickerRecents": "Recent",
+  "stickerFavorites": "Favorites",
+  "stickerEmptyRecents": "Your recent stickers will appear here.",
+  "stickerEmptyFavorites": "Tap ★ on a sticker to add it to your favorites.",
+  "stickerLoadError": "Couldn't load stickers.",
+  "stickerRetry": "Retry",
+  "stickerLockedBanner": "This pack is for Alanya Plus.",
+  "stickerUnlockCta": "Discover Alanya Plus",
+  "stickerLockedLabel": "{name} pack, locked",
+  "@stickerLockedLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerBadgeOfficial": "Official",
+  "stickerBadgePlus": "Plus",
+  "stickerFavoriteAdd": "Add to favorites",
+  "stickerFavoriteRemove": "Remove from favorites",
+  "stickerViewPack": "View pack",
+  "stickerForward": "Forward",
+  "stickerSheetPack": "Pack: {name}",
+  "@stickerSheetPack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSender": "Sent by {name}",
+  "@stickerSheetSender": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerSheetSize": "{w} × {h} px",
+  "@stickerSheetSize": {
+    "placeholders": {
+      "w": {
+        "type": "int"
+      },
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerSheetWeight": "Size: {size}",
+  "@stickerSheetWeight": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerAddPack": "Add",
+  "stickerRemovePack": "Remove",
+  "stickerAdded": "Pack added.",
+  "stickerPackRemoved": "Pack removed.",
+  "stickerMyPacks": "My packs",
+  "stickerCatalog": "Catalog",
+  "stickerManage": "Manage stickers",
+  "stickerPackCount": "{count} stickers",
+  "@stickerPackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerPackInstalled": "Installed",
+  "stickerSendLockedPlus": "This sticker needs Alanya Plus.",
+  "stickerDomainError": "Stickers are unavailable right now.",
+  "errCodeStickerNotFound": "This sticker no longer exists.",
+  "errCodeStickerPackUnavailable": "This pack is no longer available.",
+  "errCodeStickerInvalidPayload": "This sticker couldn't be sent.",
+  "errCodeStickerAssetInvalid": "This image can't be used as a sticker.",
+  "errCodeStickerAssetBlocked": "This image is blocked and can't be used.",
+  "errCodeStickerQuotaExceeded": "You've reached your limit of 200 stickers.",
+  "errCodeStickerPackLimit": "You've reached the limit of packs, or of stickers per pack.",
+  "plusFeatureStickers": "Royal stickers",
+  "paywallStickersTitle": "Royal stickers",
+  "paywallStickersBody": "The Royal pack is part of Alanya Plus: crowns, trophies and sparkle for your chats.",
+  "stickerTrayLabel": "Stickers",
+  "stickerNoPacks": "No packs installed. Open the catalog to add some.",
+  "stickerPreviewTitle": "Sticker preview",
+  "stickerReplyQuote": "Sticker",
+  "stickerSemantics": "Sticker {emoji}",
+  "@stickerSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerPackLockedSemantics": "Locked, Alanya Plus required",
+  "stickerSendFailed": "The sticker couldn't be sent.",
+  "stickerPackReorderHint": "Hold and drag to reorder",
+  "stickerPackActions": "Pack actions",
+  "stickerMoveUp": "Move up",
+  "stickerMoveDown": "Move down",
+  "stickerNoFavorites": "No favorites",
+  "stickerOfficialPackName": "Official pack",
+  "stickerTabInstalled": "Installed",
+  "stickerMyCreations": "My creations",
+  "stickerCreatedEmpty": "You haven't created any pack yet. Tap ＋ to start.",
+  "stickerNewPack": "New pack",
+  "stickerPackNameLabel": "Pack name",
+  "stickerDefaultPackName": "My stickers",
+  "stickerPrivacyTitle": "Before you create",
+  "stickerPrivacyBody": "A sticker you send can be seen by its recipients.",
+  "stickerPrivacyDetail": "Your pack stays private, but each image can be opened by anyone who receives it in a chat.",
+  "stickerPrivacyConfirm": "I understand",
+  "stickerRename": "Rename",
+  "stickerDeletePack": "Delete pack",
+  "stickerDeletePackBody": "The pack will be deleted and its share link revoked. Stickers already sent may show as “Sticker removed”.",
+  "stickerPackDeleted": "Pack deleted.",
+  "stickerAddFromGallery": "Add from gallery",
+  "stickerAddedSticker": "Sticker added to the pack.",
+  "stickerAlreadyOwned": "This image is already in your stickers.",
+  "stickerRemoveFromPack": "Remove from pack",
+  "stickerPackEmpty": "This pack is empty. Add an image from your gallery.",
+  "stickerImageFormat": "Can't read this image. Choose a JPEG, PNG or WebP photo.",
+  "stickerImageTooBig": "The image is larger than 1 MB.",
+  "stickerImageSize": "The image must be exactly 512 × 512 px.",
+  "stickerImageNoAlpha": "The image needs a transparent background (PNG or WebP with transparency).",
+  "stickerImageAnimated": "Animated images (GIF, animated WebP) aren't supported yet.",
+  "stickerImageInputTooBig": "This image is too large (20 MB or 50 megapixels at most).",
+  "stickerPreviewTitle": "Sticker preview",
+  "stickerPreviewHint": "The image is fitted in a 512 × 512 px square. The checkerboard shows transparent areas.",
+  "stickerPreviewAdd": "Add",
+  "stickerAddToPack": "Add to a pack",
+  "stickerChoosePack": "Choose a pack",
+  "stickerCopiedToPack": "Sticker added to your pack.",
+  "stickerReport": "Report",
+  "stickerReportTitle": "Why report this sticker?",
+  "stickerReportInappropriate": "Inappropriate content",
+  "stickerReportSpam": "Spam",
+  "stickerReportRights": "Rights infringement",
+  "stickerReportOther": "Other",
+  "stickerReported": "Thanks, your report has been sent.",
+  "stickerReportedAlready": "You've already reported this sticker.",
+  "stickerShareByLink": "Share by link",
+  "stickerShareRevoke": "Revoke link",
+  "stickerShareRevoked": "Link revoked.",
+  "stickerShareRevokeBody": "The link will stop working. People who already added the pack keep their copy.",
+  "stickerShareEmpty": "Add at least one sticker before sharing.",
+  "stickerShared": "Shared",
+  "stickerShareMessage": "My sticker pack “{name}” on Alanya: {link}\nCode: {code}",
+  "@stickerShareMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "link": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerOpenLink": "Open a pack link",
+  "stickerOpenLinkHint": "Paste a link or a code",
+  "stickerOpenLinkInvalid": "This link or code isn't a sticker pack.",
+  "stickerSharedPackTitle": "Shared pack",
+  "stickerShareInstall": "Add to my packs",
+  "stickerShareCopyInfo": "You get your own copy: it stays yours even if the link is revoked.",
+  "stickerShareAlreadyAdded": "Already added",
+  "stickerShareMine": "This is your own pack.",
+  "stickerShareDone": "Pack added to your creations.",
+  "stickerShareIgnored": "{count} image(s) skipped (blocked or removed).",
+  "@stickerShareIgnored": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stickerCreatedCount": "{count}/{max}",
+  "@stickerCreatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "errCodeRateLimited": "Too many requests. Try again in a minute.",
+  "stickerSetCover": "Set as cover",
+  "stickerPaste": "Paste",
+  "stickerPreviewEdit": "Edit",
+  "mediaEditorTitleSticker": "Edit sticker",
+  "mediaEditorTitlePhoto": "Edit image",
+  "mediaEditorDone": "Done",
+  "mediaEditorUndo": "Undo",
+  "mediaEditorRedo": "Redo",
+  "mediaEditorTools": "Editing tools",
+  "mediaEditorToolCrop": "Crop",
+  "mediaEditorToolDraw": "Draw",
+  "mediaEditorToolText": "Text",
+  "mediaEditorToolEmoji": "Emoji",
+  "mediaEditorPen": "Pen",
+  "mediaEditorEraser": "Eraser",
+  "mediaEditorColor": "Color",
+  "mediaEditorColorBlack": "Black",
+  "mediaEditorColorWhite": "White",
+  "mediaEditorColorRed": "Red",
+  "mediaEditorColorOrange": "Orange",
+  "mediaEditorColorGreen": "Green",
+  "mediaEditorColorBlue": "Blue",
+  "mediaEditorColorIndigo": "Indigo",
+  "mediaEditorThickness": "Stroke width",
+  "mediaEditorCropHintSticker": "Pinch to zoom, drag to move the image inside the square.",
+  "mediaEditorCropHintPhoto": "Pinch to zoom, drag to move the image inside the frame.",
+  "mediaEditorFitContain": "Fit",
+  "mediaEditorFitCover": "Fill",
+  "mediaEditorAspectOriginal": "Original",
+  "mediaEditorAddText": "Add text",
+  "mediaEditorEditText": "Edit text",
+  "mediaEditorTextHint": "Your text",
+  "mediaEditorFontStandard": "Standard",
+  "mediaEditorFontBold": "Bold",
+  "mediaEditorFontHandwriting": "Handwritten",
+  "mediaEditorAddEmoji": "Add emoji",
+  "mediaEditorSize": "Size",
+  "mediaEditorRotation": "Rotation",
+  "mediaEditorDeleteItem": "Delete item",
+  "mediaEditorCanvas": "Image editing area",
+  "mediaEditorDiscardTitle": "Discard changes?",
+  "mediaEditorDiscardBody": "Your edits will be lost.",
+  "mediaEditorKeepEditing": "Keep editing",
+  "mediaEditorDiscard": "Discard",
+  "mediaEditorExporting": "Preparing the image…",
+  "mediaEditorToolCutout": "Cut out",
+  "mediaEditorCutoutHint": "Automatic cut-out: people. For everything else, use the brush.",
+  "mediaEditorCutoutAuto": "Cut out people",
+  "mediaEditorCutoutBusy": "Cutting out…",
+  "mediaEditorCutoutKeep": "Keep",
+  "mediaEditorCutoutErase": "Erase",
+  "mediaEditorCutoutSize": "Brush size",
+  "mediaEditorCutoutSoft": "Soft edges",
+  "mediaEditorCutoutReset": "Reset mask",
+  "mediaEditorCutoutNoPerson": "No person detected in this image. Use the brush to cut out.",
+  "mediaEditorCutoutFailed": "Automatic cut-out failed. Use the brush to cut out.",
+  "stickerAnimatedSemantics": "Animated sticker {emoji}",
+  "@stickerAnimatedSemantics": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerReplay": "Replay the animation",
+  "stickerOpenDetails": "View sticker details",
+  "stickerBadgeAnimated": "Animated",
+  "stickerAddAnimated": "Add an animated sticker",
+  "stickerAnimatedTitle": "Animated sticker",
+  "stickerAnimatedShape": "Shape",
+  "stickerShapeCircle": "Circle",
+  "stickerShapeRounded": "Rounded square",
+  "stickerShapeSquare": "Square",
+  "stickerAnimatedHint": "Your image will be cropped to a square and limited to about 3 seconds. In the chat the animation plays once; tap the sticker to replay it.",
+  "stickerAnimatedPreviewLabel": "Animated sticker preview",
+  "stickerAnimatedConverting": "Converting…",
+  "stickerAnimatedConvertingHint": "This can take about fifteen seconds.",
+  "stickerAnimatedAdded": "Animated sticker added.",
+  "stickerAnimatedNotAnimated": "This file isn't animated. Choose a GIF or an animated WebP.",
+  "stickerAnimatedFormat": "Only GIF and animated WebP files are accepted.",
+  "stickerAnimatedTooBig": "This file is larger than 3 MB.",
+  "stickerAnimatedInvalid": "This file is too heavy or isn't supported. Try a shorter or smaller GIF.",
+  "stickerAnimatedRateLimited": "You've created a lot of animated stickers. Try again later (10 per hour at most).",
+  "stickerAnimatedBusy": "The service is busy. Try again in a moment.",
+  "stickerAnimatedClosed": "Animated stickers aren't available right now.",
+  "mediaEditorCropHintRound": "Drag and pinch to frame the photo: it will be shown in a circle.",
+  "mediaEditorEditFailed": "Couldn't prepare the edited photo. Please try again.",
+  "stickerCreateTile": "Create",
+  "stickerCreateHint": "Make a sticker from a photo in your gallery.",
+  "stickerCreatedInMyStickers": "Added to {name}",
+  "stickerView": "View",
+  "chatPanelExpand": "Expand panel",
+  "chatPanelCollapse": "Collapse panel",
+  "stickerVideoTitle": "Sticker from a video",
+  "stickerVideoPreviewLabel": "Preview of the trimmed video",
+  "stickerVideoStart": "Start",
+  "stickerVideoDuration": "Length",
+  "stickerVideoStartValue": "Start: {time}",
+  "@stickerVideoStartValue": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoDurationValue": "Length: {seconds} s",
+  "@stickerVideoDurationValue": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "stickerVideoPlay": "Play",
+  "stickerVideoPause": "Pause",
+  "stickerVideoHint": "Choose up to 3 seconds to keep (500 ms minimum). The video is trimmed on our servers, without sound.",
+  "stickerVideoTooBig": "This video is over 20 MB. Choose a shorter one.",
+  "stickerVideoFormat": "Unsupported format. Choose an MP4, MOV or WebM video.",
+  "stickerVideoUnsupported": "Videos are not supported yet.",
+  "stickerVideoTooShort": "This video is too short (500 ms minimum).",
+  "stickerVideoLoadFailed": "This video can't be played.",
+  "stickerVideoConverting": "Sending and converting the video…",
+  "stickerVideoConvertingHint": "On mobile data, this can take up to a minute.",
+  "stickerVideoInvalid": "This video isn't supported or is too detailed. Try a shorter or simpler video.",
+  "mediaEditorToolFilters": "Filters",
+  "mediaEditorBrushPen": "Pen",
+  "mediaEditorBrushHighlighter": "Highlighter",
+  "mediaEditorBrushNeon": "Neon",
+  "mediaEditorBrushBlur": "Blur",
+  "mediaEditorBlurHint": "Swipe over a face or a plate to blur it.",
+  "mediaEditorColorYellow": "Yellow",
+  "mediaEditorColorPink": "Pink",
+  "mediaEditorRotate90": "Rotate",
+  "mediaEditorFlip": "Mirror",
+  "mediaEditorReset": "Reset",
+  "mediaEditorStraighten": "Straighten",
+  "mediaEditorTabFilters": "Filters",
+  "mediaEditorTabAdjust": "Adjust",
+  "mediaEditorIntensity": "Intensity",
+  "mediaEditorBrightness": "Brightness",
+  "mediaEditorContrast": "Contrast",
+  "mediaEditorSaturation": "Saturation",
+  "mediaEditorWarmth": "Warmth",
+  "mediaEditorFilterNone": "Original",
+  "mediaEditorFilterVivid": "Vivid",
+  "mediaEditorFilterWarm": "Warm",
+  "mediaEditorFilterSoft": "Soft",
+  "mediaEditorFilterMono": "B&W",
+  "mediaEditorFilterNight": "Night",
+  "mediaEditorCompare": "Hold to see the original",
+  "mediaEditorAlign": "Text alignment",
+  "mediaEditorTextBackground": "Text background",
+  "mediaEditorItemHint": "Drag to move, pinch to resize or rotate.",
+  "mediaSendRemoveItem": "Remove from this send",
+  "mediaSendAddMore": "Add media",
+  "mediaSendUndoEdit": "Undo last edit",
+  "mediaSendViewOnceOn": "View once on",
+  "mediaSendViewOnceOff": "View once off",
+  "mediaSendMute": "Mute",
+  "mediaSendUnmute": "Unmute",
+  "mediaSendEdits": "{count, plural, =1{1 edit} other{{count} edits}}",
+  "mediaSendItemLabel": "{kind} {index} of {total}",
+  "cameraShutterHint": "Tap for a photo, hold to record",
+  "cameraTakePhoto": "Take a photo",
+  "cameraStartRecording": "Record a video",
+  "cameraStopRecording": "Stop recording",
+  "cameraFlash": "Flash",
+  "cameraOpenGallery": "Open gallery",
+  "videoTrimStart": "Video start",
+  "videoTrimEnd": "Video end",
+  "videoRendering": "Preparing the video…",
+  "videoRenderFailed": "Couldn't prepare the video. Please try again.",
+  "videoFrameFailed": "This video can't be read for editing.",
+  "videoTrimSummary": "{range} · {length} of {total}",
   "errCodeDeleteWindowExpired": "Delete for everyone is only possible within 72 hours of sending.",
   "clearChatTitle": "Clear chat",
   "clearChatAllMessages": "All messages",

@@ -1,0 +1,9 @@
+{"packs":[
+ {"id":41,"code":"u_7_ab12cd34","name":"Mes stickers","nameI18n":{"fr":"Mes stickers","en":"My stickers"},"version":3,"shared":true,"shareToken":"Zk3_9aQpLm-X7vB2nR4tYw8e",
+  "cover":"https://<bucket>/stickers/u/7/0a1b2c3d4e5f6071_aa11bb22_t.webp","count":2,
+  "stickers":[
+   {"id":501,"position":0,"emoji":"😀","name":"Content","url":"https://<bucket>/stickers/u/7/0a1b2c3d4e5f6071_aa11bb22.webp","thumb":"https://<bucket>/stickers/u/7/0a1b2c3d4e5f6071_aa11bb22_t.webp","w":512,"h":512,"animated":false,"bytes":38210,"assetId":9001},
+   {"id":502,"position":1,"emoji":"🎉","name":"","url":"https://<bucket>/stickers/u/7/9f8e7d6c5b4a3921_cc33dd44.webp","thumb":"https://<bucket>/stickers/u/7/9f8e7d6c5b4a3921_cc33dd44_t.webp","w":512,"h":512,"animated":false,"bytes":41002,"assetId":9002}]},
+ {"id":42,"code":"u_7_ef56ab78","name":"Famille","nameI18n":{"fr":"Famille"},"version":1,"shared":false,"shareToken":null,
+  "cover":null,"count":0,"stickers":[]}
+]}

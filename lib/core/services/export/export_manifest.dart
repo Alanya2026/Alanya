@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../../utils/sticker_payload.dart';
+
 /// Version du format d'archive. Toute évolution incompatible l'incrémente :
 /// la restauration doit pouvoir refuser proprement une archive qu'elle ne sait
 /// pas lire, plutôt que d'en tirer des conclusions fausses.
@@ -43,8 +45,22 @@ class ExportItem {
   final String? senderName;
   final bool isMine;
 
-  /// 1=image 2=vidéo 3=audio 4=fichier.
+  /// 1=image 2=vidéo 3=audio 4=fichier, 10=sticker.
   final int type;
+
+  /// Référence d'un sticker (type 10) : son pack, son identifiant et l'emoji.
+  ///
+  /// Un sticker n'a pas de fichier à lui sur le disque (juste une image mise en
+  /// cache) : l'archive emporte donc de quoi le **référencer** et le
+  /// réafficher, jamais le JSON brut du message. `null` pour tout autre type, et
+  /// aussi pour un payload illisible ou d'une version future — l'archive reste
+  /// alors lisible, elle sait seulement moins de choses.
+  final String? stickerPack;
+  final int? stickerSid;
+  final String? stickerEmoji;
+
+  /// Ce média est-il un sticker (type 10) ?
+  bool get isSticker => type == kStickerMessageType;
 
   final DateTime? sentAt;
 
@@ -75,6 +91,9 @@ class ExportItem {
     this.senderName,
     required this.isMine,
     required this.type,
+    this.stickerPack,
+    this.stickerSid,
+    this.stickerEmoji,
     this.sentAt,
     required this.path,
     this.originalName,
@@ -92,6 +111,9 @@ class ExportItem {
         if (senderName != null) 'senderName': senderName,
         'isMine': isMine,
         'type': type,
+        if (stickerPack != null) 'stickerPack': stickerPack,
+        if (stickerSid != null) 'stickerSid': stickerSid,
+        if (stickerEmoji != null) 'stickerEmoji': stickerEmoji,
         if (sentAt != null) 'sentAt': sentAt!.toUtc().toIso8601String(),
         'path': path,
         if (originalName != null) 'originalName': originalName,
@@ -109,6 +131,9 @@ class ExportItem {
         senderName: json['senderName']?.toString(),
         isMine: json['isMine'] == true,
         type: _asInt(json['type']) ?? 0,
+        stickerPack: json['stickerPack']?.toString(),
+        stickerSid: _asInt(json['stickerSid']),
+        stickerEmoji: json['stickerEmoji']?.toString(),
         sentAt: _asDate(json['sentAt']),
         path: json['path']?.toString() ?? '',
         originalName: json['originalName']?.toString(),
@@ -125,12 +150,22 @@ class ExportMissing {
   final DateTime? sentAt;
   final MissingReason reason;
 
+  /// Type du message. Sert à traiter les stickers (type 10) à part : ils ne se
+  /// récupèrent pas comme un média ordinaire — leur image vit dans le cache
+  /// dédié ([StickerCache]), et l'archive ne renseigne pas `localMediaPath`.
+  /// `0` pour une archive ancienne ou un type non précisé.
+  final int type;
+
   const ExportMissing({
     required this.msgID,
     required this.clientId,
     this.sentAt,
     required this.reason,
+    this.type = 0,
   });
+
+  /// Ce média est-il un sticker (type 10) ?
+  bool get isSticker => type == kStickerMessageType;
 
   /// Le serveur peut encore le rendre — sous réserve d'accepter la dépense.
   bool get recoverable => reason != MissingReason.expired;
@@ -140,6 +175,7 @@ class ExportMissing {
         'clientId': clientId,
         if (sentAt != null) 'sentAt': sentAt!.toUtc().toIso8601String(),
         'reason': reason.name,
+        if (type != 0) 'type': type,
       };
 
   factory ExportMissing.fromJson(Map<String, dynamic> json) => ExportMissing(
@@ -153,6 +189,7 @@ class ExportMissing {
           // le supposer perdu est le pessimisme sûr.
           orElse: () => MissingReason.expired,
         ),
+        type: _asInt(json['type']) ?? 0,
       );
 }
 

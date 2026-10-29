@@ -53,6 +53,13 @@ import 'core/services/callkit_service.dart';
 import 'core/services/call/ended_call_registry.dart';
 import 'core/services/local_cache_repository.dart';
 import 'core/services/trip_repository.dart';
+import 'core/services/stickers/sticker_api.dart';
+import 'core/services/stickers/sticker_cache.dart';
+import 'core/services/stickers/sticker_creation_api.dart';
+import 'core/services/stickers/sticker_creation_repository.dart';
+import 'core/services/stickers/sticker_features.dart';
+import 'core/services/stickers/sticker_repository.dart';
+import 'widgets/stickers/sticker_share_screens.dart';
 import 'core/services/trip_socket_service.dart';
 import 'core/services/trip_bootstrap.dart';
 import 'core/services/local_hidden_store.dart';
@@ -278,6 +285,27 @@ class _TalkyAppState extends State<TalkyApp> {
   late final EntitlementService _entitlements =
       EntitlementService(api: _apiClient)..loadFromCache();
   StreamSubscription<void>? _outgoingBlockedSub;
+  StreamSubscription<PlusFeature>? _featureBlockedSub;
+  // Stickers : miroir local du catalogue et de l'état de l'utilisateur. Le
+  // client réseau est injecté ; `stickers:sync` (autre appareil, back-office)
+  // relit l'état serveur.
+  // `features` (`GET /me`, contrat §4c) est partagé avec la création : l'option
+  // « Sticker animé » suit `animated_enabled`.
+  final StickerFeatures _stickerFeatures = StickerFeatures();
+  late final StickerRepository _stickers = StickerRepository(
+    db: _database,
+    api: TalkyStickerApi(_apiClient),
+    cache: StickerCache.instance,
+    features: _stickerFeatures,
+  );
+  // V1b : mes packs créés et le partage. Le client est injecté comme pour le
+  // reste ; fermé côté serveur (`404 NOT_FOUND`), il masque ses entrées.
+  late final StickerCreationRepository _stickerCreation =
+      StickerCreationRepository(
+    db: _database,
+    api: TalkyStickerCreationApi(_apiClient),
+    features: _stickerFeatures,
+  );
   late final MessageTranslationService _translation =
       MessageTranslationService(
     dao: ChatDao(_database),
@@ -321,11 +349,24 @@ class _TalkyAppState extends State<TalkyApp> {
         unawaited(showPaywall(context, null, outgoing: true));
       }
     });
+    // Un sticker Royal refusé hors de tout écran (message remis en file) :
+    // le panneau de la fonctionnalité, pas celui de l'émission.
+    _featureBlockedSub = _entitlements.featureBlocked.listen((feature) {
+      final context = appNavigatorKey.currentContext;
+      if (context != null) unawaited(showPaywall(context, feature));
+    });
+    // `stickers:sync` « packs » relit aussi mes créations (V1b), via le rappel
+    // de fin de synchro ; l'ouverture de l'app fait de même par `refresh`.
+    _stickers.afterSync = _stickerCreation.syncCreated;
+    _apiClient.onSocketEvent('stickers:sync', (data) {
+      unawaited(_stickers.onSyncEvent(data));
+    });
   }
 
   @override
   void dispose() {
     unawaited(_outgoingBlockedSub?.cancel());
+    unawaited(_featureBlockedSub?.cancel());
     super.dispose();
   }
 
@@ -355,6 +396,8 @@ class _TalkyAppState extends State<TalkyApp> {
         Provider<TripRepository>.value(value: _trips),
         Provider<TripSocketService>.value(value: _tripSocket),
         Provider<TripBootstrap>.value(value: _tripBootstrap),
+        Provider<StickerRepository>.value(value: _stickers),
+        Provider<StickerCreationRepository>.value(value: _stickerCreation),
         ChangeNotifierProvider(
             create: (_) => RingtonePreferences()..load()),
         ChangeNotifierProvider(
@@ -559,6 +602,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// L'abonnement vit ici pour capter aussi bien le lien qui a démarré l'app
   /// que ceux reçus pendant qu'elle tourne.
   StreamSubscription<({String kind, String token})>? _qrLinkSub;
+  StreamSubscription<String>? _stickerShareSub;
 
   /// Quelqu'un vient d'utiliser mon code QR : invitation à l'ajouter en
   /// retour. L'abonnement vit ici et non sur l'écran « Mon code » — le code a
@@ -581,6 +625,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     _qrScanSub = Provider.of<TalkyApiClient>(context, listen: false)
         .qrContactScans
         .listen((scan) => unawaited(_onQrContactScanned(scan)));
+    _stickerShareSub = QrDeepLinkService.instance.stickerShareTokens
+        .listen((token) => unawaited(_handleStickerShareLink(token)));
     unawaited(QrDeepLinkService.instance.start());
     Future.microtask(_bootstrap);
   }
@@ -591,6 +637,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     _authProvider?.removeListener(_onAuthChanged);
     _deviceRevokedSub?.cancel();
     _qrLinkSub?.cancel();
+    _stickerShareSub?.cancel();
     _qrScanSub?.cancel();
     _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
@@ -1282,9 +1329,28 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     );
   }
 
+  /// Ouvre la fiche d'un pack de stickers partagé par lien (V1b). Hors session,
+  /// le jeton est mis de côté et rejoué par [_replayPendingQrLink].
+  Future<void> _handleStickerShareLink(String token) async {
+    if (!mounted) return;
+    final auth = _authProvider;
+    if (auth == null || !auth.isLoggedIn) {
+      QrDeepLinkService.instance.stashStickerShareToken(token);
+      return;
+    }
+    final nav = appNavigator;
+    if (nav == null) return;
+    unawaited(nav.push(MaterialPageRoute<void>(
+      builder: (_) => StickerSharePreviewScreen(token: token),
+    )));
+  }
+
   /// Rejoue un lien d'identité reçu avant l'ouverture de session.
   Future<void> _replayPendingQrLink() async {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
+
+    final stickerToken = QrDeepLinkService.instance.consumePendingStickerShareToken();
+    if (stickerToken != null) await _handleStickerShareLink(stickerToken);
 
     final token = QrDeepLinkService.instance.consumePendingToken();
     if (token != null) await _handleQrIdentityLink(token);

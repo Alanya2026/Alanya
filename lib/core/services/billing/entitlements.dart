@@ -15,7 +15,11 @@ enum PlusFeature {
   trustedTrips('trusted_trips'),
   listRingtones('list_ringtones'),
   style('style'),
-  verifiedBadge('verified_badge');
+  verifiedBadge('verified_badge'),
+
+  /// Pack Royal (stickers Plus). Le verrou est imposé par le serveur ; le
+  /// catalogue dit lequel (`locked`).
+  stickersPremium('stickers_premium');
 
   const PlusFeature(this.code);
   final String code;

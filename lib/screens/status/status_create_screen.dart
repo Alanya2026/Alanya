@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/services/photo_edit_service.dart';
 import '../../core/services/image_upload_compressor.dart';
 import '../../core/services/video_thumbnail_service.dart';
 import '../../core/services/voice_record_config.dart';
@@ -33,16 +34,32 @@ enum _StatusType { text, photo, video, audio }
 class _StatusMediaDraft {
   _StatusMediaDraft({required this.file, this.name, this.durationMs});
 
-  final File file;
+  /// Le fichier à publier : l'original, ou la photo retouchée qui l'a remplacé.
+  File file;
   final String? name;
   final int? durationMs;
   final TextEditingController captionCtrl = TextEditingController();
 
   void dispose() => captionCtrl.dispose();
+
+  /// Supprime la retouche (jamais l'original de l'utilisateur).
+  void discardEdit() => unawaited(PhotoEditService.discard(file));
 }
 
 class StatusCreateScreen extends StatefulWidget {
-  const StatusCreateScreen({super.key});
+  const StatusCreateScreen({
+    super.key,
+    this.editPhoto = editPhotoWithFeedback,
+    this.pickPhotos,
+  });
+
+  /// Retouche d'une photo avant publication (injectable pour les tests).
+  final PhotoEditor editPhoto;
+
+  /// Sélecteur de photos (injectable pour les tests) ; par défaut, image_picker.
+  /// [limit] : nombre de photos encore acceptées.
+  final Future<List<XFile>> Function(ImageSource source, int limit)?
+  pickPhotos;
 
   @override
   State<StatusCreateScreen> createState() => _StatusCreateScreenState();
@@ -78,6 +95,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   int _index = 0;
   Color _bgColor = const Color(0xFFE53935);
   bool _publishing = false;
+  bool _editing = false;
 
   /// Nombre de brouillons déjà publiés dans la passe en cours.
   int _published = 0;
@@ -170,6 +188,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   /// À appeler dans un `setState` : vide la sélection et libère les contrôleurs.
   void _clearDrafts() {
     for (final draft in _drafts) {
+      draft.discardEdit();
       _disposeDraftLater(draft);
     }
     _drafts.clear();
@@ -210,11 +229,35 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
   void _removeDraftAt(int index) {
     HapticFeedback.selectionClick();
     setState(() {
-      _disposeDraftLater(_drafts.removeAt(index));
+      final removed = _drafts.removeAt(index);
+      removed.discardEdit();
+      _disposeDraftLater(removed);
       if (_index >= _drafts.length) _index = _drafts.length - 1;
       if (_index < 0) _index = 0;
     });
     if (_drafts.isNotEmpty) _jumpTo(_index);
+  }
+
+  /// Retouche facultative d'une photo : l'image modifiée remplace le fichier du
+  /// brouillon (légende et rang inchangés) ; abandonner ne change rien.
+  Future<void> _editDraft(_StatusMediaDraft draft) async {
+    if (_editing || _publishing) return;
+    setState(() => _editing = true);
+    File? edited;
+    try {
+      edited = await widget.editPhoto(context, draft.file);
+    } finally {
+      if (mounted) setState(() => _editing = false);
+    }
+    if (edited == null) return;
+    if (!mounted || !_drafts.contains(draft)) {
+      // Brouillon retiré ou écran fermé pendant la retouche.
+      await PhotoEditService.discard(edited);
+      return;
+    }
+    final previous = draft.file;
+    setState(() => draft.file = edited!);
+    unawaited(PhotoEditService.discard(previous));
   }
 
   Future<void> _pickMedia(ImageSource source, {bool video = false}) async {
@@ -226,8 +269,11 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 
     final picker = ImagePicker();
     final List<XFile> files;
-    // La caméra ne produit qu'un média ; `pickMulti*` exige une limite ≥ 2.
-    if (source == ImageSource.camera || remaining == 1) {
+    final injected = widget.pickPhotos;
+    if (injected != null && !video) {
+      files = await injected(source, remaining);
+    } else if (source == ImageSource.camera || remaining == 1) {
+      // La caméra ne produit qu'un média ; `pickMulti*` exige une limite ≥ 2.
       final one = video
           ? await picker.pickVideo(source: source)
           : await picker.pickImage(
@@ -778,6 +824,15 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                         tone: StatusChipTone.neutral,
                       ),
                     ),
+                  if (!isVideo)
+                    _OverlayIconButton(
+                      key: const ValueKey('status-edit-photo'),
+                      icon: Icons.edit_outlined,
+                      tooltip: context.l10n.edit,
+                      onPressed: _publishing || _editing
+                          ? null
+                          : () => _editDraft(draft),
+                    ),
                   if (isVideo)
                     StatusChip(
                       label: context.l10n.video2,
@@ -993,6 +1048,7 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
 /// Bouton rond translucide posé sur un média (retirer, etc.).
 class _OverlayIconButton extends StatelessWidget {
   const _OverlayIconButton({
+    super.key,
     required this.icon,
     required this.tooltip,
     this.onPressed,
@@ -1011,7 +1067,11 @@ class _OverlayIconButton extends StatelessWidget {
       child: IconButton(
         icon: Icon(icon, color: Colors.white, size: 20),
         tooltip: tooltip,
-        visualDensity: VisualDensity.compact,
+        // Cible tactile d'au moins 48 dp (pas de densité compacte).
+        constraints: const BoxConstraints(
+          minWidth: AppSizes.minTapTarget,
+          minHeight: AppSizes.minTapTarget,
+        ),
         onPressed: onPressed,
       ),
     );

@@ -59,6 +59,8 @@ class EntitlementService extends ChangeNotifier {
       StreamController<PaymentUpdate>.broadcast();
   final StreamController<void> _outgoingBlocked =
       StreamController<void>.broadcast();
+  final StreamController<PlusFeature> _featureBlocked =
+      StreamController<PlusFeature>.broadcast();
   Entitlements _current = Entitlements.unrestricted;
   PlusOffer? _offer;
   bool _refreshing = false;
@@ -93,6 +95,16 @@ class EntitlementService extends ChangeNotifier {
   /// Plusieurs refus coup sur coup (cinq messages en file qui échouent
   /// ensemble) ne font qu'un seul signal : le panneau ne s'ouvre pas cinq fois.
   Stream<void> get outgoingBlocked => _outgoingBlocked.stream;
+
+  /// Une fonctionnalité du catalogue vient d'être refusée par le serveur sans
+  /// qu'aucun écran ne l'attende (un sticker Royal remis en file, par exemple).
+  /// L'écoute racine ouvre le panneau de **cette** fonctionnalité.
+  Stream<PlusFeature> get featureBlocked => _featureBlocked.stream;
+
+  void reportFeatureBlocked(PlusFeature feature) {
+    if (!_featureBlocked.isClosed) _featureBlocked.add(feature);
+    unawaited(refresh());
+  }
 
   /// Fenêtre où des refus rapprochés ne font qu'un signal. Assez longue pour une
   /// rafale (des messages en file qui échouent ensemble arrivent à quelques
@@ -282,6 +294,7 @@ class EntitlementService extends ChangeNotifier {
     _api.removeSocketListener(SocketEvents.paymentUpdated, _onPaymentUpdated);
     unawaited(_payments.close());
     unawaited(_outgoingBlocked.close());
+    unawaited(_featureBlocked.close());
     if (identical(_instance, this)) _instance = null;
     super.dispose();
   }

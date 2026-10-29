@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart';
 
+import '../../utils/sticker_payload.dart';
 import 'export_manifest.dart';
 import 'export_scan.dart';
 
@@ -95,12 +96,22 @@ class ExportZipBuilder {
             clientId: media.message.clientId,
             sentAt: media.message.sendAt,
             reason: MissingReason.fileGone,
+            type: media.message.type,
           ));
           continue;
         }
 
         final digest = await sha256.bind(media.file.openRead()).first;
         await _addStored(encoder, media.file, media.archivePath);
+
+        // Un sticker ne porte pas de fichier nommé : l'archive emporte sa
+        // **référence** (pack, identifiant, emoji) recalculée depuis le JSON du
+        // message — jamais le JSON brut. Illisible, elle reste simplement
+        // absente sans rendre l'entrée inexploitable.
+        final StickerPayload? sticker =
+            media.message.type == kStickerMessageType
+                ? StickerPayload.tryParse(media.message.content)
+                : null;
 
         items.add(ExportItem(
           msgID: media.message.msgID,
@@ -110,6 +121,11 @@ class ExportZipBuilder {
           senderName: media.senderName,
           isMine: media.message.senderID == alanyaID,
           type: media.message.type,
+          stickerPack:
+              (sticker?.pack.isNotEmpty ?? false) ? sticker!.pack : null,
+          stickerSid: sticker?.sid,
+          stickerEmoji:
+              (sticker?.emoji.isNotEmpty ?? false) ? sticker!.emoji : null,
           sentAt: media.message.sendAt,
           path: media.archivePath,
           originalName: media.message.mediaName,

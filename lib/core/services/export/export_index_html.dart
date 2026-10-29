@@ -67,9 +67,10 @@ String _cell(ExportItem item) {
     _bytes(item.bytes),
   ].where((s) => s.isNotEmpty).join(' · ');
 
-  // Seules les images ont un aperçu : une vidéo demanderait de décoder une
-  // vignette qu'on n'a pas ici, et un document n'en a pas.
-  final preview = item.type == 1
+  // Les images et les stickers ont un aperçu : le fichier est dans l'archive,
+  // il s'affiche directement. Une vidéo demanderait de décoder une vignette
+  // qu'on n'a pas ici, et un document n'en a pas.
+  final preview = (item.type == 1 || item.isSticker)
       ? '<img loading="lazy" src="$href" alt="">'
       : '<span class="icon">${_icon(item.type)}</span>';
 
@@ -124,6 +125,7 @@ String _subtitle(ExportManifest m) {
 String _icon(int type) => switch (type) {
       2 => 'Vidéo',
       3 => 'Audio',
+      10 => 'Sticker',
       _ => 'Fichier',
     };
 

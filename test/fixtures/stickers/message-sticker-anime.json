@@ -1,0 +1,12 @@
+{
+  "_doc": "Sticker animé (V1c, contrat §4c) : `a` = 1 posé par le serveur d'après sticker_asset.animated, jamais par le client.",
+  "sortie_serveur": {
+    "type": 10,
+    "content": "{\"v\":1,\"pack\":\"u_7_ab12cd34\",\"sid\":504,\"emoji\":\"😀\",\"w\":512,\"h\":512,\"a\":1}",
+    "mediaUrl": "https://www.alanya237.com/uploads/stickers/u/7/anim_ff.webp",
+    "mediaName": "Sticker 😀"
+  },
+  "entree_client_a_fantaisiste": {
+    "content": "{\"v\":1,\"pack\":\"u_7_ab12cd34\",\"sid\":504,\"emoji\":\"😀\",\"w\":512,\"h\":512,\"a\":0}"
+  }
+}

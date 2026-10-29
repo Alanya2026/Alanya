@@ -15,6 +15,7 @@ import '../../utils/location_payload.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../utils/media_album.dart';
 import '../../utils/trip_payload.dart';
+import '../../utils/sticker_payload.dart';
 import '../alanya_media_export_service.dart';
 import '../local_notification_helper.dart';
 import '../notifications/badge_sync_service.dart';
@@ -742,6 +743,24 @@ class ChatRepository {
         isForwarded: isForwarded,
       );
 
+  /// Envoi d'un sticker (`type = 10`) : voir `MessageSender.sendSticker`.
+  Future<void> sendSticker({
+    required int conversationID,
+    required StickerPayload sticker,
+    String? mediaUrl,
+    int? replyToID,
+    String? replyToContent,
+    bool isForwarded = false,
+  }) =>
+      _sender.sendSticker(
+        conversationID: conversationID,
+        sticker: sticker,
+        mediaUrl: mediaUrl,
+        replyToID: replyToID,
+        replyToContent: replyToContent,
+        isForwarded: isForwarded,
+      );
+
   Future<void> sendContact({
     required int conversationID,
     required ContactPayload contact,
@@ -1140,6 +1159,22 @@ class ChatRepository {
       await sendLocation(
         conversationID: conversationID,
         location: loc,
+        isForwarded: true,
+      );
+      return;
+    }
+
+    // Sticker : transfert par référence (même JSON, même mediaUrl) ; le
+    // serveur relit `sid` et réécrit le contenu canonique.
+    if (source.type == kStickerMessageType) {
+      final sticker = StickerPayload.tryParse(source.content);
+      if (sticker == null || !sticker.isRenderable) {
+        throw StateError(LocaleController.instance.l10n.stickerRemoved);
+      }
+      await sendSticker(
+        conversationID: conversationID,
+        sticker: sticker,
+        mediaUrl: source.mediaUrl,
         isForwarded: true,
       );
       return;
@@ -2248,7 +2283,7 @@ class ChatRepository {
       replyToContent: (j['replyToContent'] == null ||
               j['replyToContent'].toString().trim().isEmpty)
           ? const Value.absent()
-          : Value(j['replyToContent'].toString()),
+          : Value(sanitizeQuotedContent(j['replyToContent'].toString())),
       isEdited: Value(j['isEdited'] == 1 || j['isEdited'] == true),
       editedAt: Value(_parseDate(j['editedAt'])),
       // Ces champs ne doivent JAMAIS être écrasés par le sync serveur.

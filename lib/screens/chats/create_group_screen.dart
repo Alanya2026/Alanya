@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import '../../core/services/photo_edit_service.dart';
 import '../../core/utils/validators.dart';
 import '../../core/utils/app_log.dart';
 import '../../core/theme/app_dimens.dart';
@@ -23,10 +24,18 @@ class CreateGroupScreen extends StatefulWidget {
   /// contacts (« Famille » devient le nom proposé du groupe).
   final String? initialName;
 
+  /// Sélecteur de photo (injectable pour les tests) ; par défaut, image_picker.
+  final Future<XFile?> Function(ImageSource source)? pickImage;
+
+  /// Rognage d'office de la photo choisie (injectable pour les tests).
+  final PhotoEditor editPhoto;
+
   const CreateGroupScreen({
     super.key,
     required this.members,
     this.initialName,
+    this.pickImage,
+    this.editPhoto = editPhotoWithFeedback,
   });
 
   @override
@@ -61,16 +70,33 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final picker = ImagePicker();
-    // Même réglage que l'avatar (profile_step, edit_profile_screen) : une photo
-    // de groupe ne s'affiche jamais plus grande qu'un portrait de profil.
-    final x = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 85,
+    final pick = widget.pickImage;
+    final x = pick != null
+        ? await pick(ImageSource.gallery)
+        : await ImagePicker().pickImage(
+            // Même réglage que l'avatar (profile_step, edit_profile_screen) : une
+            // photo de groupe ne s'affiche jamais plus grande qu'un portrait de profil.
+            source: ImageSource.gallery,
+            maxWidth: 1024,
+            maxHeight: 1024,
+            imageQuality: 85,
+          );
+    if (x == null || !mounted) return;
+    // Rognage proposé d'office : carré, aperçu rond. Abandonner = on garde la
+    // photo précédente (ou aucune).
+    final cropped = await widget.editPhoto(
+      context,
+      File(x.path),
+      target: PhotoEditTarget.avatar,
     );
-    if (x != null) setState(() => _photoFile = File(x.path));
+    if (cropped == null) return;
+    if (!mounted) {
+      unawaited(PhotoEditService.discard(cropped));
+      return;
+    }
+    final previous = _photoFile;
+    setState(() => _photoFile = cropped);
+    unawaited(PhotoEditService.discard(previous));
   }
 
   void _removeMember(User u) {

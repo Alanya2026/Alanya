@@ -82,6 +82,10 @@ dependencies:
   gal: ^2.3.1                         # Sauvegarde photos/vidéos vers album Alanya
   image_picker: ^1.1.2                # Galerie / caméra (photos & vidéos)
   camera: ^0.11.0+2                   # Écran caméra intégré (photo + vidéo)
+  # Encodage JPEG des photos retouchées SEULEMENT (core/services/photo_edit_service.dart,
+  # dans un isolat) ; importé nulle part ailleurs (test/photo_edit_isolate_test.dart).
+  # Verrou inchangé (4.8.0). Les stickers restent exportés en PNG par dart:ui.
+  image: ^4.8.0
   file_picker: ^8.1.2                 # Sélection de documents
   cached_network_image: ^3.4.1        # Affichage + cache disque des images
   # Déjà tiré par cached_network_image, mais déclaré : `map_tiles.dart` s'en sert
@@ -153,6 +157,14 @@ dependencies:
   # AVFoundation, pas par ML Kit).
   google_mlkit_translation: ^0.14.0
   google_mlkit_language_id: ^0.14.0
+  # ── Détourage automatique des personnes (sticker), sur l'appareil ──
+  # ML Kit Selfie Segmentation : le modèle est embarqué, la photo ne quitte
+  # jamais le téléphone. 0.12.0 = la version qui partage google_mlkit_commons
+  # ^0.12.0 avec google_mlkit_translation 0.14.0 (pods GoogleMLKit ~> 9.0.0,
+  # `s.platform = 15.5` : AUCUN changement de IPHONEOS_DEPLOYMENT_TARGET ;
+  # Android minSdk 21 < 23 du projet : rien à monter).
+  google_mlkit_selfie_segmentation: ^0.12.0
+  pro_video_editor: ^2.43.2
   # ── Coffre-fort : sauvegarde automatique (lot 10) ──────────────────
   # Lire la galerie (photos, vidéos, audio) par dossier, l'original avec sa
   # localisation (ACCESS_MEDIA_LOCATION), et retirer du téléphone ce qui est

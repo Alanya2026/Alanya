@@ -9,6 +9,9 @@ import '../db/app_database.dart';
 import '../utils/contact_payload.dart';
 import '../utils/forward_message.dart';
 import '../utils/location_payload.dart';
+import '../utils/sticker_payload.dart';
+import 'stickers/sticker_cache.dart';
+import 'stickers/sticker_trust.dart';
 import 'chat/chat_repository.dart';
 
 /// Partage externe (share sheet OS) — distinct du transfert interne Alanya.
@@ -41,6 +44,12 @@ class MessageShareService {
             'https://maps.google.com/?q=${loc.lat},${loc.lng}';
         await _shareText('$label\n$maps', shareOrigin: shareOrigin);
         return true;
+      }
+
+      // Sticker : l'image elle-même (fichier du cache dédié ou téléchargé),
+      // jamais le JSON. Repli : « 😂 Sticker » en texte.
+      if (message.type == kStickerMessageType) {
+        return _shareSticker(message, shareOrigin: shareOrigin);
       }
 
       if (message.type == 7) {
@@ -90,6 +99,29 @@ class MessageShareService {
       debugPrint('[MessageShare] échec: $e\n$st');
       return false;
     }
+  }
+
+  /// Partage hors app d'un sticker : le fichier WebP (cache dédié), jamais le
+  /// JSON. Fichier retiré, URL non fiable ou réseau absent : repli en texte
+  /// « 😂 Sticker ».
+  Future<bool> _shareSticker(LocalMessage message, {Rect? shareOrigin}) async {
+    final url = message.mediaUrl;
+    // URL non Alanya : on ne télécharge pas, on ne partage pas de fichier.
+    final file = !StickerTrust.isTrustedStickerUrl(url)
+        ? null
+        : await StickerCache.instance.fileFor(url!);
+    if (file != null && file.existsSync()) {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, name: 'sticker.webp', mimeType: 'image/webp')],
+          sharePositionOrigin: shareOrigin,
+        ),
+      );
+      return true;
+    }
+    await _shareText(stickerPreviewLabel(message.content),
+        shareOrigin: shareOrigin);
+    return true;
   }
 
   Future<void> _shareText(String text, {Rect? shareOrigin}) async {

@@ -289,6 +289,51 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  /// Envoi d'un sticker depuis le plateau (`type = 10`).
+  ///
+  /// Le verrou Plus est **imposé par le serveur** ; le catalogue (`locked`)
+  /// ne sert qu'à l'afficher et à éviter un aller-retour inutile. Un sticker
+  /// de pack verrouillé ouvre l'offre au lieu de partir.
+  Future<void> _sendSticker(StickerEntry entry) async {
+    if (_inputBlocked || _myId == null) return;
+    if (entry.locked) {
+      unawaited(openPlusOffer(context));
+      return;
+    }
+    final convId = await _ensureConversation();
+    if (convId == null || !mounted) return;
+    _dismissUnreadSeparator();
+
+    // Même résolution de citation que `_sendMessage` : msgID frais.
+    final reply = _replyTo;
+    int? replyId;
+    String? replyContent;
+    if (reply != null) {
+      replyContent = _previewOf(reply);
+      replyId = reply.msgID > 0 ? reply.msgID : null;
+      if (replyId == null) {
+        for (final m in _currentMessages) {
+          if (m.clientId == reply.clientId && m.msgID > 0) {
+            replyId = m.msgID;
+            break;
+          }
+        }
+      }
+    }
+
+    await _chat.repository.sendSticker(
+      conversationID: convId,
+      sticker: entry.payload,
+      mediaUrl: entry.sticker.url,
+      replyToID: replyId,
+      replyToContent: replyContent,
+    );
+    unawaited(context.read<StickerRepository>().markUsed(entry.sticker.stickerId));
+    if (!mounted) return;
+    rebuild(() => _replyTo = null);
+    _scrollToBottom();
+  }
+
   Future<void> _sendMessage() async {
     if (_inputBlocked) return;
     final text = _messageController.text.trim();
@@ -349,6 +394,8 @@ extension _ChatActions on _ChatDetailScreenState {
     if (m.type == 5) return locationPreviewLabel(m.content);
     // Contact : JSON — ne jamais exposer le content brut.
     if (m.type == 7) return contactPreviewLabel(m.content);
+    // Sticker : JSON — « 😂 Sticker », jamais le content brut.
+    if (m.type == kStickerMessageType) return stickerPreviewLabel(m.content);
     // Boutons de bienvenue : JSON également. Sans ce cas, une citation affichait
     // `{"buttons":[…]}` tel quel.
     if (m.type == kWelcomeCtaMessageType) {
@@ -658,6 +705,7 @@ extension _ChatActions on _ChatDetailScreenState {
                   Navigator.pop(context);
                 },
               ),
+            // Un sticker n'est jamais modifiable (isText exclut le type 10).
             if (isMe && isText && !msg.isDeleted && _canEditMessage(msg))
               ListTile(
                 leading: Icon(Icons.edit, color: primary),
@@ -1205,7 +1253,8 @@ extension _ChatActions on _ChatDetailScreenState {
   // ── Médias ─────────────────────────────────────────────────────────
   void _showAttachSheet() {
     final sem = context.semantic;
-    _pendingViewOnce = false;
+    // La vue unique se choisit désormais sur l'écran d'envoi, à côté de la
+    // légende (discussions à deux, un seul média).
     showAppBottomSheet(
       context: context,
       builder: (_) => StatefulBuilder(
@@ -1213,22 +1262,6 @@ extension _ChatActions on _ChatDetailScreenState {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Vue unique : réservée aux discussions 1-1 (pas les groupes).
-              if (!widget.isGroup) ...[
-                SwitchListTile(
-                  value: _pendingViewOnce,
-                  onChanged: (v) => setSheet(() => _pendingViewOnce = v),
-                  secondary: Icon(
-                    _pendingViewOnce ? Icons.timer : Icons.timer_outlined,
-                    color: context.colors.primary,
-                  ),
-                  title: Text(context.l10n.viewOnce),
-                  subtitle: Text(context.l10n.canBeOpenedOnlyOnceThen),
-                  contentPadding: EdgeInsets.zero,
-                ),
-                const Divider(height: 1),
-                AppSpacing.vGapSm,
-              ],
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -1326,31 +1359,21 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _pickImageFromGallery() async {
-    final viewOnce = _pendingViewOnce;
+    final items = await _pickPhotoItems(ChatRepository.maxAlbumItems);
+    await _composeAndSendMedia(items);
+  }
 
-    if (viewOnce) {
-      final x = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: _kChatPhotoMaxSide,
-        maxHeight: _kChatPhotoMaxSide,
-      );
-      if (x != null) {
-        await _composeAndSendMedia(
-          [AlbumSendItem(file: File(x.path), type: 1)],
-          viewOnce: true,
-        );
-      }
-      return;
-    }
-
+  /// Photos de la galerie, au plus [limit] (le surplus est signalé).
+  Future<List<AlbumSendItem>> _pickPhotoItems(int limit) async {
+    if (limit <= 0) return const [];
     final picked = await _picker.pickMultiImage(
       maxWidth: _kChatPhotoMaxSide,
       maxHeight: _kChatPhotoMaxSide,
-      limit: ChatRepository.maxAlbumItems,
+      limit: limit < 2 ? 2 : limit,
     );
-    if (picked.isEmpty) return;
+    if (picked.isEmpty) return const [];
 
-    if (picked.length > ChatRepository.maxAlbumItems) {
+    if (picked.length > limit) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1363,12 +1386,10 @@ extension _ChatActions on _ChatDetailScreenState {
       }
     }
 
-    final items = picked
-        .take(ChatRepository.maxAlbumItems)
+    return picked
+        .take(limit)
         .map((x) => AlbumSendItem(file: File(x.path), type: 1))
         .toList();
-
-    await _composeAndSendMedia(items);
   }
 
   Future<int?> _readVideoDuration(File file) async {
@@ -1385,10 +1406,11 @@ extension _ChatActions on _ChatDetailScreenState {
   }
 
   Future<void> _pickImageFromCamera() async {
-    final viewOnce = _pendingViewOnce;
     final result = await Navigator.push<CameraResult>(
       context,
-      MaterialPageRoute(builder: (_) => const CameraScreen()),
+      MaterialPageRoute(
+        builder: (_) => CameraScreen(onPickFromGallery: _pickImageFromGallery),
+      ),
     );
     if (result == null || !mounted) return;
 
@@ -1399,31 +1421,22 @@ extension _ChatActions on _ChatDetailScreenState {
     }
     await _composeAndSendMedia(
       [AlbumSendItem(file: File(result.file.path), type: type, duration: durSec)],
-      viewOnce: viewOnce,
     );
   }
 
   Future<void> _pickVideo() async {
-    final viewOnce = _pendingViewOnce;
+    final items = await _pickVideoItems(ChatRepository.maxAlbumItems);
+    await _composeAndSendMedia(items);
+  }
 
-    if (viewOnce) {
-      final x = await _picker.pickVideo(source: ImageSource.gallery);
-      if (x == null) return;
-      final file = File(x.path);
-      final durSec = await _readVideoDuration(file);
-      await _composeAndSendMedia(
-        [AlbumSendItem(file: file, type: 2, duration: durSec)],
-        viewOnce: true,
-      );
-      return;
-    }
+  /// Vidéos de la galerie, au plus [limit] ; les trop lourdes sont écartées
+  /// (et signalées).
+  Future<List<AlbumSendItem>> _pickVideoItems(int limit) async {
+    if (limit <= 0) return const [];
+    final picked = await _picker.pickMultiVideo(limit: limit < 2 ? 2 : limit);
+    if (picked.isEmpty) return const [];
 
-    final picked = await _picker.pickMultiVideo(
-      limit: ChatRepository.maxAlbumItems,
-    );
-    if (picked.isEmpty) return;
-
-    if (picked.length > ChatRepository.maxAlbumItems && mounted) {
+    if (picked.length > limit && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1434,7 +1447,7 @@ extension _ChatActions on _ChatDetailScreenState {
       );
     }
 
-    final limited = picked.take(ChatRepository.maxAlbumItems).toList();
+    final limited = picked.take(limit).toList();
     final items = <AlbumSendItem>[];
     final tropLourdes = <({File file, String? name, int estime})>[];
     for (final x in limited) {
@@ -1449,41 +1462,59 @@ extension _ChatActions on _ChatDetailScreenState {
       final durSec = await _readVideoDuration(file);
       items.add(AlbumSendItem(file: file, type: 2, duration: durSec));
     }
-    if (items.isNotEmpty) await _composeAndSendMedia(items);
-    await _proposerCoffre(
-      [for (final v in tropLourdes) _pickDe(v.file, nom: v.name)],
-      sinon: () {
-        if (!mounted) return;
-        final mb = (tropLourdes.first.estime / (1024 * 1024)).toStringAsFixed(1);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes)),
-          backgroundColor: AppColors.error,
-        ));
-      },
-    );
+    // Trop lourdes pour les médias de discussion : proposées par le coffre-fort.
+    if (tropLourdes.isNotEmpty) {
+      await _proposerCoffre(
+        [for (final v in tropLourdes) _pickDe(v.file, nom: v.name)],
+        sinon: () {
+          if (!mounted) return;
+          final mb = (tropLourdes.first.estime / (1024 * 1024)).toStringAsFixed(1);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.l10n.videoTooLarge(mb, MediaUploadLimits.maxMegabytes)),
+            backgroundColor: AppColors.error,
+          ));
+        },
+      );
+    }
+    return items;
   }
 
-  /// Ouvre l'aperçu avec légende, puis envoie le(s) média(s).
-  Future<void> _composeAndSendMedia(
-    List<AlbumSendItem> items, {
-    bool viewOnce = false,
-  }) async {
+  /// Ouvre l'écran d'envoi (retouche, légende, vue unique), puis envoie le(s)
+  /// média(s). Le bouton « + » de l'album rouvre le même sélecteur (photos
+  /// ou vidéos, comme le premier média).
+  Future<void> _composeAndSendMedia(List<AlbumSendItem> items) async {
     if (items.isEmpty || _myId == null) return;
     if (!mounted) return;
 
+    final max = ChatRepository.maxAlbumItems;
+    final photos = items.first.type == 1;
     final result = await Navigator.push<MediaSendResult>(
       context,
       MaterialPageRoute(
-        builder: (_) => MediaSendScreen(items: items, isViewOnce: viewOnce),
+        builder: (_) => MediaSendScreen(
+          items: items,
+          // Vue unique : réservée aux discussions 1-1 (pas les groupes).
+          allowViewOnce: !widget.isGroup,
+          recipientName: widget.userName,
+          maxItems: max,
+          onAddMore: () async {
+            // L'écran d'envoi ne garde que ce qui tient dans l'album.
+            return photos ? _pickPhotoItems(max) : _pickVideoItems(max);
+          },
+        ),
         fullscreenDialog: true,
       ),
     );
     if (result == null || !mounted) return;
     if (_myId == null) return;
+    final viewOnce = result.viewOnce;
 
-    if (items.length == 1) {
+    // Photos retouchées dans l'aperçu : elles remplacent leur original, et
+    // suivent le chemin habituel (outbox, vignette, upload).
+    final toSend = result.items ?? items;
+    if (toSend.length == 1) {
       // _sendMediaFile joue déjà le son d'envoi immédiatement (avant réseau).
-      final item = items.first;
+      final item = toSend.first;
       _sendMediaFile(
         item.file,
         type: item.type,
@@ -1499,7 +1530,7 @@ extension _ChatActions on _ChatDetailScreenState {
     if (convId == null) return;
     _chat.repository.sendMediaAlbum(
       conversationID: convId,
-      items: items,
+      items: toSend,
       content: result.caption,
     );
     _scrollToBottom();
@@ -2733,6 +2764,8 @@ extension _ChatActions on _ChatDetailScreenState {
         return context.l10n.location;
       case 7:
         return context.l10n.contact;
+      case kStickerMessageType:
+        return context.l10n.stickerWord;
       case kSafeboxShareMessageType:
         return context.l10n.safeboxShareFallback;
       default:

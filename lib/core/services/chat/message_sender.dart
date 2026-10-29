@@ -12,6 +12,7 @@ import '../../utils/contact_payload.dart';
 import '../../utils/location_payload.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../utils/media_album.dart';
+import '../../utils/sticker_payload.dart';
 import '../../utils/file_metadata.dart';
 import '../../utils/media_staging.dart';
 import '../../utils/upload_errors.dart';
@@ -212,6 +213,63 @@ class MessageSender {
       conversationID: conversationID,
       content: content,
       type: 5,
+      replyToID: replyToID,
+      replyToContent: replyToContent,
+      isForwarded: isForwarded,
+      clickSentAt: now,
+    );
+    unawaited(_recompute(conversationID));
+  }
+
+  /// Envoi d'un sticker (`type = 10`, JSON dans content, **pas d'upload**).
+  ///
+  /// Hors ligne : identique à un texte (outbox, `syncPending`). `mediaUrl` est
+  /// celle du catalogue (affichage immédiat) ; le serveur l'ignore, relit `sid`
+  /// et réécrit `content` / `mediaUrl` canoniques.
+  Future<void> sendSticker({
+    required int conversationID,
+    required StickerPayload sticker,
+    String? mediaUrl,
+    int? replyToID,
+    String? replyToContent,
+    bool isForwarded = false,
+  }) async {
+    if (_myId() == 0) {
+      debugPrint('[MessageSender] sendSticker ignoré : utilisateur non lié (myId=0)');
+      return;
+    }
+    if (!_outgoingAllowed()) return;
+    final clientId = _newClientId();
+    final now = DateTime.now().toUtc();
+    final content = sticker.encode();
+    final mediaName = 'Sticker ${sticker.emoji}'.trim();
+
+    MessagePathTracer.start(clientId);
+    await _dao.upsertMessage(LocalMessagesCompanion.insert(
+      clientId: clientId,
+      conversationID: conversationID,
+      senderID: _myId(),
+      sendAt: now,
+      clickSentAt: Value(now),
+      content: Value(content),
+      type: const Value(kStickerMessageType),
+      status: const Value(0),
+      mediaUrl: Value(mediaUrl),
+      mediaName: Value(mediaName),
+      replyToID: Value(replyToID),
+      replyToContent: Value(replyToContent),
+      isForwarded: Value(isForwarded),
+      syncPending: const Value(true),
+    ));
+    MessagePathTracer.mark(clientId, 'local_insert');
+
+    emitSend(
+      clientId: clientId,
+      conversationID: conversationID,
+      content: content,
+      type: kStickerMessageType,
+      mediaUrl: mediaUrl,
+      mediaName: mediaName,
       replyToID: replyToID,
       replyToContent: replyToContent,
       isForwarded: isForwarded,

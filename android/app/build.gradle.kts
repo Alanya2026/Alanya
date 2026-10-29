@@ -25,10 +25,15 @@ val keystoreProperties = Properties().apply {
 }
 val hasSharedKey = keystorePropertiesFile.exists()
 
-// Une release sans la clé commune serait signée par une clé que Google ne
-// connaît pas : mieux vaut s'arrêter net que livrer un APK où Drive échoue.
+// La CI de publication (android-release.yml) signe avec son propre keystore,
+// celui des APK déjà installées, qu'elle désigne par ALANYA_DEBUG_KEYSTORE.
+// Deux clés coexistent en attendant que l'équipe en choisisse une (28/10/2026).
+val ciKeystore = System.getenv("ALANYA_DEBUG_KEYSTORE")
+
+// Une release sans aucune des deux clés serait signée par une clé que Google
+// ne connaît pas : mieux vaut s'arrêter net que livrer un APK où Drive échoue.
 gradle.taskGraph.whenReady {
-    if (!hasSharedKey && allTasks.any { it.name.contains("Release") }) {
+    if (!hasSharedKey && ciKeystore == null && allTasks.any { it.name.contains("Release") }) {
         throw GradleException(
             "android/key.properties introuvable : la version release doit être " +
                 "signée avec la clé commune d'Alanya. Demandez key.properties et " +
@@ -57,8 +62,10 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.alanya237.alanya"
-        // Firebase Messaging et flutter_callkit_incoming requièrent au moins API 23.
-        minSdk = maxOf(23, flutter.minSdkVersion)
+        // Android 7.0 (API 24) au moins : exigé par pro_video_editor (retouche
+        // des vidéos avant envoi, Media3 Transformer). Firebase Messaging et
+        // flutter_callkit_incoming en demandaient 23.
+        minSdk = maxOf(24, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -76,6 +83,12 @@ android {
     }
 
     signingConfigs {
+        getByName("debug") {
+            // La CI désigne explicitement la clé des APK déjà installées : sur
+            // le runner, Gradle ignorait ~/.android/debug.keystore et signait
+            // avec une clé jetable, différente à chaque build.
+            ciKeystore?.let { storeFile = file(it) }
+        }
         if (hasSharedKey) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
@@ -95,7 +108,9 @@ android {
             if (hasSharedKey) signingConfig = signingConfigs.getByName("release")
         }
         release {
-            if (hasSharedKey) signingConfig = signingConfigs.getByName("release")
+            // La clé commune si le poste l'a ; sinon, comme avant, la clé debug
+            // (celle de la CI quand ALANYA_DEBUG_KEYSTORE la désigne).
+            signingConfig = signingConfigs.getByName(if (hasSharedKey) "release" else "debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

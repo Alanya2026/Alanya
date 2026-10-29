@@ -86,6 +86,24 @@ class MediaDownloadPreferences extends ChangeNotifier {
     }
   }
 
+  /// `true` si les vignettes d'un pack de stickers installé peuvent être
+  /// préchargées MAINTENANT : **Wi-Fi (ou Ethernet) seulement**, quel que soit
+  /// le réglage « Wi-Fi uniquement » — un préchargement que l'utilisateur n'a
+  /// pas demandé ne consomme jamais de données mobiles. Respecte aussi
+  /// l'extinction du téléchargement automatique. Les stickers complets, eux,
+  /// se chargent à la demande, sur n'importe quel réseau.
+  static Future<bool> shouldPrefetchStickersNow({
+    ConnectivityService? connectivity,
+  }) async {
+    if (!isAutoDownloadEnabled) return false;
+    try {
+      return await (connectivity ?? ConnectivityService()).currentIsUnmetered;
+    } catch (e) {
+      debugPrint('[MediaDownload] préchargement stickers : réseau indéterminable, abstention: $e');
+      return false;
+    }
+  }
+
   /// True si les médias reçus doivent être exportés vers le stockage interne.
   static bool get isMediaVisibilityEnabled {
     if (_bound != null) return _bound!._mediaVisibility;

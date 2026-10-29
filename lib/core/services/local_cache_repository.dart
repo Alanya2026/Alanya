@@ -16,6 +16,11 @@ import '../../talky_models.dart';
 import 'media_cache_service.dart';
 import 'list_ringtone_preferences.dart';
 import '../theme/locale_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'stickers/sticker_cache.dart';
+import 'stickers/sticker_creation_repository.dart';
+import 'stickers/sticker_features.dart';
+import 'stickers/sticker_repository.dart';
 
 /// Cache lecture-seule pour les modules secondaires (contacts préférés,
 /// historique d'appels, meetings, statuses). Patron commun :
@@ -707,6 +712,27 @@ class LocalCacheRepository {
     await _db.delete(_db.localTripEvents).go();
     await _db.delete(_db.localTrips).go();
     await _db.delete(_db.localUsers).go();
+
+    // Stickers : tout est propre au compte. Les packs installés du compte
+    // précédent, ses favoris et ses récents ne doivent jamais apparaître à un
+    // autre compte sur un appareil partagé. Sans ETag mémorisé, aucun 304 ne
+    // peut garder le catalogue de l'ancien compte : le suivant relit tout.
+    await _db.delete(_db.localStickerPacks).go();
+    await _db.delete(_db.localStickers).go();
+    await _db.delete(_db.localStickerFavorites).go();
+    await _db.delete(_db.localStickerRecents).go();
+    final prefs = await SharedPreferences.getInstance();
+    await Future.wait([
+      prefs.remove(StickerRepository.catalogEtagKey),
+      prefs.remove(StickerRepository.catalogVersionKey),
+      prefs.remove(StickerRepository.meVersionKey),
+      prefs.remove(StickerRepository.unavailablePacksKey),
+      prefs.remove(StickerCreationRepository.availableKey),
+      for (final k in StickerFeatures.prefKeys) prefs.remove(k),
+    ]);
+    // Fichiers stickers téléchargés pour l'ancien compte (vignettes, images) :
+    // le cache disque dédié est vidé aussi.
+    await StickerCache.instance.clear();
   }
 
   // ── Helpers de conversion ───────────────────────────────────────────
