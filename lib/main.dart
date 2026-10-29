@@ -1053,6 +1053,15 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         }
       }
 
+      // Taps de notification : avant les liaisons de session, qui peuvent
+      // durer des minutes. Voir `PushService.bindNotificationOpens`.
+      try {
+        await PushService.bindNotificationOpens(apiClient, navKey: navigatorKey);
+      } catch (e) {
+        debugPrint('[AuthWrapper] bindNotificationOpens failed: $e');
+      }
+      if (!mounted) return;
+
       await _queueSessionBindings();
 
       if (!mounted) return;
