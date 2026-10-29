@@ -1610,14 +1610,15 @@ extension _ChatBubbles on _ChatDetailScreenState {
     } else if (url == null || url.isEmpty) {
       child = StickerFallback(emoji: emoji, size: size, removed: true);
     } else if (payload.animated) {
-      // Sticker animé (`a` = 1, posé par le serveur) : lu une seule fois à
-      // l'arrivée, rejoué au tap. L'ouverture de la fiche passe par le bouton
+      // Sticker animé (`a` = 1, posé par le serveur) : tourne en boucle tant
+      // que la bulle est visible. L'ouverture de la fiche passe par le bouton
       // « i » ; l'appui long reste celui du menu du message.
       return NonLoopingAnimatedSticker(
         url: url,
         emoji: emoji,
         size: size,
         playKey: msg.clientId,
+        loop: true,
         interactive: !_selectionMode,
         onOpenSheet: () => _openStickerSheet(msg, payload, url),
       );

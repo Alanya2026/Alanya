@@ -432,14 +432,15 @@ class _StickerCreatedPackScreenState extends State<StickerCreatedPackScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Un sticker animé s'aperçoit en image fixe (première image).
+            // Un sticker animé s'aperçoit en boucle.
             if (s.animated)
               NonLoopingAnimatedSticker(
                 url: s.url,
                 thumbUrl: s.thumbUrl,
                 emoji: s.emoji,
                 size: 160,
-                animate: false,
+                loop: true,
+                interactive: false,
                 semanticLabel: l10n.stickerAnimatedSemantics(s.emoji),
               )
             else
@@ -672,15 +673,24 @@ class _StickerCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final image = StickerImage(
-      url: sticker.url,
-      thumbUrl: sticker.thumbUrl,
-      emoji: sticker.emoji,
-      size: 72,
-      showRemovedLabel: false,
-      // Grille : image fixe (un fichier animé tournerait en boucle).
-      staticFrame: sticker.animated,
-    );
+    // Grille : un sticker animé tourne en boucle tant qu'il est visible.
+    final Widget image = sticker.animated
+        ? NonLoopingAnimatedSticker(
+            url: sticker.url,
+            thumbUrl: sticker.thumbUrl,
+            emoji: sticker.emoji,
+            size: 72,
+            loop: true,
+            interactive: false,
+            showRemovedLabel: false,
+          )
+        : StickerImage(
+            url: sticker.url,
+            thumbUrl: sticker.thumbUrl,
+            emoji: sticker.emoji,
+            size: 72,
+            showRemovedLabel: false,
+          );
     return DragTarget<int>(
       onWillAcceptWithDetails: (d) => d.data != index,
       onAcceptWithDetails: (d) => onMove(d.data),

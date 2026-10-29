@@ -25,23 +25,33 @@ Future<Uint8List> _loadFromCache(String url) async {
 /// État de session de la lecture des stickers animés : quelles bulles ont déjà
 /// joué leur animation, et combien jouent **en même temps** (mémoire).
 ///
-/// Un sticker animé joue **une seule fois** quand sa bulle devient visible pour
-/// la première fois dans la session (V1c, plan §7.7) ; le tap la rejoue. Le
-/// serveur écrit une boucle infinie dans le fichier : « une fois » est une
-/// décision du client.
+/// Sans [NonLoopingAnimatedSticker.loop], un sticker animé joue **une seule
+/// fois** quand sa bulle devient visible pour la première fois dans la session
+/// (V1c, plan §7.7) ; le tap la rejoue. Avec `loop`, il tourne tant qu'il est
+/// visible.
 abstract final class StickerPlayback {
   /// Bulles animées qui jouent au même instant. Les autres attendent leur tour
-  /// (une lecture dure au plus ~3 s) : chaque lecture tient une image 512×512
-  /// décodée (~1 Mo) plus le décodeur, sur des téléphones d'entrée de gamme.
-  static const int maxConcurrent = 3;
+  /// (une lecture unique dure au plus ~3 s ; une boucle cède sa place à la fin
+  /// de chaque tour si quelqu'un attend) : chaque lecture tient une image
+  /// 512×512 décodée (~1 Mo) plus le décodeur, sur des téléphones d'entrée de
+  /// gamme.
+  static const int maxConcurrent = 4;
+
+  /// Vignettes de grille (côté ≤ [smallSide]) qui jouent au même instant. Une
+  /// vignette décodée pèse ~1/5 d'une bulle : une galerie entière peut bouger
+  /// sans dépasser la mémoire de [maxConcurrent] bulles.
+  static const int maxConcurrentSmall = 20;
+  static const double smallSide = 96;
 
   /// Mémoire de bulles déjà jouées, bornée (la session d'un téléphone peut
   /// voir passer des milliers de messages).
   static const int maxRemembered = 2000;
 
   static final Set<String> _played = <String>{};
-  static int _active = 0;
-  static final Queue<Completer<bool>> _waiters = Queue<Completer<bool>>();
+  static final _SlotPool _large = _SlotPool(maxConcurrent);
+  static final _SlotPool _small = _SlotPool(maxConcurrentSmall);
+
+  static _SlotPool _poolFor(double size) => size <= smallSide ? _small : _large;
 
   /// Décodeurs ouverts en ce moment (contrôle de fuite par les tests).
   @visibleForTesting
@@ -49,11 +59,11 @@ abstract final class StickerPlayback {
 
   /// Lectures qui tiennent une place.
   @visibleForTesting
-  static int get activeSlots => _active;
+  static int get activeSlots => _large.active + _small.active;
 
   /// Bulles en attente d'une place.
   @visibleForTesting
-  static int get waitingSlots => _waiters.length;
+  static int get waitingSlots => _large.waiters.length + _small.waiters.length;
 
   static bool hasPlayed(String key) => _played.contains(key);
 
@@ -66,47 +76,67 @@ abstract final class StickerPlayback {
   @visibleForTesting
   static void reset() {
     _played.clear();
-    _active = 0;
+    _large.clear();
+    _small.clear();
     liveCodecs = 0;
-    _waiters.clear();
+  }
+}
+
+/// Places de lecture d'une taille de sticker.
+class _SlotPool {
+  _SlotPool(this.max);
+
+  final int max;
+  int active = 0;
+  final Queue<Completer<bool>> waiters = Queue<Completer<bool>>();
+
+  bool get someoneWaiting => waiters.any((w) => !w.isCompleted);
+
+  void clear() {
+    active = 0;
+    waiters.clear();
   }
 
   /// Attend une place. `false` : l'attente a été annulée, rien n'est tenu.
-  static Future<bool> _acquire(Completer<bool> ticket) {
-    if (_active < maxConcurrent) {
-      _active++;
+  Future<bool> acquire(Completer<bool> ticket) {
+    if (active < max) {
+      active++;
       ticket.complete(true);
     } else {
-      _waiters.add(ticket);
+      waiters.add(ticket);
     }
     return ticket.future;
   }
 
-  static void _cancel(Completer<bool> ticket) {
+  void cancel(Completer<bool> ticket) {
     if (ticket.isCompleted) return;
-    _waiters.remove(ticket);
+    waiters.remove(ticket);
     ticket.complete(false);
   }
 
   /// Rend une place : la première bulle en attente la reçoit.
-  static void _release() {
-    while (_waiters.isNotEmpty) {
-      final next = _waiters.removeFirst();
+  void release() {
+    while (waiters.isNotEmpty) {
+      final next = waiters.removeFirst();
       if (!next.isCompleted) {
-        next.complete(true); // la place est transmise, `_active` ne bouge pas
+        next.complete(true); // la place est transmise, `active` ne bouge pas
         return;
       }
     }
-    if (_active > 0) _active--;
+    if (active > 0) active--;
   }
 }
 
-/// Sticker animé lu **une seule fois**, sans boucle.
+/// Sticker animé lu **une seule fois**, sans boucle — ou en boucle tant qu'il
+/// est visible avec [loop] (bulles de discussion, galerie).
 ///
 /// `Image.network` / `CachedNetworkImage` bouclent un WebP animé sans fin : ici
 /// le fichier est décodé à la main (`dart:ui` : `instantiateImageCodec`,
 /// `FrameInfo.duration`, aucun paquet image) et chaque image est montrée
 /// pendant sa durée ; la lecture **s'arrête sur la dernière image**.
+/// * [loop] : la lecture repart au début tant que le sticker est visible et
+///   l'application au premier plan ; hors de vue, elle s'arrête (décodeur
+///   libéré) et reprend au retour.
 ///
 /// * Lecture unique à l'arrivée : quand la bulle devient visible pour la
 ///   première fois dans la session (clé [playKey], cf. [StickerPlayback]).
@@ -117,7 +147,8 @@ abstract final class StickerPlayback {
 ///   `MediaQuery.disableAnimations`, ou si [animate] est faux (fiches). Avec
 ///   « réduire les animations », le tap ouvre la fiche (rien à rejouer).
 /// * Un seul décodeur par bulle, libéré dès la fin de la lecture ; au plus
-///   [StickerPlayback.maxConcurrent] lectures simultanées.
+///   [StickerPlayback.maxConcurrent] lectures simultanées
+///   ([StickerPlayback.maxConcurrentSmall] pour les vignettes de grille).
 /// * Décodage impossible : image fixe (vignette) ; « Sticker retiré »
 ///   seulement sur 404/410.
 class NonLoopingAnimatedSticker extends StatefulWidget {
@@ -128,6 +159,7 @@ class NonLoopingAnimatedSticker extends StatefulWidget {
     this.thumbUrl,
     this.size = 150,
     this.playKey,
+    this.loop = false,
     this.animate = true,
     this.interactive = true,
     this.onOpenSheet,
@@ -149,6 +181,10 @@ class NonLoopingAnimatedSticker extends StatefulWidget {
   /// `clientId` du message). `null` : pas de lecture automatique, seulement au
   /// tap.
   final String? playKey;
+
+  /// Vrai : boucle tant que le sticker est visible (lecture automatique sans
+  /// [playKey]).
+  final bool loop;
 
   /// Faux : image fixe, ni lecture automatique ni rejeu (fiches).
   final bool animate;
@@ -188,11 +224,13 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
   /// Invalide les lectures en cours (rejeu, changement d'URL, démontage).
   int _gen = 0;
   Completer<bool>? _ticket;
+  _SlotPool? _ticketPool;
 
   ScrollPosition? _position;
   bool _awaitingVisible = false;
   bool _staticStarted = false;
   bool _checkQueued = false;
+  AppLifecycleListener? _lifecycle;
 
   /// Index de l'image montrée (`-1` : aucune), pour les tests.
   @visibleForTesting
@@ -210,6 +248,15 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
   StickerBytesLoader get _load => widget.loadBytes ?? _loadFromCache;
 
   // ── Cycle de vie ────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    // Une boucle arrêtée en arrière-plan reprend au retour au premier plan.
+    _lifecycle = AppLifecycleListener(onResume: () {
+      if (_awaitingVisible) _queueVisibilityCheck();
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -231,7 +278,8 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
       _discardImage();
       _phase = _Phase.loading;
       _begin();
-    } else if (oldWidget.animate != widget.animate) {
+    } else if (oldWidget.animate != widget.animate ||
+        oldWidget.loop != widget.loop) {
       _begin();
     }
   }
@@ -240,8 +288,9 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
   void dispose() {
     _gen++; // toute lecture en cours s'arrête à son prochain point d'attente
     _stopWatchingScroll();
+    _lifecycle?.dispose();
     final t = _ticket;
-    if (t != null) StickerPlayback._cancel(t);
+    if (t != null) _ticketPool?.cancel(t);
     _image?.dispose();
     _image = null;
     super.dispose();
@@ -252,14 +301,13 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
   // ── Choix du mode ───────────────────────────────────────────────────
 
   /// Image fixe d'abord ; la lecture automatique part dès que la bulle est
-  /// visible, **une fois par session**.
+  /// visible, **une fois par session** (ou en boucle avec [loop]).
   void _begin() {
     if (!_trusted) return;
     final key = widget.playKey;
     final auto = widget.animate &&
         !_reduce &&
-        key != null &&
-        !StickerPlayback.hasPlayed(key);
+        (widget.loop || (key != null && !StickerPlayback.hasPlayed(key)));
     _staticStarted = false;
     if (!auto) {
       _awaitingVisible = false;
@@ -325,6 +373,14 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
     return inter.width * inter.height >= rect.width * rect.height * 0.5;
   }
 
+  /// Une boucle continue : visible, animations permises, application au
+  /// premier plan.
+  bool _keepLooping() {
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state != null && state != AppLifecycleState.resumed) return false;
+    return widget.animate && !_reduce && _visibleEnough();
+  }
+
   // ── Lecture ─────────────────────────────────────────────────────────
 
   /// Durée d'affichage d'une image : celle du fichier, avec la convention des
@@ -372,12 +428,13 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
   Future<void> _run({required bool play}) async {
     final gen = ++_gen;
     final prior = _ticket;
-    if (prior != null) StickerPlayback._cancel(prior);
+    if (prior != null) _ticketPool?.cancel(prior);
     _ticket = null;
     _playing = false;
     ui.Codec? codec;
     Completer<bool>? mine;
     var held = false;
+    final pool = StickerPlayback._poolFor(widget.size);
     try {
       final bytes = await _load(widget.url);
       if (!_current(gen)) return;
@@ -397,22 +454,43 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
       // Place de lecture : au plus quelques bulles animées à la fois.
       final ticket = mine = Completer<bool>();
       _ticket = ticket;
-      held = await StickerPlayback._acquire(ticket);
+      _ticketPool = pool;
+      held = await pool.acquire(ticket);
       if (!held || !_current(gen)) return;
 
       final key = widget.playKey;
       if (key != null) StickerPlayback._markPlayed(key);
       if (mounted) setState(() => _playing = true);
-      for (var i = 0; i < count; i++) {
+      // Le décodeur repart de la première image après la dernière.
+      for (var i = 0;; i = (i + 1) % count) {
         final f = await codec.getNextFrame();
         if (!_current(gen)) {
           f.image.dispose();
           return;
         }
         _setImage(f.image, i);
+        final last = i == count - 1;
         // Dernière image : la lecture s'arrête, l'image reste.
-        if (i < count - 1) await Future<void>.delayed(_frameDelay(f.duration));
+        if (last && !widget.loop) break;
+        await Future<void>.delayed(_frameDelay(f.duration));
         if (!_current(gen)) return;
+        if (!widget.loop) continue;
+        if (!_keepLooping()) {
+          // Hors de vue : on s'arrête sur l'image courante, la reprise vient
+          // du défilement, du retour sur la page ou au premier plan.
+          _staticStarted = true;
+          _awaitingVisible = true;
+          return;
+        }
+        if (last && pool.someoneWaiting) {
+          // Fin d'un tour : la place passe à une bulle qui attend.
+          pool.release();
+          held = false;
+          final again = mine = Completer<bool>();
+          _ticket = again;
+          held = await pool.acquire(again);
+          if (!held || !_current(gen)) return;
+        }
       }
     } catch (e) {
       if (!_current(gen)) return;
@@ -425,7 +503,7 @@ class NonLoopingAnimatedStickerState extends State<NonLoopingAnimatedSticker> {
         codec.dispose();
         StickerPlayback.liveCodecs--;
       }
-      if (held) StickerPlayback._release();
+      if (held) pool.release();
       if (mine != null && identical(_ticket, mine)) _ticket = null;
       if (mounted && gen == _gen && _playing) setState(() => _playing = false);
     }

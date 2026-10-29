@@ -249,14 +249,14 @@ class _StickerSheetState extends State<StickerSheet> {
               children: [
                 Center(
                   child: animated
-                      // Fiche en image fixe (première image) : l'animation se
-                      // lit dans la bulle ; la fiche ne boucle jamais.
+                      // Fiche : l'animation tourne en boucle.
                       ? NonLoopingAnimatedSticker(
                           url: url,
                           emoji: p.emoji,
                           thumbUrl: entry?.sticker.thumbUrl,
                           size: 200,
-                          animate: false,
+                          loop: true,
+                          interactive: false,
                           semanticLabel:
                               l10n.stickerAnimatedSemantics(p.emoji),
                         )
