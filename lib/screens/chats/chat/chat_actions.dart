@@ -614,6 +614,16 @@ extension _ChatActions on _ChatDetailScreenState {
                   _saveMediaToDevice(msg);
                 },
               ),
+            // Document sensible : seule une copie SIGNÉE sort.
+            if (msg.isSensitive && !msg.isDeleted && msg.status != 0)
+              ListTile(
+                leading: Icon(Icons.download_rounded, color: primary),
+                title: Text(context.l10n.sensitiveSaveSigned),
+                onTap: () {
+                  Navigator.pop(context);
+                  _saveSensitiveCopy(msg);
+                },
+              ),
             if (canForwardMessage(msg))
               ListTile(
                 leading: Icon(Icons.share_outlined, color: primary),
@@ -1019,6 +1029,8 @@ extension _ChatActions on _ChatDetailScreenState {
   /// l'appareil.
   bool _canSaveMediaToDevice(LocalMessage msg) {
     if (msg.isViewOnce || msg.isDeleted) return false;
+    // Document sensible : jamais l'original ; seule une copie signée sort.
+    if (msg.isSensitive) return false;
     if (msg.type != 1 && msg.type != 2 && msg.type != 4) return false;
     final hasLocal = msg.localMediaPath != null &&
         File(msg.localMediaPath!).existsSync();
@@ -1269,6 +1281,15 @@ extension _ChatActions on _ChatDetailScreenState {
                   _attachOption(Icons.camera_alt, context.l10n.camera, context.colors.primary, _pickImageFromCamera),
                   _attachOption(Icons.videocam, context.l10n.video2, context.colors.error, _pickVideo),
                   _attachOption(Icons.insert_drive_file, context.l10n.file2, sem.warning, _pickFile),
+                  // Document sensible, à côté des fichiers : visionneuse
+                  // protégée seulement, ni transfert ni partage, copie signée
+                  // à l'enregistrement.
+                  _attachOption(
+                    Icons.verified_user_outlined,
+                    context.l10n.sensitiveDocument,
+                    context.colors.error,
+                    _pickSensitive,
+                  ),
                 ],
               ),
               AppSpacing.vGapMd,
@@ -1337,22 +1358,36 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
+  /// Une entrée du menu. `Flexible` et un retrait latéral réduit : la
+  /// première rangée en compte cinq depuis « Sensible », et doit tenir sur un
+  /// écran de 360 dp (5 × 64 dp dans les 328 dp que laisse la feuille).
   Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: () {
-        Navigator.pop(context);
-        onTap();
-      },
-      borderRadius: AppRadius.brSm,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
-            AppSpacing.vGapSm,
-            Text(label, style: context.text.bodySmall),
-          ],
+    return Flexible(
+      child: InkWell(
+        onTap: () {
+          Navigator.pop(context);
+          onTap();
+        },
+        borderRadius: AppRadius.brSm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xs,
+            vertical: AppSpacing.sm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
+              AppSpacing.vGapSm,
+              Text(
+                label,
+                style: context.text.bodySmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1542,6 +1577,139 @@ extension _ChatActions on _ChatDetailScreenState {
       allowMultiple: true,
     );
     await _sendPickedFiles(res?.files, type: 4);
+  }
+
+  /// Documents sensibles : un ou plusieurs fichiers, de n'importe quel type. Le type de
+  /// message suit le fichier (image, vidéo, audio, sinon document), pour que
+  /// la visionneuse protégée sache l'afficher.
+  Future<void> _pickSensitive() async {
+    final res = await FilePicker.platform.pickFiles(
+      withData: false,
+      allowMultiple: true,
+    );
+    final picked = res?.files;
+    if (picked == null || picked.isEmpty || _myId == null) return;
+
+    // Mêmes bornes que les autres fichiers : nombre et poids.
+    final max = ChatRepository.maxAlbumItems;
+    if (picked.length > max && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            '${context.l10n.maxFiles(max)} ${context.l10n.albumFirstOnly(max)}'),
+      ));
+    }
+    var items = <AlbumSendItem>[];
+    var tropLourds = 0;
+    for (final f in picked.take(max)) {
+      final path = f.path;
+      if (path == null) continue;
+      final local = File(path);
+      if ((local.existsSync() ? local.lengthSync() : 0) > MediaUploadLimits.maxBytes) {
+        tropLourds++;
+        continue;
+      }
+      items.add(AlbumSendItem(
+        file: local,
+        type: typeMessagePourFichier(f.name),
+        mediaName: f.name,
+        duration: typeMessagePourFichier(f.name) == 3
+            ? await MusicMetadataService.durationSeconds(path)
+            : null,
+        sensible: const DescripteurSensible(),
+      ));
+    }
+    if (!mounted) return;
+    if (tropLourds > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.l10n.filesSkippedTooLarge(
+            tropLourds, MediaUploadLimits.maxMegabytes)),
+        backgroundColor: AppColors.error,
+      ));
+    }
+    if (items.isEmpty) return;
+
+    // Une copie SIGNÉE ne repart pas en « sensible » : re-signée au nom du
+    // destinataire, elle perdrait l'empreinte de qui l'a fait sortir la
+    // première fois. Elle peut partir en document ordinaire, qui la garde.
+    final signees = <AlbumSendItem>[
+      for (final i in items)
+        if (await DetecteurCopieSignee.estCopieSigneeFichier(i.file.path)) i,
+    ];
+    if (signees.isNotEmpty) {
+      if (!mounted) return;
+      final ordinaire = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(ctx.l10n.sensitiveAlreadySignedTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(ctx.l10n.sensitiveAlreadySignedBody),
+              AppSpacing.vGapSm,
+              for (final i in signees)
+                Text('• ${i.mediaName ?? i.file.path.split('/').last}',
+                    style: ctx.text.bodySmall),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(ctx.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(ctx.l10n.sensitiveSendAsOrdinary),
+            ),
+          ],
+        ),
+      );
+      if (ordinaire != true) return;
+      items = [for (final i in items) signees.contains(i) ? i.sansSensible() : i];
+    }
+
+    // Les PDF sensibles : l'expéditeur règle UNE FOIS, pour tous ceux de
+    // l'envoi, la protection de la copie qui sortira (impression, mots de
+    // passe).
+    bool pdfSensible(AlbumSendItem i) =>
+        i.sensible != null &&
+        (i.mediaName ?? i.file.path).toLowerCase().endsWith('.pdf');
+    final nbPdf = items.where(pdfSensible).length;
+    if (nbPdf > 0) {
+      if (!mounted) return;
+      final choix = await demanderProtectionPdf(context, nombre: nbPdf);
+      if (choix == null) return;
+      items = [
+        for (final i in items)
+          pdfSensible(i)
+              ? i.avecSensible(DescripteurSensible(protection: choix.protection))
+              : i,
+      ];
+    }
+
+    // Aperçu : passer d'un fichier à l'autre, en retirer, ajouter une légende.
+    if (!mounted) return;
+    final result = await Navigator.push<ApercuDocumentsResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ApercuDocumentsSensibles(
+          items: items,
+          recipientName: widget.userName,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+    if (result == null || result.items.isEmpty || !mounted) return;
+
+    final convId = await _ensureConversation();
+    if (convId == null) return;
+    _dismissUnreadSeparator();
+    await _chat.repository.sendMediaFiles(
+      conversationID: convId,
+      items: result.items,
+      content: result.caption,
+    );
+    _scrollToBottom();
   }
 
   /// Import de morceaux : envoyés en `type = 3` comme un vocal, c'est le nom
@@ -2436,6 +2604,7 @@ extension _ChatActions on _ChatDetailScreenState {
         isMine: isMine,
         isViewOnce: msg.isViewOnce,
         mediaName: msg.mediaName,
+        isSensitive: msg.isSensitive,
       );
       if (path == null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2659,6 +2828,105 @@ extension _ChatActions on _ChatDetailScreenState {
 
     // Consommé à la fermeture : marque vu localement + notifie le serveur.
     await _chat.repository.markViewed(msg.msgID);
+  }
+
+  /// Document sensible : toujours la visionneuse protégée, jamais la galerie
+  /// ni une autre application.
+  Future<void> _openSensitive(LocalMessage msg) async {
+    if (_selectionMode) {
+      _toggleSelection(msg);
+      return;
+    }
+    String? path;
+    for (final p in [msg.localMediaPath, _localMediaPathOverrides[msg.msgID]]) {
+      if (p != null && File(p).existsSync()) {
+        path = p;
+        break;
+      }
+    }
+    if (path == null) {
+      if (_isExpiredMedia(msg)) {
+        _showMediaExpiredSnackBar(msg);
+        return;
+      }
+      path = await _downloadReceivedMedia(msg);
+      if (path == null) return;
+    }
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => VisionneuseDocumentSensible(
+          msgID: msg.msgID,
+          type: msg.type,
+          fichier: File(path!),
+          titre: msg.mediaName ?? context.l10n.sensitiveDocumentBadge,
+          onEnregistrer: () => _saveSensitiveCopy(msg, clair: path),
+        ),
+      ),
+    );
+  }
+
+  /// Enregistre une copie SIGNÉE d'un document sensible (bords, métadonnées,
+  /// empreinte), et note le geste au serveur.
+  Future<void> _saveSensitiveCopy(LocalMessage msg, {String? clair}) async {
+    var path = clair;
+    if (path == null || !File(path).existsSync()) {
+      path = null;
+      for (final p in [msg.localMediaPath, _localMediaPathOverrides[msg.msgID]]) {
+        if (p != null && File(p).existsSync()) {
+          path = p;
+          break;
+        }
+      }
+    }
+    if (path == null) {
+      if (_isExpiredMedia(msg)) {
+        _showMediaExpiredSnackBar(msg);
+        return;
+      }
+      path = await _downloadReceivedMedia(msg);
+      if (path == null) return;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    final sortie = SortieDocumentSensible(
+      _apiClient,
+      numero: context.read<AuthProvider>().currentUser?.alanyaPhone ?? '',
+    );
+    try {
+      final r = await sortie.enregistrer(
+        clair: File(path),
+        msgID: msg.msgID,
+        type: msg.type,
+        nom: msg.mediaName ?? path.split('/').last,
+        jeSuisExpediteur: msg.senderID == _myId,
+        protection: DescripteurSensible.duMessage(
+          isSensitive: msg.isSensitive,
+          mediaProtection: msg.mediaProtection,
+        )?.protection,
+      );
+      messenger.showSnackBar(SnackBar(
+        content: Text(!r.enregistree
+            ? l10n.sensitiveSaveFailed
+            : r.copie.signee
+                ? l10n.sensitiveSavedSigned
+                : l10n.sensitiveSavedUnsigned),
+        backgroundColor: r.enregistree ? null : AppColors.error,
+      ));
+    } on ProtectionImpossible {
+      // L'expéditeur a voulu un PDF protégé : sans protection, rien ne sort.
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.pdfProtectionFailed),
+        backgroundColor: AppColors.error,
+      ));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.sensitiveSaveFailed),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   void _showLoading() {

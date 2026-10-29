@@ -29,6 +29,7 @@ import '../billing/entitlement_service.dart';
 import '../../../talky_api_client.dart' show TalkyException;
 import '../../../talky_models.dart';
 import 'chat_api.dart';
+import '../documents_sensibles/descripteur_sensible.dart';
 import 'conversation_merge.dart';
 import 'message_path_tracer.dart';
 import 'message_ack_watchdog.dart';
@@ -397,6 +398,7 @@ class MessageSender {
     String? content,
     bool isForwarded = false,
     bool isViewOnce = false,
+    DescripteurSensible? sensible,
   }) async {
     if (_myId() == 0) {
       debugPrint('[MessageSender] sendMedia ignoré : utilisateur non lié (myId=0)');
@@ -409,7 +411,13 @@ class MessageSender {
 
     // Image / vidéo : réutilise la vignette fournie (transfert) sinon la génère
     // depuis le fichier local si disponible (aperçu destinataire hors DL).
-    mediaThumb ??= await _mediaThumbFor(type, localMediaPath);
+    // Document sensible : aucune vignette — elle ferait sortir un aperçu du
+    // contenu (serveur, notifications) hors de la visionneuse protégée.
+    if (sensible != null) {
+      mediaThumb = null;
+    } else {
+      mediaThumb ??= await _mediaThumbFor(type, localMediaPath);
+    }
     MessagePathTracer.start(clientId);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
@@ -430,6 +438,8 @@ class MessageSender {
       localMediaPath: Value(localMediaPath),
       isForwarded: Value(isForwarded),
       isViewOnce: Value(isViewOnce),
+      isSensitive: Value(sensible != null),
+      mediaProtection: Value(sensible?.encoder()),
       syncPending: const Value(true),
     ));
     MessagePathTracer.mark(clientId, 'local_insert');
@@ -447,6 +457,7 @@ class MessageSender {
       mediaThumb: mediaThumb,
       isForwarded: isForwarded,
       isViewOnce: isViewOnce,
+      sensible: sensible,
       clickSentAt: now,
     );
     unawaited(_recompute(conversationID));
@@ -464,6 +475,7 @@ class MessageSender {
     int isStatusReply = 0,
     bool isForwarded = false,
     bool isViewOnce = false,
+    DescripteurSensible? sensible,
   }) async {
     if (_myId() == 0) {
       debugPrint('[MessageSender] sendMediaFile ignoré : utilisateur non lié (myId=0)');
@@ -493,8 +505,10 @@ class MessageSender {
 
     // Image / vidéo / pochette : mini-vignette base64 pour l'aperçu
     // destinataire (hors téléchargement).
-    final mediaThumb =
-        await _mediaThumbFor(type, uploadFile.path, mediaName: name);
+    // Pas de vignette pour un document sensible (voir sendMedia).
+    final mediaThumb = sensible != null
+        ? null
+        : await _mediaThumbFor(type, uploadFile.path, mediaName: name);
     MessagePathTracer.start(clientId);
 
     await _dao.upsertMessage(LocalMessagesCompanion.insert(
@@ -518,6 +532,8 @@ class MessageSender {
       isStatusReply: Value(isStatusReply),
       isForwarded: Value(isForwarded),
       isViewOnce: Value(isViewOnce),
+      isSensitive: Value(sensible != null),
+      mediaProtection: Value(sensible?.encoder()),
       syncPending: const Value(true),
     ));
     MessagePathTracer.mark(clientId, 'local_insert');
@@ -549,9 +565,13 @@ class MessageSender {
   ///
   /// Les lignes locales sont toutes insérées d'abord pour que les bulles
   /// apparaissent d'un coup, puis les uploads partent en parallèle limité.
+  ///
+  /// [content] : légende, portée par le PREMIER message. Chaque élément peut
+  /// être un document sensible ([AlbumSendItem.sensible]).
   Future<void> sendMediaFiles({
     required int conversationID,
     required List<AlbumSendItem> items,
+    String? content,
   }) async {
     if (_myId() == 0) {
       debugPrint('[MessageSender] sendMediaFiles ignoré : utilisateur non lié (myId=0)');
@@ -559,6 +579,8 @@ class MessageSender {
     }
     if (!_outgoingAllowed()) return;
     if (items.isEmpty) return;
+    final caption = content?.trim();
+    final legende = caption != null && caption.isNotEmpty ? caption : null;
     if (items.length == 1) {
       final item = items.first;
       await sendMediaFile(
@@ -567,6 +589,8 @@ class MessageSender {
         file: item.file,
         mediaName: item.mediaName,
         mediaDuration: item.duration,
+        content: legende,
+        sensible: item.sensible,
       );
       return;
     }
@@ -595,8 +619,11 @@ class MessageSender {
       final int? fileMediaSize = meta.size > 0 ? meta.size : null;
       final int? fileMediaPageCount = meta.pageCount;
 
-      final mediaThumb =
-          await _mediaThumbFor(item.type, uploadFile.path, mediaName: name);
+      // Pas de vignette pour un document sensible (voir sendMedia).
+      final mediaThumb = item.sensible != null
+          ? null
+          : await _mediaThumbFor(item.type, uploadFile.path, mediaName: name);
+      final texte = i == 0 ? legende : null;
       MessagePathTracer.start(clientId);
 
       await _dao.upsertMessage(LocalMessagesCompanion.insert(
@@ -605,6 +632,7 @@ class MessageSender {
         senderID: _myId(),
         sendAt: now,
         clickSentAt: Value(now),
+        content: Value(texte),
         type: Value(item.type),
         status: const Value(0),
         mediaName: Value(name),
@@ -614,6 +642,8 @@ class MessageSender {
         mediaThumb: Value(mediaThumb),
         localMediaPath: Value(uploadFile.path),
         pendingUploadPath: Value(uploadFile.path),
+        isSensitive: Value(item.sensible != null),
+        mediaProtection: Value(item.sensible?.encoder()),
         syncPending: const Value(true),
       ));
       MessagePathTracer.mark(clientId, 'local_insert');
@@ -622,6 +652,7 @@ class MessageSender {
         clientId: clientId,
         file: uploadFile,
         type: item.type,
+        content: texte,
         mediaName: name,
         mediaDuration: item.duration,
         clickSentAt: now,
@@ -637,6 +668,7 @@ class MessageSender {
           conversationID: conversationID,
           file: p.file,
           type: p.type,
+          content: p.content,
           mediaName: p.mediaName,
           mediaDuration: p.mediaDuration,
           clickSentAt: p.clickSentAt,
@@ -866,6 +898,9 @@ class MessageSender {
             isStatusReply: isStatusReply,
             isForwarded: isForwarded,
             isViewOnce: isViewOnce,
+            // Relu depuis la ligne, comme la vignette : un envoi repris après
+            // redémarrage (outbox) garde ainsi son caractère sensible.
+            sensible: _sensibleDe(row),
             // Sans ce champ, les médias (photo/vidéo) envoyés via upload de
             // fichier n'avaient jamais de clickSentAt : la ligne « Appui sur
             // envoyer » restait vide côté destinataire. On retombe sur
@@ -954,6 +989,7 @@ class MessageSender {
       isStatusReply: m.isStatusReply,
       isForwarded: m.isForwarded,
       isViewOnce: m.isViewOnce,
+      sensible: _sensibleDe(m),
       clickSentAt: m.clickSentAt,
       // Relues depuis la ligne : c'est ICI qu'une mention envoyée hors ligne
       // se perdrait si elle n'était que dérivée du texte au moment de la
@@ -1033,6 +1069,7 @@ class MessageSender {
     int isStatusReply = 0,
     bool isForwarded = false,
     bool isViewOnce = false,
+    DescripteurSensible? sensible,
     DateTime? clickSentAt,
     List<int>? mentions,
     bool mentionsAll = false,
@@ -1068,6 +1105,10 @@ class MessageSender {
       if (isStatusReply != 0) 'isStatusReply': isStatusReply,
       if (isForwarded) 'isForwarded': 1,
       if (isViewOnce) 'isViewOnce': 1,
+      // Le descripteur n'est envoyé que s'il porte une protection : un
+      // document sensible sans protection n'a besoin que du drapeau.
+      if (sensible != null) 'isSensitive': 1,
+      if (sensible?.protection != null) 'mediaProtection': sensible!.toJson(),
       if (clickSentAt != null) 'clickSentAt': clickSentAt.toIso8601String(),
       // Le serveur ré-intersecte avec les participants : ces ids sont une
       // intention, pas une autorisation.
@@ -1080,6 +1121,13 @@ class MessageSender {
   }
 
 
+
+  static DescripteurSensible? _sensibleDe(LocalMessage? m) => m == null
+      ? null
+      : DescripteurSensible.duMessage(
+          isSensitive: m.isSensitive,
+          mediaProtection: m.mediaProtection,
+        );
 
   String _newClientId() =>
       'c_${_myId()}_${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(99999)}';
@@ -1100,7 +1148,8 @@ class _PendingMediaUpload {
   final String clientId;
   final File file;
   final int type;
-  /// Marqueur d'album, ou `null` pour un envoi fichier par fichier.
+  /// Marqueur d'album ; pour un envoi fichier par fichier, la légende du
+  /// premier fichier, sinon `null`.
   final String? content;
   final String mediaName;
   final int? mediaDuration;

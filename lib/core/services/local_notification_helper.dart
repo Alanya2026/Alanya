@@ -168,9 +168,16 @@ class LocalNotificationHelper {
     if (kIsWeb) return;
     if (_initialized) return;
 
+    // Pas de demande de permission iOS à l'initialisation : celle-ci peut
+    // précéder `requestPermission` de FCM (taps branchés dès le démarrage),
+    // qui reste le seul endroit où l'on demande.
     const initSettings = InitializationSettings(
       android: AndroidInitializationSettings(kNotificationIcon),
-      iOS: DarwinInitializationSettings(),
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
     );
     await _plugin.initialize(
       initSettings,

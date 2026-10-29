@@ -151,6 +151,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// padding — elles ont déjà leur propre mise en page interne.
   bool _isBleedMedia(LocalMessage msg) =>
       !msg.isViewOnce &&
+      !msg.isSensitive &&
       !msg.isDeleted &&
       (msg.type == 1 || msg.type == 2 || msg.type == 5);
 
@@ -1193,6 +1194,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
 
   bool _canShowReplyThumb(LocalMessage msg) =>
       !msg.isViewOnce &&
+      !msg.isSensitive &&
       (msg.type == 1 ||
           msg.type == 2 ||
           msg.type == 4 ||
@@ -1522,6 +1524,7 @@ extension _ChatBubbles on _ChatDetailScreenState {
   /// fond réapparaît dans chaque coin.
   Widget _buildMedia(LocalMessage msg, bool isMe, {bool bleed = false}) {
     if (msg.isViewOnce) return _buildViewOnceMedia(msg, isMe);
+    if (msg.isSensitive) return _buildSensitiveMedia(msg, isMe);
     switch (msg.type) {
       case 1:
         return _buildImageMedia(msg, bleed: bleed);
@@ -1620,14 +1623,15 @@ extension _ChatBubbles on _ChatDetailScreenState {
     } else if (url == null || url.isEmpty) {
       child = StickerFallback(emoji: emoji, size: size, removed: true);
     } else if (payload.animated) {
-      // Sticker animé (`a` = 1, posé par le serveur) : lu une seule fois à
-      // l'arrivée, rejoué au tap. L'ouverture de la fiche passe par le bouton
+      // Sticker animé (`a` = 1, posé par le serveur) : tourne en boucle tant
+      // que la bulle est visible. L'ouverture de la fiche passe par le bouton
       // « i » ; l'appui long reste celui du menu du message.
       return NonLoopingAnimatedSticker(
         url: url,
         emoji: emoji,
         size: size,
         playKey: msg.clientId,
+        loop: true,
         interactive: !_selectionMode,
         onOpenSheet: () => _openStickerSheet(msg, payload, url),
       );
@@ -1972,6 +1976,110 @@ extension _ChatBubbles on _ChatDetailScreenState {
   }
 
   String _formatBytes(int bytes) => formatBytes(bytes, context.l10n);
+
+  /// Document sensible : une carte SANS aperçu — une vignette se capturerait
+  /// hors de l'écran protégé. L'appui ouvre la visionneuse protégée.
+  Widget _buildSensitiveMedia(LocalMessage msg, bool isMe) {
+    final textColor = _bubbleText(isMe);
+    final accent = isMe ? context.colors.onPrimary : context.colors.error;
+    final uploading = msg.status == 0;
+    final busy = uploading || _mediaDownloadingIds.contains(msg.msgID);
+    final size = (msg.mediaSize ?? 0) > 0
+        ? ' · ${_formatBytes(msg.mediaSize!)}'
+        : '';
+    final icon = switch (msg.type) {
+      1 => Icons.image_outlined,
+      2 => Icons.videocam_outlined,
+      3 => Icons.audiotrack_outlined,
+      _ => Icons.description_outlined,
+    };
+
+    final protection = DescripteurSensible.duMessage(
+      isSensitive: true,
+      mediaProtection: msg.mediaProtection,
+    )?.protection;
+
+    final carte = GestureDetector(
+      onTap: uploading ? null : () => _openSensitive(msg),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 40,
+            height: 40,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: accent.withAlpha(30),
+                  child: Icon(icon, color: accent),
+                ),
+                if (busy)
+                  SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: accent),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  msg.mediaName ?? context.l10n.sensitiveDocumentBadge,
+                  style: context.text.bodyMedium?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_outline,
+                        size: 12, color: textColor.withAlpha(170)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        '${context.l10n.sensitiveDocumentBadge}$size',
+                        style: context.text.labelSmall?.copyWith(
+                          color: textColor.withAlpha(170),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (protection == null) return carte;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        carte,
+        InfosProtectionPdf(
+          protection: protection,
+          // Le msgID est le même sur tous les appareils ; avant l'accusé,
+          // seul l'expéditeur voit la bulle, et il n'a pas de vue unique.
+          idMessage: msg.msgID > 0 ? 'm${msg.msgID}' : msg.clientId,
+          isMe: isMe,
+          couleurDiscrete: textColor.withAlpha(190),
+        ),
+      ],
+    );
+  }
 
   /// Overlay spinner ou barre de progression pendant l'envoi d'un média.
   /// Une vidéo passe d'abord par la compression (« Compression… x % »), puis

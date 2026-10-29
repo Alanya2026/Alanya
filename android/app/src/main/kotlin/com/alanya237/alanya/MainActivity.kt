@@ -29,6 +29,7 @@ class MainActivity : FlutterFragmentActivity() {
     private val callPermissionsChannel = "com.alanya/call_permissions"
     private val deviceIdentityChannel = "com.alanya/device_identity"
     private val screenshotChannel = "com.alanya/screenshot"
+    private val signatureChannel = "com.alanya/signature"
     private var screenshotDetector: ScreenshotDetector? = null
 
     // Dossiers de documents de la sauvegarde automatique du coffre. Créé avec
@@ -202,6 +203,12 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // Documents sensibles : la copie enregistrée d'une vidéo reçoit la
+        // signature incrustée aux quatre bords (SignatureVideo).
+        val signatureVideo = SignatureVideo(applicationContext)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, signatureChannel)
+            .setMethodCallHandler { appel, resultat -> signatureVideo.traiter(appel, resultat) }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, callPermissionsChannel)
             .setMethodCallHandler { call, result ->

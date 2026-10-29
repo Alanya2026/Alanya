@@ -1939,6 +1939,195 @@ class AppLocalizationsEn extends AppLocalizations {
   String get file2 => 'File';
 
   @override
+  String get sensitiveDocument => 'Sensitive';
+
+  @override
+  String get sensitiveDocumentBadge => 'Sensitive document';
+
+  @override
+  String sensitiveViewedBy(String numero, String appareil, String date) {
+    return 'Viewed by Alanya $numero · $appareil · $date';
+  }
+
+  @override
+  String get sensitiveCannotPreview =>
+      'This document can\'t be opened in Alanya. It stays protected: only a copy signed in your name can leave the app.';
+
+  @override
+  String get sensitiveSaveSigned => 'Save a signed copy';
+
+  @override
+  String get sensitiveSavedSigned =>
+      'Signed copy saved: it carries your digital fingerprint.';
+
+  @override
+  String get sensitiveSavedUnsigned =>
+      'Copy saved, but this format can\'t be signed. The download has been recorded.';
+
+  @override
+  String get sensitiveSaveFailed => 'Couldn\'t save the copy.';
+
+  @override
+  String get sensitiveAlreadySignedTitle => 'Already a signed copy';
+
+  @override
+  String get sensitiveAlreadySignedBody =>
+      'These files are signed copies of sensitive documents. They can\'t be sent as sensitive again: re-signed, they would lose the fingerprint of whoever took them out. They can be sent as ordinary documents, which keep it:';
+
+  @override
+  String get sensitiveSendAsOrdinary => 'Send as ordinary';
+
+  @override
+  String get fingerprintCheckTitle => 'Check a fingerprint';
+
+  @override
+  String get fingerprintCheckSubtitle =>
+      'Who took a signed copy of a sensitive document out';
+
+  @override
+  String get fingerprintCheckIntro =>
+      'Every copy of a sensitive document saved outside Alanya carries a digital fingerprint: 32 characters on its edges or in its properties. Enter it to find out who took it out. Only people who could see the document get an answer.';
+
+  @override
+  String get fingerprintField => 'Digital fingerprint';
+
+  @override
+  String get fingerprintPaste => 'Paste';
+
+  @override
+  String get fingerprintSearch => 'Search';
+
+  @override
+  String get fingerprintInvalid =>
+      'It takes 32 characters: digits 0–9 and letters A–F.';
+
+  @override
+  String get fingerprintUnknown =>
+      'Unknown fingerprint, or a copy of a document you couldn\'t see.';
+
+  @override
+  String get fingerprintLookupFailed =>
+      'The search didn\'t go through. Try again.';
+
+  @override
+  String get fingerprintResult => 'Copy identified';
+
+  @override
+  String get fingerprintBy => 'Taken out by';
+
+  @override
+  String get fingerprintAction => 'Action';
+
+  @override
+  String get fingerprintDate => 'Date';
+
+  @override
+  String get fingerprintDevice => 'Device';
+
+  @override
+  String get fingerprintSender => 'Document sender';
+
+  @override
+  String get fingerprintDocument => 'Document';
+
+  @override
+  String get fingerprintUnknownValue => 'Unknown';
+
+  @override
+  String get fingerprintActionDownload => 'Download';
+
+  @override
+  String get fingerprintActionShare => 'Share';
+
+  @override
+  String get fingerprintActionForward => 'Forward';
+
+  @override
+  String get pdfProtectionTitle => 'Protect the PDF copy';
+
+  @override
+  String get pdfProtectionIntro =>
+      'These settings apply to the copy the recipient saves outside Alanya. Inside Alanya, the document stays readable in the protected viewer.';
+
+  @override
+  String get pdfProtectionAllowPrint => 'Allow printing';
+
+  @override
+  String get pdfProtectionPassword => 'Protect with a password';
+
+  @override
+  String get pdfProtectionPasswordHelp =>
+      'The copy will be encrypted; the opening password will be needed to read it.';
+
+  @override
+  String get pdfOpenPassword => 'Opening password';
+
+  @override
+  String get pdfOpenPasswordHelp => 'Shown only once to the recipient.';
+
+  @override
+  String get pdfOwnerPassword => 'Owner password';
+
+  @override
+  String get pdfOwnerPasswordHelp =>
+      'Lifts the restrictions (printing). Never shown to the recipient.';
+
+  @override
+  String pdfPasswordTooShort(int n) {
+    return 'At least $n characters.';
+  }
+
+  @override
+  String get pdfProtectionSend => 'Send';
+
+  @override
+  String get pdfPrintForbidden => 'Printing not allowed';
+
+  @override
+  String get pdfPasswordShowOnce => 'Show the password (once only)';
+
+  @override
+  String get pdfPasswordAlreadySeen => 'Password already shown';
+
+  @override
+  String get pdfPasswordOnceNotice =>
+      'Write it down: it won\'t be shown again. It opens the saved copy of this PDF.';
+
+  @override
+  String get pdfPasswordCopy => 'Copy';
+
+  @override
+  String get pdfPasswordDone => 'Got it';
+
+  @override
+  String get pdfProtectionFailed =>
+      'Protecting the PDF failed: no copy was saved.';
+
+  @override
+  String get sensitivePreviewTitle => 'Sensitive document';
+
+  @override
+  String sensitivePreviewTitleMany(int n) {
+    return '$n sensitive documents';
+  }
+
+  @override
+  String get sensitivePreviewRemove => 'Remove this file';
+
+  @override
+  String get sensitivePreviewBanner =>
+      'Will open only in Alanya\'s protected viewer. No forwarding or sharing; any saved copy will be signed.';
+
+  @override
+  String get sensitivePreviewOrdinary =>
+      'Already a signed copy: it will be sent as an ordinary document, with its original fingerprint.';
+
+  @override
+  String pdfProtectionIntroMany(int n) {
+    return 'These settings apply to the $n PDFs in this send, and to the copy the recipient saves outside Alanya. Inside Alanya, the documents stay readable in the protected viewer.';
+  }
+
+  @override
   String get comingSoon => 'Coming soon';
 
   @override

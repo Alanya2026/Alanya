@@ -1876,6 +1876,183 @@ class AppLocalizationsZh extends AppLocalizations {
   String get file2 => '文件';
 
   @override
+  String get sensitiveDocument => '敏感文件';
+
+  @override
+  String get sensitiveDocumentBadge => '敏感文件';
+
+  @override
+  String sensitiveViewedBy(String numero, String appareil, String date) {
+    return 'Alanya $numero 查看 · $appareil · $date';
+  }
+
+  @override
+  String get sensitiveCannotPreview => '此文件无法在 Alanya 中打开。它仍受保护：只能导出以您名义签名的副本。';
+
+  @override
+  String get sensitiveSaveSigned => '保存签名副本';
+
+  @override
+  String get sensitiveSavedSigned => '已保存签名副本：其中带有您的数字指纹。';
+
+  @override
+  String get sensitiveSavedUnsigned => '副本已保存，但此格式无法签名。下载已被记录。';
+
+  @override
+  String get sensitiveSaveFailed => '无法保存副本。';
+
+  @override
+  String get sensitiveAlreadySignedTitle => '已签名的副本';
+
+  @override
+  String get sensitiveAlreadySignedBody =>
+      '以下文件是敏感文件的签名副本，不能再次作为敏感文件发送：重新签名会丢失导出者的指纹。它们可以作为普通文件发送，指纹会保留：';
+
+  @override
+  String get sensitiveSendAsOrdinary => '作为普通文件发送';
+
+  @override
+  String get fingerprintCheckTitle => '核验指纹';
+
+  @override
+  String get fingerprintCheckSubtitle => '查明谁导出了敏感文件的签名副本';
+
+  @override
+  String get fingerprintCheckIntro =>
+      '每份保存到 Alanya 之外的敏感文件副本都带有数字指纹：位于边缘或属性中的 32 个字符。输入指纹即可查明导出者。只有能查看该文件的人才会得到答复。';
+
+  @override
+  String get fingerprintField => '数字指纹';
+
+  @override
+  String get fingerprintPaste => '粘贴';
+
+  @override
+  String get fingerprintSearch => '查找';
+
+  @override
+  String get fingerprintInvalid => '需要 32 个字符：数字 0–9 和字母 A–F。';
+
+  @override
+  String get fingerprintUnknown => '未知指纹，或是您无权查看的文件的副本。';
+
+  @override
+  String get fingerprintLookupFailed => '查找失败，请重试。';
+
+  @override
+  String get fingerprintResult => '已识别副本';
+
+  @override
+  String get fingerprintBy => '导出者';
+
+  @override
+  String get fingerprintAction => '操作';
+
+  @override
+  String get fingerprintDate => '日期';
+
+  @override
+  String get fingerprintDevice => '设备';
+
+  @override
+  String get fingerprintSender => '文件发送者';
+
+  @override
+  String get fingerprintDocument => '文件';
+
+  @override
+  String get fingerprintUnknownValue => '未知';
+
+  @override
+  String get fingerprintActionDownload => '下载';
+
+  @override
+  String get fingerprintActionShare => '分享';
+
+  @override
+  String get fingerprintActionForward => '转发';
+
+  @override
+  String get pdfProtectionTitle => '保护 PDF 副本';
+
+  @override
+  String get pdfProtectionIntro =>
+      '这些设置适用于收件人保存到 Alanya 之外的副本。在 Alanya 内，文件仍可在受保护的查看器中阅读。';
+
+  @override
+  String get pdfProtectionAllowPrint => '允许打印';
+
+  @override
+  String get pdfProtectionPassword => '使用密码保护';
+
+  @override
+  String get pdfProtectionPasswordHelp => '副本将被加密；需要打开密码才能阅读。';
+
+  @override
+  String get pdfOpenPassword => '打开密码';
+
+  @override
+  String get pdfOpenPasswordHelp => '仅向收件人显示一次。';
+
+  @override
+  String get pdfOwnerPassword => '所有者密码';
+
+  @override
+  String get pdfOwnerPasswordHelp => '解除限制（打印）。从不向收件人显示。';
+
+  @override
+  String pdfPasswordTooShort(int n) {
+    return '至少 $n 个字符。';
+  }
+
+  @override
+  String get pdfProtectionSend => '发送';
+
+  @override
+  String get pdfPrintForbidden => '禁止打印';
+
+  @override
+  String get pdfPasswordShowOnce => '查看密码（仅一次）';
+
+  @override
+  String get pdfPasswordAlreadySeen => '密码已显示过';
+
+  @override
+  String get pdfPasswordOnceNotice => '请记下：它将不再显示。它用于打开此 PDF 的已保存副本。';
+
+  @override
+  String get pdfPasswordCopy => '复制';
+
+  @override
+  String get pdfPasswordDone => '已记下';
+
+  @override
+  String get pdfProtectionFailed => 'PDF 保护失败：未保存任何副本。';
+
+  @override
+  String get sensitivePreviewTitle => '敏感文件';
+
+  @override
+  String sensitivePreviewTitleMany(int n) {
+    return '$n 个敏感文件';
+  }
+
+  @override
+  String get sensitivePreviewRemove => '移除此文件';
+
+  @override
+  String get sensitivePreviewBanner =>
+      '只能在 Alanya 的受保护查看器中打开。不可转发或分享；任何保存的副本都会被签名。';
+
+  @override
+  String get sensitivePreviewOrdinary => '已签名的副本：将作为普通文件发送，保留其原始指纹。';
+
+  @override
+  String pdfProtectionIntroMany(int n) {
+    return '这些设置适用于本次发送的 $n 个 PDF，以及收件人保存到 Alanya 之外的副本。在 Alanya 内，文件仍可在受保护的查看器中阅读。';
+  }
+
+  @override
   String get comingSoon => '即将推出';
 
   @override

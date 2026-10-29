@@ -351,8 +351,62 @@ class PushService {
     GlobalKey<NavigatorState>? navKey,
   }) async {
     _instance ??= PushService._(apiClient, navKey);
+    await _instance!._bindNotificationOpens();
     await _instance!._setup();
     return _instance!;
+  }
+
+  /// Branche les taps de notification, sans rien de ce que [init] attend.
+  ///
+  /// [init] passe derrière les liaisons de session (rafraîchissement HTTP et
+  /// vidage complet de l'outbox, jusqu'à plusieurs minutes). Le tap qui a
+  /// lancé l'application restait pendant tout ce temps en attente côté natif
+  /// (`getInitialOpen`), FCM (`getInitialMessage`) ou plugin local : l'accueil
+  /// s'affichait, et la discussion ne s'ouvrait que bien plus tard, voire par
+  /// surprise par-dessus une autre. À appeler avant ces liaisons.
+  static Future<void> bindNotificationOpens(
+    TalkyApiClient apiClient, {
+    GlobalKey<NavigatorState>? navKey,
+  }) async {
+    _instance ??= PushService._(apiClient, navKey);
+    await _instance!._bindNotificationOpens();
+  }
+
+  bool _opensBound = false;
+
+  Future<void> _bindNotificationOpens() async {
+    if (_opensBound) return;
+    _opensBound = true;
+
+    if (!kIsWeb) {
+      // Aucune demande de permission ici (voir DarwinInitializationSettings) :
+      // c'est `requestPermission` dans [_setup] qui s'en charge.
+      await LocalNotificationHelper.ensureInitialized(
+        onTap: _onLocalNotifTap,
+      );
+
+      await _bindNativeNotificationOpens();
+
+      final launchDetails =
+          await LocalNotificationHelper.plugin.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp == true) {
+        final payload = launchDetails!.notificationResponse?.payload;
+        final action = decodeNotificationPayload(payload);
+        if (action != null) {
+          debugPrint('[Push] cold start via notif locale: type=${action.type}');
+          _dispatchNotificationAction(action);
+        }
+      }
+    }
+
+    _onMessageOpenedSub =
+        FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
+
+    final initial = await _fm.getInitialMessage();
+    if (initial != null) {
+      debugPrint('[Push] cold start via FCM: type=${initial.data['type']}');
+      _handleOpenedApp(initial);
+    }
   }
 
   Future<void> _setup() async {
@@ -375,26 +429,10 @@ class PushService {
     }
 
     if (!kIsWeb) {
-      await LocalNotificationHelper.ensureInitialized(
-        onTap: _onLocalNotifTap,
-      );
-
-      await _bindNativeNotificationOpens();
       await _bindNativeCallEvents();
 
       await _maybeRequestBatteryOptimizationExemption();
       await CallPermissionsHelper.ensureCallDisplayPermissions();
-
-      final launchDetails =
-          await LocalNotificationHelper.plugin.getNotificationAppLaunchDetails();
-      if (launchDetails?.didNotificationLaunchApp == true) {
-        final payload = launchDetails!.notificationResponse?.payload;
-        final action = decodeNotificationPayload(payload);
-        if (action != null) {
-          debugPrint('[Push] cold start via notif locale: type=${action.type}');
-          _dispatchNotificationAction(action);
-        }
-      }
     }
 
     try {
@@ -413,15 +451,6 @@ class PushService {
     });
 
     _onMessageSub = FirebaseMessaging.onMessage.listen(_handleForeground);
-
-    _onMessageOpenedSub =
-        FirebaseMessaging.onMessageOpenedApp.listen(_handleOpenedApp);
-
-    final initial = await _fm.getInitialMessage();
-    if (initial != null) {
-      debugPrint('[Push] cold start via FCM: type=${initial.data['type']}');
-      _handleOpenedApp(initial);
-    }
   }
 
   Future<void> syncDeviceLifecycle({

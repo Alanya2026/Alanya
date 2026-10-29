@@ -1958,6 +1958,195 @@ class AppLocalizationsFr extends AppLocalizations {
   String get file2 => 'Fichier';
 
   @override
+  String get sensitiveDocument => 'Sensible';
+
+  @override
+  String get sensitiveDocumentBadge => 'Document sensible';
+
+  @override
+  String sensitiveViewedBy(String numero, String appareil, String date) {
+    return 'Consulté par Alanya $numero · $appareil · $date';
+  }
+
+  @override
+  String get sensitiveCannotPreview =>
+      'Ce document ne s\'ouvre pas dans Alanya. Il reste protégé : seule une copie signée à votre nom peut en sortir.';
+
+  @override
+  String get sensitiveSaveSigned => 'Enregistrer une copie signée';
+
+  @override
+  String get sensitiveSavedSigned =>
+      'Copie signée enregistrée : elle porte votre empreinte numérique.';
+
+  @override
+  String get sensitiveSavedUnsigned =>
+      'Copie enregistrée, mais ce format ne peut pas être signé. L\'enregistrement a été noté.';
+
+  @override
+  String get sensitiveSaveFailed => 'Impossible d\'enregistrer la copie.';
+
+  @override
+  String get sensitiveAlreadySignedTitle => 'Copie déjà signée';
+
+  @override
+  String get sensitiveAlreadySignedBody =>
+      'Ces fichiers sont des copies signées de documents sensibles. Ils ne peuvent pas repartir en sensible : signés à nouveau, ils perdraient l\'empreinte de la personne qui les a fait sortir. Ils peuvent partir en documents ordinaires, qui la gardent :';
+
+  @override
+  String get sensitiveSendAsOrdinary => 'Envoyer en ordinaire';
+
+  @override
+  String get fingerprintCheckTitle => 'Vérifier une empreinte';
+
+  @override
+  String get fingerprintCheckSubtitle =>
+      'Qui a fait sortir une copie signée d\'un document sensible';
+
+  @override
+  String get fingerprintCheckIntro =>
+      'Chaque copie d\'un document sensible enregistrée hors d\'Alanya porte une empreinte numérique : 32 caractères sur ses bords ou dans ses propriétés. Saisissez-la pour savoir qui l\'a fait sortir. Seules les personnes qui pouvaient voir le document obtiennent une réponse.';
+
+  @override
+  String get fingerprintField => 'Empreinte numérique';
+
+  @override
+  String get fingerprintPaste => 'Coller';
+
+  @override
+  String get fingerprintSearch => 'Rechercher';
+
+  @override
+  String get fingerprintInvalid =>
+      'Il faut 32 caractères, chiffres de 0 à 9 et lettres de A à F.';
+
+  @override
+  String get fingerprintUnknown =>
+      'Empreinte inconnue, ou copie d\'un document que vous ne pouviez pas voir.';
+
+  @override
+  String get fingerprintLookupFailed =>
+      'La recherche n\'a pas abouti. Réessayez.';
+
+  @override
+  String get fingerprintResult => 'Copie identifiée';
+
+  @override
+  String get fingerprintBy => 'Sortie par';
+
+  @override
+  String get fingerprintAction => 'Geste';
+
+  @override
+  String get fingerprintDate => 'Date';
+
+  @override
+  String get fingerprintDevice => 'Appareil';
+
+  @override
+  String get fingerprintSender => 'Expéditeur du document';
+
+  @override
+  String get fingerprintDocument => 'Document';
+
+  @override
+  String get fingerprintUnknownValue => 'Inconnu';
+
+  @override
+  String get fingerprintActionDownload => 'Enregistrement';
+
+  @override
+  String get fingerprintActionShare => 'Partage';
+
+  @override
+  String get fingerprintActionForward => 'Transfert';
+
+  @override
+  String get pdfProtectionTitle => 'Protéger la copie du PDF';
+
+  @override
+  String get pdfProtectionIntro =>
+      'Ces réglages s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, le document reste lisible dans la visionneuse protégée.';
+
+  @override
+  String get pdfProtectionAllowPrint => 'Autoriser l\'impression';
+
+  @override
+  String get pdfProtectionPassword => 'Protéger par mot de passe';
+
+  @override
+  String get pdfProtectionPasswordHelp =>
+      'La copie sera chiffrée ; il faudra le mot de passe d\'ouverture pour la lire.';
+
+  @override
+  String get pdfOpenPassword => 'Mot de passe d\'ouverture';
+
+  @override
+  String get pdfOpenPasswordHelp => 'Montré une seule fois au destinataire.';
+
+  @override
+  String get pdfOwnerPassword => 'Mot de passe propriétaire';
+
+  @override
+  String get pdfOwnerPasswordHelp =>
+      'Lève les restrictions (l\'impression). Jamais montré au destinataire.';
+
+  @override
+  String pdfPasswordTooShort(int n) {
+    return '$n caractères au moins.';
+  }
+
+  @override
+  String get pdfProtectionSend => 'Envoyer';
+
+  @override
+  String get pdfPrintForbidden => 'Impression interdite';
+
+  @override
+  String get pdfPasswordShowOnce => 'Voir le mot de passe (une seule fois)';
+
+  @override
+  String get pdfPasswordAlreadySeen => 'Mot de passe déjà affiché';
+
+  @override
+  String get pdfPasswordOnceNotice =>
+      'Notez-le : il ne sera plus affiché. Il ouvre la copie enregistrée de ce PDF.';
+
+  @override
+  String get pdfPasswordCopy => 'Copier';
+
+  @override
+  String get pdfPasswordDone => 'J\'ai noté';
+
+  @override
+  String get pdfProtectionFailed =>
+      'La protection du PDF a échoué : aucune copie n\'est sortie.';
+
+  @override
+  String get sensitivePreviewTitle => 'Document sensible';
+
+  @override
+  String sensitivePreviewTitleMany(int n) {
+    return '$n documents sensibles';
+  }
+
+  @override
+  String get sensitivePreviewRemove => 'Retirer ce fichier';
+
+  @override
+  String get sensitivePreviewBanner =>
+      'S\'ouvrira seulement dans la visionneuse protégée d\'Alanya. Ni transfert ni partage ; toute copie enregistrée sera signée.';
+
+  @override
+  String get sensitivePreviewOrdinary =>
+      'Copie déjà signée : elle partira en document ordinaire, avec son empreinte d\'origine.';
+
+  @override
+  String pdfProtectionIntroMany(int n) {
+    return 'Ces réglages valent pour les $n PDF de cet envoi, et s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, les documents restent lisibles dans la visionneuse protégée.';
+  }
+
+  @override
   String get comingSoon => 'Bientôt';
 
   @override
