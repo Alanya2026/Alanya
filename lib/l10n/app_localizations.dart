@@ -15211,7 +15211,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxDownloadFolderAction.
   ///
   /// In fr, this message translates to:
-  /// **'Télécharger le dossier'**
+  /// **'Enregistrer sur le téléphone'**
   String get safeboxDownloadFolderAction;
 
   /// No description provided for @safeboxToday.
@@ -15823,20 +15823,14 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxShareTabSent.
   ///
   /// In fr, this message translates to:
-  /// **'Mes envois · {count}'**
-  String safeboxShareTabSent(int count);
+  /// **'Mes envois'**
+  String get safeboxShareTabSent;
 
   /// No description provided for @safeboxShareTabReceived.
   ///
   /// In fr, this message translates to:
-  /// **'Reçus · {count}'**
-  String safeboxShareTabReceived(int count);
-
-  /// No description provided for @safeboxShareTabReceivedPlain.
-  ///
-  /// In fr, this message translates to:
   /// **'Reçus'**
-  String get safeboxShareTabReceivedPlain;
+  String get safeboxShareTabReceived;
 
   /// No description provided for @safeboxShareSentInfo.
   ///
@@ -15877,20 +15871,32 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxShareStatusAll.
   ///
   /// In fr, this message translates to:
-  /// **'{name} · téléchargé par tous'**
+  /// **'Envoyé dans {name} · téléchargé par tous'**
   String safeboxShareStatusAll(String name);
 
   /// No description provided for @safeboxShareStatusNone.
   ///
   /// In fr, this message translates to:
-  /// **'{name} · personne n\'a encore téléchargé'**
+  /// **'Envoyé dans {name} · personne n\'a encore téléchargé'**
   String safeboxShareStatusNone(String name);
 
   /// No description provided for @safeboxShareStatusSome.
   ///
   /// In fr, this message translates to:
-  /// **'{name} · téléchargé par {count} sur {total}'**
+  /// **'Envoyé dans {name} · téléchargé par {count} sur {total}'**
   String safeboxShareStatusSome(String name, int count, int total);
+
+  /// No description provided for @safeboxShareStatusPersonNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas encore téléchargé'**
+  String safeboxShareStatusPersonNone(String name);
+
+  /// No description provided for @safeboxShareStatusPersonDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargé par {name}'**
+  String safeboxShareStatusPersonDone(String name);
 
   /// No description provided for @safeboxShareConvFallback.
   ///

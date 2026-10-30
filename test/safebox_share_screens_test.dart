@@ -193,15 +193,14 @@ void main() {
 
   testWidgets('Partager : « Mes envois » avec leur état, puis « Reçus »', (tester) async {
     await monter(tester, const SafeboxFolderScreen(folderId: 16, root: SafeboxRoot.partager));
-    expect(find.text(fr.safeboxShareTabSent(3)), findsOneWidget);
+    expect(find.text(fr.safeboxShareTabSent), findsOneWidget);
     expect(find.text(fr.safeboxShareNotSent), findsOneWidget);
     expect(find.widgetWithText(FilledButton, fr.safeboxSend), findsOneWidget);
     expect(find.text(fr.safeboxShareStatusAll(fr.safeboxShareConvFallback)), findsOneWidget);
     expect(find.text(fr.safeboxShareStatusSome(fr.safeboxShareConvFallback, 5, 8)), findsOneWidget);
     expect(find.text(fr.safeboxShareAllReceived(1)), findsOneWidget);
-    await tester.tap(find.textContaining(fr.safeboxShareTabReceivedPlain));
+    await tester.tap(find.text(fr.safeboxShareTabReceived));
     await tester.pumpAndSettle();
-    expect(find.text(fr.safeboxShareTabReceived(2)), findsOneWidget);
     expect(find.text(fr.safeboxShareReceivedInfo), findsOneWidget);
     expect(find.text('Kribi 2026'), findsOneWidget);
     expect(find.text(fr.safeboxSharedUnavailable), findsOneWidget);

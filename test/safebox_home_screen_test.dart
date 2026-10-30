@@ -99,8 +99,8 @@ void main() {
     final c = await monter(tester);
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.text(fr.safeboxSpaceTitle), findsOneWidget);
-    // Une seule carte : les envois, puis la sauvegarde automatique.
-    expect(find.text(fr.safeboxStatusSafe), findsOneWidget);
+    // Rien en route : la carte d'état ne montre que la sauvegarde automatique.
+    expect(find.text(fr.safeboxStatusSafe), findsNothing);
     expect(find.text(fr.safeboxBackupTitle), findsOneWidget);
     expect(find.text(fr.safeboxBackupActivate), findsOneWidget);
     await tester.scrollUntilVisible(find.text(fr.safeboxNewAlbum), 300, scrollable: find.byType(Scrollable).first);
@@ -120,19 +120,13 @@ void main() {
     expect(find.text(fr.safeboxNoTransfers), findsOneWidget);
     tester.state<NavigatorState>(find.byType(Navigator)).pop();
     await tester.pumpAndSettle();
-    // La carte d'état ouvre aussi les transferts.
-    await tester.tap(find.text(fr.safeboxStatusSafe));
-    await tester.pumpAndSettle();
-    expect(find.text(fr.safeboxNoTransfers), findsOneWidget);
-    tester.state<NavigatorState>(find.byType(Navigator)).pop();
-    await tester.pumpAndSettle();
     final tuile = find.descendant(of: find.byType(GridView), matching: find.text(fr.safeboxRootShare));
     await tester.scrollUntilVisible(tuile, 200, scrollable: find.byType(Scrollable).first);
     await tester.ensureVisible(tuile);
     await tester.pumpAndSettle();
     await tester.tap(tuile);
     await tester.pumpAndSettle();
-    expect(find.text(fr.safeboxShareTabSent(0)), findsOneWidget, reason: 'Mes envois et Reçus');
+    expect(find.text(fr.safeboxShareTabSent), findsOneWidget, reason: 'Mes envois et Reçus');
     expect(find.text(fr.safeboxFolderEmpty), findsOneWidget);
     expect(tester.takeException(), isNull);
     await demonter(tester, c);

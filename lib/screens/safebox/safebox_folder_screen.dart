@@ -75,7 +75,6 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
 
   /// Racine Partager : « Mes envois » et « Reçus » (lot 9).
   TabController? _onglets;
-  int? _nbRecus;
 
   SafeboxController get _c => context.read<SafeboxController>();
   bool get _grille =>
@@ -302,19 +301,17 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     await SharePlus.instance.share(ShareParams(files: [XFile(fichier.path)]));
   }
 
-  /// Le fichier part dans les discussions choisies, sans quitter le coffre.
+  /// Le fichier part dans les discussions choisies.
   Future<void> _envoyerDansDiscussion(SafeboxFile f) async {
-    final ids = await pickSafeboxConversations(context, file: f);
-    if (ids == null || ids.isEmpty || !mounted) return;
-    if (!await confirmSafeboxHevcSend(context, f, ids) || !mounted) return;
-    try {
-      final n = await _c.sendToConversations([f], ids);
-      if (!mounted) return;
-      safeboxSnack(context, context.l10n.safeboxSendDone(n));
-      await _charger(); // le badge « envoyé » apparaît
-    } catch (e) {
-      if (mounted) safeboxShowError(context, e);
-    }
+    final n = await sendSafeboxToConversations(
+      context,
+      file: f,
+      send: (ctx, ids) async {
+        if (!await confirmSafeboxHevcSend(ctx, f, ids)) return null;
+        return _c.sendToConversations([f], ids);
+      },
+    );
+    if (n != null && mounted) await _charger(); // le badge « envoyé » apparaît
   }
 
   Future<void> _renommerFichier(SafeboxFile f) async {
@@ -532,32 +529,28 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
       safeboxSnack(context, l10n.safeboxShareTooMany(kSafeboxShareMaxItems), error: true);
       return;
     }
-    final ids = await pickSafeboxConversations(context, file: fichiers.first, others: fichiers.length - 1);
-    if (ids == null || ids.isEmpty || !mounted) return;
-    try {
-      // Une vidéo H.265 qu'un membre ne lirait pas : demandée une par une.
-      final retenus = <SafeboxFile>[];
-      for (final f in fichiers) {
-        if (!mounted) return;
-        if (await confirmSafeboxHevcSend(context, f, ids)) retenus.add(f);
-      }
-      if (retenus.isEmpty || !mounted) return;
-      final dossier = _page?.folder;
-      // Tout l'album, sans rien d'écarté : partagé comme album par le serveur.
-      final commeAlbum = dossierEntier && dossier != null && retenus.length == fichiers.length;
-      final n = await _c.sendToConversations(
-        retenus,
-        ids,
-        title: _titreDossier(l10n),
-        album: commeAlbum ? dossier : null,
-      );
-      if (!mounted) return;
-      if (n > 0) safeboxSnack(context, l10n.safeboxSendDone(n));
-      _quitterSelection();
-      await _charger();
-    } catch (e) {
-      if (mounted) safeboxShowError(context, e);
-    }
+    final titre = _titreDossier(l10n);
+    final dossier = _page?.folder;
+    final n = await sendSafeboxToConversations(
+      context,
+      file: fichiers.first,
+      others: fichiers.length - 1,
+      send: (ctx, ids) async {
+        // Une vidéo H.265 qu'un membre ne lirait pas : demandée une par une.
+        final retenus = <SafeboxFile>[];
+        for (final f in fichiers) {
+          if (!ctx.mounted) return null;
+          if (await confirmSafeboxHevcSend(ctx, f, ids)) retenus.add(f);
+        }
+        if (retenus.isEmpty) return null;
+        // Tout l'album, sans rien d'écarté : partagé comme album par le serveur.
+        final commeAlbum = dossierEntier && dossier != null && retenus.length == fichiers.length;
+        return _c.sendToConversations(retenus, ids, title: titre, album: commeAlbum ? dossier : null);
+      },
+    );
+    if (n == null || !mounted) return;
+    _quitterSelection();
+    await _charger();
   }
 
   /// « Tout sélectionner » : tout le dossier, pas seulement les fichiers déjà
@@ -906,8 +899,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                     : TabBar(
                         controller: _onglets,
                         tabs: [
-                          Tab(text: l10n.safeboxShareTabSent(_fichiers.length)),
-                          Tab(text: _nbRecus == null ? l10n.safeboxShareTabReceivedPlain : l10n.safeboxShareTabReceived(_nbRecus!)),
+                          // Sans nombre : « Mes envois · 1 » se lisait « 1 personne ».
+                          Tab(text: l10n.safeboxShareTabSent),
+                          Tab(text: l10n.safeboxShareTabReceived),
                         ],
                       ),
                 actions: [
@@ -961,7 +955,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                 controller: _onglets,
                 children: [
                   _corps(l10n, page, envois, filtres),
-                  SafeboxReceivedList(onCount: (n) => setState(() => _nbRecus = n)),
+                  const SafeboxReceivedList(),
                 ],
               ),
       ),
@@ -1155,8 +1149,10 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   }
 }
 
-/// Ce qu'est devenu un fichier de Partager : « Pas encore envoyé », « Famille
-/// Ngono · téléchargé par 5 sur 8 », « … · téléchargé par tous ».
+/// Ce qu'est devenu un fichier de Partager : « Pas encore envoyé »,
+/// « Etchome n'a pas encore téléchargé » (discussion à deux), « Envoyé dans
+/// Famille Ngono · téléchargé par 5 sur 8 ». Le nom seul suivi de
+/// « personne n'a… » se lisait comme une contradiction.
 class _EtatEnvoi extends StatelessWidget {
   const _EtatEnvoi({required this.sent});
   final SafeboxSent? sent;
@@ -1171,7 +1167,14 @@ class _EtatEnvoi extends StatelessWidget {
     if (s.received == null || s.lastConversationId == null) return SafeboxSentBadge(sent: s);
     return SafeboxConversationName(
       conversationId: s.lastConversationId,
-      builder: (context, nom) {
+      builder: (context, nom, groupe) {
+        // Une seule personne : on la nomme. Envoyé dans plusieurs discussions,
+        // les chiffres valent pour toutes.
+        if (nom != null && groupe == false && s.shares == 1 && s.recipients == 1) {
+          return s.receivedByAll
+              ? Text(l10n.safeboxShareStatusPersonDone(nom), style: style(context.semantic.success))
+              : Text(l10n.safeboxShareStatusPersonNone(nom), style: style(context.semantic.warning));
+        }
         final discussion = nom ?? l10n.safeboxShareConvFallback;
         if (s.receivedByAll) return Text(l10n.safeboxShareStatusAll(discussion), style: style(context.semantic.success));
         if (s.received == 0) return Text(l10n.safeboxShareStatusNone(discussion), style: style(context.semantic.warning));

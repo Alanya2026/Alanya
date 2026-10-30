@@ -276,17 +276,26 @@ class _CarteEtat extends StatelessWidget {
   const _CarteEtat();
 
   @override
-  Widget build(BuildContext context) => _Carte(
-        padding: EdgeInsets.zero,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+  Widget build(BuildContext context) {
+    // Rien en route : la ligne des envois n'apprend rien (« Tous vos fichiers
+    // sont en sécurité ») ; les transferts restent à l'icône du haut. L'attente
+    // du Wi-Fi est dite par la ligne de la sauvegarde.
+    final calme = context.select<SafeboxController, bool>((c) => c.uploads.jobs.every(
+        (j) => j.state == SafeboxUploadState.completed || j.state == SafeboxUploadState.waitingWifi));
+    return _Carte(
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!calme) ...[
             const _LigneEnvois(),
             Divider(height: 1, indent: AppSpacing.md, endIndent: AppSpacing.md, color: context.colors.outlineVariant),
-            const _LigneSauvegarde(),
           ],
-        ),
-      );
+          const _LigneSauvegarde(),
+        ],
+      ),
+    );
+  }
 }
 
 class _LigneEnvois extends StatelessWidget {

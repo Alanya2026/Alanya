@@ -56,21 +56,12 @@ class _SafeboxShareTrackingScreenState extends State<SafeboxShareTrackingScreen>
   }
 
   Future<void> _envoyerAilleurs(SafeboxShareInfo info) async {
-    final ids = await pickSafeboxConversations(
+    await sendSafeboxToConversations(
       context,
       file: info.asFile(),
       others: info.isBatch ? info.count - 1 : 0,
+      send: (_, ids) => _c.sendShareElsewhere(info, ids),
     );
-    if (ids == null || ids.isEmpty || !mounted) return;
-    setState(() => _occupe = true);
-    try {
-      final n = await _c.sendShareElsewhere(info, ids);
-      if (mounted) safeboxSnack(context, context.l10n.safeboxSendDone(n));
-    } catch (e) {
-      if (mounted) safeboxShowError(context, e);
-    } finally {
-      if (mounted) setState(() => _occupe = false);
-    }
   }
 
   Future<void> _retirer() async {
@@ -111,7 +102,7 @@ class _SafeboxShareTrackingScreenState extends State<SafeboxShareTrackingScreen>
             if (detail != null)
               SafeboxConversationName(
                 conversationId: info?.conversationId,
-                builder: (context, nom) => Text(
+                builder: (context, nom, _) => Text(
                   [detail, ?nom].join(' · '),
                   style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
                 ),

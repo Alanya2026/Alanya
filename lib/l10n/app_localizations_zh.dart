@@ -8478,7 +8478,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxDownloadStarted => '下载已开始：可在“传输”中查看。';
 
   @override
-  String get safeboxDownloadFolderAction => '下载此文件夹';
+  String get safeboxDownloadFolderAction => '保存到手机';
 
   @override
   String get safeboxToday => '今天';
@@ -8855,17 +8855,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxTrackingRevoked => '已取消共享';
 
   @override
-  String safeboxShareTabSent(int count) {
-    return '我的发送 · $count';
-  }
+  String get safeboxShareTabSent => '我的发送';
 
   @override
-  String safeboxShareTabReceived(int count) {
-    return '已接收 · $count';
-  }
-
-  @override
-  String get safeboxShareTabReceivedPlain => '已接收';
+  String get safeboxShareTabReceived => '已收到';
 
   @override
   String get safeboxShareSentInfo => '这些文件会一直保留，直到您将其删除。它们计入您的空间。';
@@ -8893,17 +8886,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String safeboxShareStatusAll(String name) {
-    return '$name · 所有人已下载';
+    return '已发送到 $name · 所有人都已下载';
   }
 
   @override
   String safeboxShareStatusNone(String name) {
-    return '$name · 还没有人下载';
+    return '已发送到 $name · 还没有人下载';
   }
 
   @override
   String safeboxShareStatusSome(String name, int count, int total) {
-    return '$name · $total 人中 $count 人已下载';
+    return '已发送到 $name · $count/$total 人已下载';
+  }
+
+  @override
+  String safeboxShareStatusPersonNone(String name) {
+    return '$name 尚未下载';
+  }
+
+  @override
+  String safeboxShareStatusPersonDone(String name) {
+    return '$name 已下载';
   }
 
   @override

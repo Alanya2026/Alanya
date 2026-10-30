@@ -8887,7 +8887,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Download started: follow it in Transfers.';
 
   @override
-  String get safeboxDownloadFolderAction => 'Download this folder';
+  String get safeboxDownloadFolderAction => 'Save to phone';
 
   @override
   String get safeboxToday => 'Today';
@@ -9340,17 +9340,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxTrackingRevoked => 'Sharing stopped';
 
   @override
-  String safeboxShareTabSent(int count) {
-    return 'My shares · $count';
-  }
+  String get safeboxShareTabSent => 'My shares';
 
   @override
-  String safeboxShareTabReceived(int count) {
-    return 'Received · $count';
-  }
-
-  @override
-  String get safeboxShareTabReceivedPlain => 'Received';
+  String get safeboxShareTabReceived => 'Received';
 
   @override
   String get safeboxShareSentInfo =>
@@ -9392,17 +9385,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String safeboxShareStatusAll(String name) {
-    return '$name · downloaded by everyone';
+    return 'Sent to $name · downloaded by everyone';
   }
 
   @override
   String safeboxShareStatusNone(String name) {
-    return '$name · nobody has downloaded it yet';
+    return 'Sent to $name · no one has downloaded it yet';
   }
 
   @override
   String safeboxShareStatusSome(String name, int count, int total) {
-    return '$name · downloaded by $count of $total';
+    return 'Sent to $name · downloaded by $count of $total';
+  }
+
+  @override
+  String safeboxShareStatusPersonNone(String name) {
+    return '$name hasn\'t downloaded it yet';
+  }
+
+  @override
+  String safeboxShareStatusPersonDone(String name) {
+    return 'Downloaded by $name';
   }
 
   @override

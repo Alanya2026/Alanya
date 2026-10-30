@@ -18,10 +18,7 @@ import 'safebox_shared_screens.dart';
 import 'safebox_widgets.dart';
 
 class SafeboxReceivedList extends StatefulWidget {
-  const SafeboxReceivedList({super.key, this.onCount});
-
-  /// Nombre de partages reçus chargés, pour le titre de l'onglet.
-  final ValueChanged<int>? onCount;
+  const SafeboxReceivedList({super.key});
 
   @override
   State<SafeboxReceivedList> createState() => _SafeboxReceivedListState();
@@ -73,7 +70,6 @@ class _SafeboxReceivedListState extends State<SafeboxReceivedList> {
         _charge = true;
         _erreur = null;
       });
-      widget.onCount?.call(_partages.length);
     } catch (e) {
       if (mounted) setState(() => _erreur = e);
     }
@@ -91,7 +87,6 @@ class _SafeboxReceivedListState extends State<SafeboxReceivedList> {
         _surLeTelephone.addAll(locaux);
         _suite = page.nextCursor;
       });
-      widget.onCount?.call(_partages.length);
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
     } finally {
@@ -312,7 +307,7 @@ class _CarteRecue extends StatelessWidget {
                         Text(detail, style: context.text.bodySmall?.copyWith(color: muet)),
                         SafeboxConversationName(
                           conversationId: s.conversationId,
-                          builder: (context, discussion) => Text(
+                          builder: (context, discussion, _) => Text(
                             [
                               l10n.safeboxSharedFrom(s.sender?.name ?? l10n.safeboxSharedSender),
                               if (discussion != null && discussion != s.sender?.name) discussion,
