@@ -44,7 +44,9 @@ void main() {
     fichier(4, 'Hotel.pdf', 'documents', '2025-03-01T10:00:00Z'),
   ];
 
-  http.Client serveur(String root, List<Map<String, dynamic>> files) => MockClient((req) async {
+  /// Avec [suite], une deuxième page (curseur 999) : le dossier se charge par pages.
+  http.Client serveur(String root, List<Map<String, dynamic>> files, {List<Map<String, dynamic>>? suite}) =>
+      MockClient((req) async {
         final corps = req.url.path.endsWith('/safebox')
             ? {
                 'quota': {'quotaBytes': 1 << 30, 'usedBytes': 0, 'pendingBytes': 0, 'trashBytes': 0, 'byRoot': {}},
@@ -58,18 +60,19 @@ void main() {
                 'folder': {'id': 30, 'parentId': 15, 'root': root, 'name': 'Kribi 2026', 'depth': 1},
                 'breadcrumbs': [],
                 'folders': [],
-                'files': files,
-                'nextCursor': null,
+                'files': req.url.queryParameters['cursor'] == null ? files : (suite ?? const []),
+                'nextCursor': suite != null && req.url.queryParameters['cursor'] == null ? 999 : null,
               };
         return http.Response(jsonEncode(corps), 200, headers: {'content-type': 'application/json; charset=utf-8'});
       });
 
-  Future<void> monter(WidgetTester tester, SafeboxRoot root, List<Map<String, dynamic>> files) async {
+  Future<void> monter(WidgetTester tester, SafeboxRoot root, List<Map<String, dynamic>> files,
+      {List<Map<String, dynamic>>? suite}) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
-    final c = SafeboxController(api: TalkyApiClient(client: serveur(root.name, files)));
+    final c = SafeboxController(api: TalkyApiClient(client: serveur(root.name, files, suite: suite)));
     await c.refreshOverview();
     await tester.pumpWidget(ChangeNotifierProvider<SafeboxController>.value(
       value: c,
@@ -112,6 +115,23 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxDownloadGallery), findsOneWidget);
     expect(find.text(fr.safeboxDownloadFolder('Kribi 2026')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('« Tout sélectionner » prend aussi les pages suivantes ; « Envoyer l\'album » au menu', (tester) async {
+    await monter(tester, SafeboxRoot.albums, album.take(2).toList(), suite: album.skip(2).toList());
+    expect(find.byType(SafeboxGridTile), findsNWidgets(2), reason: 'première page seulement');
+    await tester.longPress(find.byType(SafeboxGridTile).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(fr.safeboxSelectAll));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxSelectedCount(4)), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxSendAlbum), findsOneWidget);
+    expect(find.text(fr.safeboxDownloadFolderAction), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

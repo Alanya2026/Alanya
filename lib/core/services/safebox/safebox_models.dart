@@ -696,6 +696,9 @@ class SafeboxTrash {
 }
 
 /// Partage créé (`POST /api/safebox/shares`).
+/// Éléments d'un partage en lot au plus (serveur : SHARE_MAX_ITEMS).
+const int kSafeboxShareMaxItems = 500;
+
 /// Un partage, d'un fichier ou d'un lot (lot 9 : un album ou une sélection,
 /// une seule carte).
 enum SafeboxShareKind {

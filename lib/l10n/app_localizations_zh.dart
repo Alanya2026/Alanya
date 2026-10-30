@@ -8262,12 +8262,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxHevcWarningSend => '仍然发送';
 
   @override
-  String get safeboxTabHome => '首页';
-
-  @override
-  String get safeboxTabFiles => '文件';
-
-  @override
   String get safeboxTabTransfers => '传输';
 
   @override
@@ -8326,16 +8320,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxStatusOpen => '查看传输';
-
-  @override
-  String safeboxShareCardHint(int count, String max) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 个文件 · 每个文件最多 $max',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get safeboxMyFolders => '我的文件夹';
@@ -8501,6 +8485,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxYesterday => '昨天';
+
+  @override
+  String get safeboxSendAlbum => '发送相册';
+
+  @override
+  String get safeboxSendFolder => '发送文件夹';
+
+  @override
+  String safeboxShareTooMany(int max) {
+    return '每次最多发送 $max 个文件：请少选一些。';
+  }
 
   @override
   String safeboxFilesCount(int count) {

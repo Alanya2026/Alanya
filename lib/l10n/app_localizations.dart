@@ -14908,18 +14908,6 @@ abstract class AppLocalizations {
   /// **'Envoyer quand même'**
   String get safeboxHevcWarningSend;
 
-  /// No description provided for @safeboxTabHome.
-  ///
-  /// In fr, this message translates to:
-  /// **'Accueil'**
-  String get safeboxTabHome;
-
-  /// No description provided for @safeboxTabFiles.
-  ///
-  /// In fr, this message translates to:
-  /// **'Fichiers'**
-  String get safeboxTabFiles;
-
   /// No description provided for @safeboxTabTransfers.
   ///
   /// In fr, this message translates to:
@@ -14985,12 +14973,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Voir les transferts'**
   String get safeboxStatusOpen;
-
-  /// No description provided for @safeboxShareCardHint.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =0{Aucun fichier · jusqu\'à {max} par fichier} =1{1 fichier · jusqu\'à {max} par fichier} other{{count} fichiers · jusqu\'à {max} par fichier}}'**
-  String safeboxShareCardHint(int count, String max);
 
   /// No description provided for @safeboxMyFolders.
   ///
@@ -15243,6 +15225,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Hier'**
   String get safeboxYesterday;
+
+  /// No description provided for @safeboxSendAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer l\'album'**
+  String get safeboxSendAlbum;
+
+  /// No description provided for @safeboxSendFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le dossier'**
+  String get safeboxSendFolder;
+
+  /// No description provided for @safeboxShareTooMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'{max} fichiers au plus par envoi : sélectionnez-en moins.'**
+  String safeboxShareTooMany(int max);
 
   /// No description provided for @safeboxFilesCount.
   ///

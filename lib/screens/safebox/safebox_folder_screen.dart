@@ -511,10 +511,27 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     }
   }
 
-  Future<void> _envoyerSelection() async {
+  Future<void> _envoyerSelection() => _envoyer(_selectionnes);
+
+  /// « Envoyer l'album » : tout le dossier en une seule carte, pages comprises.
+  Future<void> _envoyerLeDossier() async {
+    try {
+      final tous = await _toutLeDossier();
+      if (mounted) await _envoyer(tous, dossierEntier: true);
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    }
+  }
+
+  /// Une sélection, ou tout le dossier, part en un seul message (lot 9), au
+  /// nom du dossier ; 500 fichiers au plus.
+  Future<void> _envoyer(List<SafeboxFile> fichiers, {bool dossierEntier = false}) async {
     final l10n = context.l10n;
-    final fichiers = _selectionnes;
     if (fichiers.isEmpty) return;
+    if (fichiers.length > kSafeboxShareMaxItems) {
+      safeboxSnack(context, l10n.safeboxShareTooMany(kSafeboxShareMaxItems), error: true);
+      return;
+    }
     final ids = await pickSafeboxConversations(context, file: fichiers.first, others: fichiers.length - 1);
     if (ids == null || ids.isEmpty || !mounted) return;
     try {
@@ -525,12 +542,37 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
         if (await confirmSafeboxHevcSend(context, f, ids)) retenus.add(f);
       }
       if (retenus.isEmpty || !mounted) return;
-      // Une sélection part en un seul message (lot 9), au nom du dossier.
-      final n = await _c.sendToConversations(retenus, ids, title: _titreDossier(l10n));
+      final dossier = _page?.folder;
+      // Tout l'album, sans rien d'écarté : partagé comme album par le serveur.
+      final commeAlbum = dossierEntier && dossier != null && retenus.length == fichiers.length;
+      final n = await _c.sendToConversations(
+        retenus,
+        ids,
+        title: _titreDossier(l10n),
+        album: commeAlbum ? dossier : null,
+      );
       if (!mounted) return;
       if (n > 0) safeboxSnack(context, l10n.safeboxSendDone(n));
       _quitterSelection();
       await _charger();
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    }
+  }
+
+  /// « Tout sélectionner » : tout le dossier, pas seulement les fichiers déjà
+  /// affichés (les dossiers se chargent par pages de 100).
+  Future<void> _toutSelectionner() async {
+    try {
+      final tous = await _toutLeDossier();
+      if (!mounted) return;
+      setState(() {
+        _fichiers
+          ..clear()
+          ..addAll(tous);
+        _suite = null;
+        _choisis.addAll(_visibles.map((f) => f.id));
+      });
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
     }
@@ -852,7 +894,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                 title: Text(l10n.safeboxSelectedCount(_choisis.length)),
                 actions: [
                   TextButton(
-                    onPressed: () => setState(() => _choisis.addAll(_visibles.map((f) => f.id))),
+                    onPressed: _toutSelectionner,
                     child: Text(l10n.safeboxSelectAll),
                   ),
                 ],
@@ -879,8 +921,19 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                     PopupMenuButton<String>(
                       onSelected: (v) {
                         if (v == 'telecharger') _versLeTelephone();
+                        if (v == 'envoyer') _envoyerLeDossier();
                       },
                       itemBuilder: (_) => [
+                        // Un album ou un sous-dossier : tout part en une seule carte.
+                        if (page.folder.depth > 0)
+                          PopupMenuItem(
+                            value: 'envoyer',
+                            child: ListTile(
+                              leading: const Icon(Icons.send_outlined),
+                              title: Text(widget.root == SafeboxRoot.albums ? l10n.safeboxSendAlbum : l10n.safeboxSendFolder),
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
                         PopupMenuItem(
                           value: 'telecharger',
                           child: ListTile(

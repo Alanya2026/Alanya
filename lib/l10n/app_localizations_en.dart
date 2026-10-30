@@ -8662,12 +8662,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxHevcWarningSend => 'Send anyway';
 
   @override
-  String get safeboxTabHome => 'Home';
-
-  @override
-  String get safeboxTabFiles => 'Files';
-
-  @override
   String get safeboxTabTransfers => 'Transfers';
 
   @override
@@ -8729,18 +8723,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxStatusOpen => 'See transfers';
-
-  @override
-  String safeboxShareCardHint(int count, String max) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count files · up to $max per file',
-      one: '1 file · up to $max per file',
-      zero: 'No files · up to $max per file',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get safeboxMyFolders => 'My folders';
@@ -8912,6 +8894,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxYesterday => 'Yesterday';
+
+  @override
+  String get safeboxSendAlbum => 'Send album';
+
+  @override
+  String get safeboxSendFolder => 'Send folder';
+
+  @override
+  String safeboxShareTooMany(int max) {
+    return '$max files at most per send: select fewer.';
+  }
 
   @override
   String safeboxFilesCount(int count) {

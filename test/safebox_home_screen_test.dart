@@ -95,30 +95,44 @@ void main() {
     return c;
   }
 
-  testWidgets('accueil : espace, état des envois, sauvegarde, Partager, dossiers, albums récents', (tester) async {
+  testWidgets('un seul écran : espace, une carte d\'état, six dossiers, albums récents, pas d\'onglets', (tester) async {
     final c = await monter(tester);
+    expect(find.byType(NavigationBar), findsNothing);
     expect(find.text(fr.safeboxSpaceTitle), findsOneWidget);
+    // Une seule carte : les envois, puis la sauvegarde automatique.
     expect(find.text(fr.safeboxStatusSafe), findsOneWidget);
     expect(find.text(fr.safeboxBackupTitle), findsOneWidget);
     expect(find.text(fr.safeboxBackupActivate), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(fr.safeboxNewAlbum), 300);
+    await tester.scrollUntilVisible(find.text(fr.safeboxNewAlbum), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text(fr.safeboxMyFolders.toUpperCase()), findsOneWidget);
+    for (final r in [fr.safeboxRootPhotos, fr.safeboxRootVideos, fr.safeboxRootAudios, fr.safeboxRootDocuments, fr.safeboxRootAlbums, fr.safeboxRootShare]) {
+      expect(find.text(r), findsWidgets, reason: r);
+    }
     expect(find.text('Kribi 2026'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await demonter(tester, c);
   });
 
-  testWidgets('onglets Fichiers, Partager et Transferts', (tester) async {
+  testWidgets('les transferts par l\'icône de la barre, Partager comme un dossier', (tester) async {
     final c = await monter(tester);
-    await tester.tap(find.text(fr.safeboxTabFiles));
-    await tester.pumpAndSettle();
-    expect(find.text(fr.safeboxRootAlbums), findsWidgets);
-    expect(find.text(fr.safeboxRootShare), findsWidgets);
-    await tester.tap(find.text(fr.safeboxTabTransfers).last);
+    await tester.tap(find.byTooltip(fr.safeboxTabTransfers));
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxNoTransfers), findsOneWidget);
-    await tester.tap(find.text(fr.safeboxRootShare).last);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
     await tester.pumpAndSettle();
+    // La carte d'état ouvre aussi les transferts.
+    await tester.tap(find.text(fr.safeboxStatusSafe));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxNoTransfers), findsOneWidget);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pumpAndSettle();
+    final tuile = find.descendant(of: find.byType(GridView), matching: find.text(fr.safeboxRootShare));
+    await tester.scrollUntilVisible(tuile, 200, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(tuile);
+    await tester.pumpAndSettle();
+    await tester.tap(tuile);
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxShareTabSent(0)), findsOneWidget, reason: 'Mes envois et Reçus');
     expect(find.text(fr.safeboxFolderEmpty), findsOneWidget);
     expect(tester.takeException(), isNull);
     await demonter(tester, c);
