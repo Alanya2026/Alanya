@@ -62,9 +62,10 @@ const bool _kAndroidNativeCallNotifications = bool.fromEnvironment(
   defaultValue: true,
 );
 
+/// Bascule audio → vidéo, active par défaut ; `--dart-define=CALL_AUDIO_TO_VIDEO=false` la coupe.
 const bool kCallAudioToVideoEnabled = bool.fromEnvironment(
   'CALL_AUDIO_TO_VIDEO',
-  defaultValue: false,
+  defaultValue: true,
 );
 
 enum CallStatus {

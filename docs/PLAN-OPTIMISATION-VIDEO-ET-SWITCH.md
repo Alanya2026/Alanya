@@ -10,8 +10,8 @@ et les réunions et ne modifie ni l'audio, ni ICE, ni le codec.
 
 ## Transition audio → vidéo
 
-La première version est protégée par `CALL_AUDIO_TO_VIDEO`, désactivé par
-défaut. Elle est limitée aux appels individuels déjà connectés :
+La transition est active par défaut ; `--dart-define=CALL_AUDIO_TO_VIDEO=false`
+la coupe. Elle est limitée aux appels individuels déjà connectés :
 
 1. l'appelant confirme localement puis acquiert uniquement sa caméra ;
 2. une offre/réponse SDP dédiée est relayée sur l'appel existant ;
