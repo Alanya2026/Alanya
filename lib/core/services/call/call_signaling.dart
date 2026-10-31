@@ -652,6 +652,20 @@ extension CallSignaling on CallService {
       _flushPendingConfJoin();
       _flushPendingConfReady();
       _rejoinGroupRoomIfNeeded();
+      final pendingAnswer = _videoUpgradeAnswer;
+      final pendingAck = _videoUpgradeCommitAck;
+      final transitionId = _videoTransitionId;
+      if (pendingAnswer != null &&
+          pendingAck != null &&
+          transitionId != null &&
+          !pendingAck.isCompleted) {
+        _requestVideoUpgradeAck(
+          pendingAnswer,
+          callId: _currentCallId,
+          remoteUserId: _remoteUserId,
+          transitionId: transitionId,
+        );
+      }
       // Le socket est revenu : ce que le rejeu du décrochage n'avait pas pu
       // émettre peut enfin partir.
       _replayOutgoingIce();

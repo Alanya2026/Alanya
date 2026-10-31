@@ -135,11 +135,12 @@ extension CallControls on CallService {
       try {
         await commitAck.future.timeout(const Duration(seconds: 5));
       } on TimeoutException {
-        _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeAckRequest, {
-          'targetUserId': operationRemoteUserId,
-          'callId': operationCallId,
-          'transitionId': transitionId,
-        });
+        _requestVideoUpgradeAck(
+          completer,
+          callId: operationCallId,
+          remoteUserId: operationRemoteUserId,
+          transitionId: transitionId,
+        );
         await commitAck.future.timeout(const Duration(seconds: 5));
       }
       if (!_isCurrentVideoUpgrade(
@@ -234,6 +235,27 @@ extension CallControls on CallService {
         operationTransitionId: transitionId,
         isConnected: _status == CallStatus.connected,
       );
+
+  void _requestVideoUpgradeAck(
+    Completer<RTCSessionDescription> completer, {
+    required String? callId,
+    required int? remoteUserId,
+    required String transitionId,
+  }) {
+    if (!_isCurrentVideoUpgrade(
+      completer,
+      callId: callId,
+      remoteUserId: remoteUserId,
+      transitionId: transitionId,
+    )) {
+      return;
+    }
+    _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeAckRequest, {
+      'targetUserId': remoteUserId,
+      'callId': callId,
+      'transitionId': transitionId,
+    });
+  }
 
   Future<void> switchCamera() async {
     await _webrtc.switchCamera();
