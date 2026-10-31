@@ -2320,6 +2320,8 @@ class SocketEvents {
   static const callVideoUpgradeAnswer = 'call_video_upgrade_answer';
   static const callVideoUpgradeCommit = 'call_video_upgrade_commit';
   static const callVideoUpgradeCommitAck = 'call_video_upgrade_commit_ack';
+  static const callVideoUpgradeAckRequest =
+      'call_video_upgrade_ack_request';
   static const callVideoUpgradeCancel = 'call_video_upgrade_cancel';
   static const callLogUpdated = 'call_log_updated';
 

@@ -59,10 +59,14 @@ extension CallControls on CallService {
         (!announceMode && !_isVideo)) {
       return;
     }
-    if (announceMode && !isAudioToVideoAvailable) return;
+    if (announceMode && !isAudioToVideoAvailable) {
+      return;
+    }
 
     final transitionId =
-        '${DateTime.now().microsecondsSinceEpoch}-${_remoteUserId}';
+        '${DateTime.now().microsecondsSinceEpoch}-$_remoteUserId';
+    final operationCallId = _currentCallId;
+    final operationRemoteUserId = _remoteUserId;
     final completer = Completer<RTCSessionDescription>();
     _videoTransitionInFlight = true;
     _videoTransitionId = transitionId;
@@ -76,7 +80,7 @@ extension CallControls on CallService {
         SocketEvents.callVideoUpgradeOffer,
         {
           'targetUserId': _remoteUserId.toString(),
-          'callId': _currentCallId,
+          'callId': operationCallId,
           'transitionId': transitionId,
           'offer': {'sdp': offer.sdp, 'type': offer.type},
         },
@@ -87,16 +91,41 @@ extension CallControls on CallService {
         const Duration(seconds: 15),
       );
       await _webrtc.handleAnswer(answer);
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       final commitAck = Completer<void>();
       _videoUpgradeCommitAck = commitAck;
       final sentCommit = _apiClient
           .sendSocketEvent(SocketEvents.callVideoUpgradeCommit, {
             'targetUserId': _remoteUserId.toString(),
-            'callId': _currentCallId,
+            'callId': operationCallId,
             'transitionId': transitionId,
           });
       if (!sentCommit) throw StateError('Commit vidéo impossible');
-      await commitAck.future.timeout(const Duration(seconds: 5));
+      try {
+        await commitAck.future.timeout(const Duration(seconds: 5));
+      } on TimeoutException {
+        _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeAckRequest, {
+          'targetUserId': operationRemoteUserId,
+          'callId': operationCallId,
+          'transitionId': transitionId,
+        });
+        await commitAck.future.timeout(const Duration(seconds: 5));
+      }
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       _isVideo = true;
       _isVideoOn = true;
       await CallSessionGuard.instance.updateMode(SessionMode.video);
@@ -107,6 +136,14 @@ extension CallControls on CallService {
       });
       notify();
     } catch (error) {
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       final rolledBack = await _webrtc.rollbackNegotiation();
       final discarded = await _webrtc.discardLocalVideoTrack();
       if (!rolledBack || !discarded) {
@@ -116,8 +153,8 @@ extension CallControls on CallService {
         );
       }
       _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCancel, {
-        'targetUserId': _remoteUserId,
-        'callId': _currentCallId,
+        'targetUserId': operationRemoteUserId,
+        'callId': operationCallId,
         'transitionId': transitionId,
       });
       _showTransientMessage(LocaleController.instance.l10n.callFailed);
@@ -132,6 +169,23 @@ extension CallControls on CallService {
       }
     }
   }
+
+  bool _isCurrentVideoUpgrade(
+    Completer<RTCSessionDescription> completer, {
+    required String? callId,
+    required int? remoteUserId,
+    required String transitionId,
+  }) =>
+      identical(_videoUpgradeAnswer, completer) &&
+      isCurrentVideoUpgradeSession(
+        activeCallId: _currentCallId,
+        operationCallId: callId,
+        activeRemoteUserId: _remoteUserId,
+        operationRemoteUserId: remoteUserId,
+        activeTransitionId: _videoTransitionId,
+        operationTransitionId: transitionId,
+        isConnected: _status == CallStatus.connected,
+      );
 
   Future<void> switchCamera() async {
     await _webrtc.switchCamera();

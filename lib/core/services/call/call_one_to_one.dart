@@ -627,11 +627,16 @@ extension CallOneToOne on CallService {
     if (pendingVideoAnswer != null && !pendingVideoAnswer.isCompleted) {
       pendingVideoAnswer.completeError(StateError('Appel terminé'));
     }
+    final pendingVideoCommitAck = _videoUpgradeCommitAck;
+    if (pendingVideoCommitAck != null && !pendingVideoCommitAck.isCompleted) {
+      pendingVideoCommitAck.completeError(StateError('Appel terminé'));
+    }
     _videoUpgradeAnswer = null;
     _videoUpgradeCommitAck = null;
     _videoTransitionId = null;
     _videoTransitionInFlight = false;
     _pendingRemoteVideoCommitId = null;
+    _lastCommittedRemoteVideoTransitionId = null;
     _resetCallUiState();
     _clearIncomingPresentation();
     _cancelOutgoingTimeout();

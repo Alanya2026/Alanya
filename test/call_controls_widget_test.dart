@@ -245,4 +245,19 @@ void main() {
       );
     },
   );
+
+  test('une transition terminée ne reste pas valide pour un nouvel appel', () {
+    expect(
+      isCurrentVideoUpgradeSession(
+        activeCallId: 'call-2',
+        operationCallId: 'call-1',
+        activeRemoteUserId: 20,
+        operationRemoteUserId: 20,
+        activeTransitionId: 'transition-2',
+        operationTransitionId: 'transition-1',
+        isConnected: true,
+      ),
+      isFalse,
+    );
+  });
 }

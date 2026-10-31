@@ -662,13 +662,15 @@ extension CallSignaling on CallService {
     });
 
     _apiClient.onSocketEvent(SocketEvents.callRejoinOffer, (data) async {
-      if (data is Map)
+      if (data is Map) {
         await _handleCallRejoinOffer(Map<String, dynamic>.from(data));
+      }
     });
 
     _apiClient.onSocketEvent(SocketEvents.callRejoinAnswer, (data) async {
-      if (data is Map)
+      if (data is Map) {
         await _handleCallRejoinAnswer(Map<String, dynamic>.from(data));
+      }
     });
 
     _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeOffer, (data) async {
@@ -719,11 +721,37 @@ extension CallSignaling on CallService {
       }
     });
 
+    _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeAckRequest, (data) {
+      if (data is! Map ||
+          data['callId']?.toString() != _currentCallId ||
+          data['transitionId']?.toString() !=
+              _lastCommittedRemoteVideoTransitionId ||
+          data['peerId']?.toString() != _remoteUserId?.toString()) {
+        return;
+      }
+      _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCommitAck, {
+        'targetUserId': _remoteUserId,
+        'callId': _currentCallId,
+        'transitionId': data['transitionId'],
+      });
+    });
+
     _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeCancel, (data) {
       if (data is! Map ||
           data['callId']?.toString() != _currentCallId ||
-          data['transitionId']?.toString() != _pendingRemoteVideoCommitId ||
           data['peerId']?.toString() != _remoteUserId?.toString()) {
+        return;
+      }
+      if (data['transitionId']?.toString() ==
+          _lastCommittedRemoteVideoTransitionId) {
+        _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCommitAck, {
+          'targetUserId': _remoteUserId,
+          'callId': _currentCallId,
+          'transitionId': data['transitionId'],
+        });
+        return;
+      }
+      if (data['transitionId']?.toString() != _pendingRemoteVideoCommitId) {
         return;
       }
       _pendingRemoteVideoCommitId = null;
@@ -1352,6 +1380,7 @@ extension CallSignaling on CallService {
       return;
     }
     _pendingRemoteVideoCommitId = null;
+    _lastCommittedRemoteVideoTransitionId = transitionId;
     final wasAlreadyVideo = _isVideo;
     _isVideo = true;
     if (shouldTurnLocalCameraOffForRemoteUpgrade(

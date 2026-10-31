@@ -2,3 +2,17 @@
 bool shouldTurnLocalCameraOffForRemoteUpgrade({
   required bool alreadyInVideoMode,
 }) => !alreadyInVideoMode;
+
+bool isCurrentVideoUpgradeSession({
+  required String? activeCallId,
+  required String? operationCallId,
+  required int? activeRemoteUserId,
+  required int? operationRemoteUserId,
+  required String? activeTransitionId,
+  required String operationTransitionId,
+  required bool isConnected,
+}) =>
+    isConnected &&
+    activeCallId == operationCallId &&
+    activeRemoteUserId == operationRemoteUserId &&
+    activeTransitionId == operationTransitionId;
