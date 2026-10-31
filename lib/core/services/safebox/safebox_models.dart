@@ -592,6 +592,27 @@ class SafeboxFolderPage {
   final int? nextCursor;
 }
 
+/// Un album de l'accueil (`GET /api/safebox/albums/recent`) : son nombre de
+/// fichiers et ses quatre couvertures, photos et vidéos d'abord.
+class SafeboxRecentAlbum {
+  const SafeboxRecentAlbum({required this.folder, required this.fileCount, required this.cover, this.lastAddedAt});
+
+  factory SafeboxRecentAlbum.fromJson(Map<String, dynamic> j) => SafeboxRecentAlbum(
+        folder: SafeboxFolder.fromJson(j),
+        fileCount: _int(j['fileCount']),
+        lastAddedAt: _date(j['lastAddedAt']),
+        cover: _list(j['cover']).map(SafeboxFile.fromJson).toList(),
+      );
+
+  static List<SafeboxRecentAlbum> listFromJson(Map<String, dynamic> j) =>
+      _list(j['albums']).map(SafeboxRecentAlbum.fromJson).toList();
+
+  final SafeboxFolder folder;
+  final int fileCount;
+  final DateTime? lastAddedAt;
+  final List<SafeboxFile> cover;
+}
+
 /// Adresse signée d'un bloc (ou de l'aperçu, `n == 0`).
 class SafeboxSignedBlock {
   const SafeboxSignedBlock({required this.n, required this.size, required this.url});

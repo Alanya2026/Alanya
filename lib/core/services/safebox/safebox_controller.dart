@@ -117,6 +117,8 @@ class SafeboxController extends ChangeNotifier {
       evict: downloads.evict,
       progressOf: downloads.progressOf,
     );
+    // Les aperçus du téléphone ramenés sous leur plafond, une fois par démarrage.
+    unawaited(previews.prune());
     uploads.addListener(notifyListeners);
     uploads.addListener(_suivrePremierPlan);
     // Le progrès d'un téléchargement groupé suit celui du fichier en cours.

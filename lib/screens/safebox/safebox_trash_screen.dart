@@ -61,7 +61,12 @@ class _SafeboxTrashScreenState extends State<SafeboxTrashScreen> {
   Future<void> _vider() async {
     final l10n = context.l10n;
     if (!await safeboxConfirm(context, message: l10n.safeboxEmptyTrashConfirm, action: l10n.safeboxEmptyTrash)) return;
-    await _agir(_c.api.emptySafeboxTrash);
+    final partis = [for (final f in _corbeille?.files ?? const <SafeboxFile>[]) f.id];
+    await _agir(() async {
+      await _c.api.emptySafeboxTrash();
+      // Ceux des dossiers supprimés partiront au tri des aperçus.
+      unawaited(_c.previews.forget(partis));
+    });
   }
 
   Future<void> _menu({SafeboxFolder? dossier, SafeboxFile? fichier}) async {
@@ -92,9 +97,11 @@ class _SafeboxTrashScreenState extends State<SafeboxTrashScreen> {
         message: l10n.safeboxRestored,
       );
     } else if (await safeboxConfirm(context, message: l10n.safeboxDeleteForeverConfirm(nom), action: l10n.safeboxDeleteForever)) {
-      await _agir(() => dossier != null
-          ? _c.api.deleteTrashedSafeboxFolder(dossier.id)
-          : _c.api.deleteTrashedSafeboxFile(fichier!.id));
+      await _agir(() async {
+        if (dossier != null) return _c.api.deleteTrashedSafeboxFolder(dossier.id);
+        await _c.api.deleteTrashedSafeboxFile(fichier!.id);
+        unawaited(_c.previews.forget([fichier.id]));
+      });
     }
   }
 

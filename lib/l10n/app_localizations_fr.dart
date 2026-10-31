@@ -8848,11 +8848,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String safeboxAlbumItemsMore(int count) {
-    return 'Plus de $count éléments';
-  }
-
-  @override
   String get safeboxNewAlbum => 'Nouvel album';
 
   @override

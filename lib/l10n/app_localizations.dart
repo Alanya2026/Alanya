@@ -14998,12 +14998,6 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Vide pour l\'instant} =1{1 élément} other{{count} éléments}}'**
   String safeboxAlbumItems(int count);
 
-  /// No description provided for @safeboxAlbumItemsMore.
-  ///
-  /// In fr, this message translates to:
-  /// **'Plus de {count} éléments'**
-  String safeboxAlbumItemsMore(int count);
-
   /// No description provided for @safeboxNewAlbum.
   ///
   /// In fr, this message translates to:

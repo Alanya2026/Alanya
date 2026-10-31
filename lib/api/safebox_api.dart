@@ -26,6 +26,12 @@ extension SafeboxApi on TalkyApiClient {
             headers: _headers,
           )));
 
+  /// Les albums de l'accueil en une demande : les derniers remplis.
+  Future<List<SafeboxRecentAlbum>> fetchSafeboxRecentAlbums({int limit = 3}) async {
+    final j = await _safeboxJson(() => _client.get(_safebox('/albums/recent', {'limit': '$limit'}), headers: _headers));
+    return SafeboxRecentAlbum.listFromJson(j);
+  }
+
   Future<SafeboxFolder> createSafeboxFolder({required int parentId, required String name}) async =>
       SafeboxFolder.fromJson(await _safeboxJson(() => _client.post(
             _safebox('/folders'),

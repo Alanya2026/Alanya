@@ -8474,7 +8474,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Save this contact under the name you choose. They will never see it.';
 
   @override
-  String get safeboxTitle => 'Safe';
+  String get safeboxTitle => 'SafeBox';
 
   @override
   String get safeboxSubtitle =>
@@ -8504,7 +8504,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxDeleteWhich => 'This file is also elsewhere in your safe';
+  String get safeboxDeleteWhich =>
+      'This file is also elsewhere in your SafeBox';
 
   @override
   String safeboxDeleteHereOnly(String place) {
@@ -8746,11 +8747,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String safeboxAlbumItemsMore(int count) {
-    return 'Over $count items';
-  }
-
-  @override
   String get safeboxNewAlbum => 'New album';
 
   @override
@@ -8925,7 +8921,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupPitch =>
-      'Your photos, videos and documents copied to the safe automatically. Nothing is deleted from your phone.';
+      'Your photos, videos and documents copied to SafeBox automatically. Nothing is deleted from your phone.';
 
   @override
   String get safeboxBackupActivate => 'Turn on';
@@ -8990,7 +8986,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupPermissionBody =>
-      'The safe copies your files encrypted, one way only: nothing is deleted from your phone, and what you delete from the safe doesn\'t come back.';
+      'SafeBox copies your files encrypted, one way only: nothing is deleted from your phone, and what you delete from SafeBox doesn\'t come back.';
 
   @override
   String get safeboxBackupPermissionDenied =>
@@ -9109,7 +9105,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupDisableConfirm =>
-      'Backup stops. What\'s already in the safe stays there.';
+      'Backup stops. What\'s already in SafeBox stays there.';
 
   @override
   String get safeboxBackupEnabledToast => 'Automatic backup on';
@@ -9125,7 +9121,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String safeboxFreePhoneBody(int photos, int videos, String size) {
-    return '$photos photos and $videos videos are already in the safe in Original quality. Removing them from your phone frees $size.';
+    return '$photos photos and $videos videos are already in SafeBox in Original quality. Removing them from your phone frees $size.';
   }
 
   @override
@@ -9152,7 +9148,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxFolderDownloads => 'Downloaded images';
 
   @override
-  String get safeboxShareBadge => 'Safe';
+  String get safeboxShareBadge => 'SafeBox';
 
   @override
   String get safeboxShareSeeAlbum => 'View album';
@@ -9222,7 +9218,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String safeboxShareUploading(int percent) {
-    return 'Uploading to the safe · $percent%';
+    return 'Uploading to SafeBox · $percent%';
   }
 
   @override
@@ -9252,7 +9248,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String safeboxSharedAvailableWhile(String name) {
-    return 'Encrypted. Available as long as $name keeps it in their safe.';
+    return 'Encrypted. Available as long as $name keeps it in their SafeBox.';
   }
 
   @override
@@ -9277,7 +9273,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxSharedAllKept => 'Everything is in your safe';
+  String get safeboxSharedAllKept => 'Everything is in your SafeBox';
 
   @override
   String get safeboxSharedUnavailable =>
@@ -9296,9 +9292,9 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count kept it in their safe',
-      one: '1 kept it in their safe',
-      zero: 'Nobody has kept it in their safe yet',
+      other: '$count kept it in their SafeBox',
+      one: '1 kept it in their SafeBox',
+      zero: 'Nobody has kept it in their SafeBox yet',
     );
     return '$_temp0';
   }
@@ -9317,7 +9313,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxTrackingSavedState => 'Kept in their safe';
+  String get safeboxTrackingSavedState => 'Kept in their SafeBox';
 
   @override
   String get safeboxTrackingPending => 'Not yet';
@@ -9334,7 +9330,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxTrackingRevokeConfirm =>
-      'Members will no longer be able to download it. The file stays in your safe.';
+      'Members will no longer be able to download it. The file stays in your SafeBox.';
 
   @override
   String get safeboxTrackingRevoked => 'Sharing stopped';
@@ -9351,7 +9347,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxShareReceivedInfo =>
-      'Files sent to you through the safe, from all your chats. They stay available as long as the sender keeps them.';
+      'Files sent to you through SafeBox, from all your chats. They stay available as long as the sender keeps them.';
 
   @override
   String safeboxShareAllReceived(int count) {
@@ -9412,13 +9408,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxShareConvFallback => 'a chat';
 
   @override
-  String get safeboxReceivedEmpty => 'Nothing received through the safe yet';
+  String get safeboxReceivedEmpty => 'Nothing received through SafeBox yet';
 
   @override
   String get safeboxReceivedInDownloads => 'In Downloads/Alanya';
 
   @override
-  String get safeboxReceivedKept => 'Kept in your safe';
+  String get safeboxReceivedKept => 'Kept in your SafeBox';
 
   @override
   String get safeboxRootVideos => 'Videos';
@@ -9595,7 +9591,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxUploadFailed => 'Upload failed';
 
   @override
-  String get safeboxUploadDone => 'Added to the safe';
+  String get safeboxUploadDone => 'Added to SafeBox';
 
   @override
   String get safeboxRetry => 'Retry';
@@ -9624,7 +9620,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxQuotaExceeded =>
-      'Your safe is full. Free up space or upgrade to Alanya Plus.';
+      'Your SafeBox is full. Free up space or upgrade to Alanya Plus.';
 
   @override
   String get safeboxSourceChanged =>
@@ -9632,7 +9628,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxUnavailable =>
-      'The safe is temporarily unavailable. Try again later.';
+      'SafeBox is temporarily unavailable. Try again later.';
 
   @override
   String get safeboxNameTaken => 'This name is already used in this folder.';
@@ -9666,19 +9662,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxNotifChannel => 'Uploads to the safe';
+  String get safeboxNotifChannel => 'Uploads to SafeBox';
 
   @override
-  String get safeboxAlertChannel => 'Safe storage';
+  String get safeboxAlertChannel => 'SafeBox storage';
 
   @override
-  String get safeboxAlert80Title => 'Your safe is 80% full';
+  String get safeboxAlert80Title => 'Your SafeBox is 80% full';
 
   @override
-  String get safeboxAlert95Title => 'Your safe is almost full (95%)';
+  String get safeboxAlert95Title => 'Your SafeBox is almost full (95%)';
 
   @override
-  String get safeboxAlert100Title => 'Your safe is full';
+  String get safeboxAlert100Title => 'Your SafeBox is full';
 
   @override
   String get safeboxAlertBody =>
@@ -9714,7 +9710,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Files in the trash still count towards your space until the trash is emptied.';
 
   @override
-  String get safeboxFreeUpNothing => 'No files in your safe.';
+  String get safeboxFreeUpNothing => 'No files in your SafeBox.';
 
   @override
   String safeboxInFolder(String folder) {
@@ -9722,14 +9718,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxShareAttach => 'Safe';
+  String get safeboxShareAttach => 'SafeBox';
 
   @override
-  String get safeboxSharePickTitle => 'Send from the safe';
+  String get safeboxSharePickTitle => 'Send from SafeBox';
 
   @override
   String safeboxSharePickHint(String max) {
-    return 'Up to $max. The file stays in your safe, on your space, until you delete it.';
+    return 'Up to $max. The file stays in your SafeBox, on your space, until you delete it.';
   }
 
   @override
@@ -9737,10 +9733,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxShareQueued =>
-      'The file will be sent to the chat as soon as it is in your safe.';
+      'The file will be sent to the chat as soon as it is in your SafeBox.';
 
   @override
-  String get safeboxShareFromVault => 'From your safe';
+  String get safeboxShareFromVault => 'From your SafeBox';
 
   @override
   String safeboxShareDownload(String size) {
@@ -9748,20 +9744,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxShareSave => 'Keep in my safe';
+  String get safeboxShareSave => 'Keep in my SafeBox';
 
   @override
-  String get safeboxShareSaved => 'In your safe';
+  String get safeboxShareSaved => 'In your SafeBox';
 
   @override
-  String get safeboxShareSavedToast => 'Kept in your safe';
+  String get safeboxShareSavedToast => 'Kept in your SafeBox';
 
   @override
   String get safeboxShareRevoked => 'File removed by the sender';
 
   @override
   String safeboxShareDownloadLimit(int limit) {
-    return 'You have already downloaded this file $limit times today. Try again tomorrow, or save it to your safe.';
+    return 'You have already downloaded this file $limit times today. Try again tomorrow, or save it to your SafeBox.';
   }
 
   @override
@@ -9777,7 +9773,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxShareFallback => 'File from the safe';
+  String get safeboxShareFallback => 'File from SafeBox';
 
   @override
   String safeboxSharePreview(String name) {
@@ -9791,7 +9787,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxPlusBadge => 'Alanya Plus';
 
   @override
-  String get safeboxOverQuotaTitle => 'Your safe is over its space';
+  String get safeboxOverQuotaTitle => 'Your SafeBox is over its space';
 
   @override
   String get safeboxOverQuotaBody =>
@@ -9807,16 +9803,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String safeboxOfferBody(String size, int limit, String vaultMax) {
-    return 'This file is $size, over the $limit MB allowed in a chat. The safe can send it up to $vaultMax: it will be stored in your safe and count towards your space.';
+    return 'This file is $size, over the $limit MB allowed in a chat. SafeBox can send it up to $vaultMax: it will be stored in your SafeBox and count towards your space.';
   }
 
   @override
   String safeboxOfferBodyMany(int count, int limit, String vaultMax) {
-    return '$count files are over the $limit MB allowed in a chat. The safe can send them up to $vaultMax each: they will be stored in your safe and count towards your space.';
+    return '$count files are over the $limit MB allowed in a chat. SafeBox can send them up to $vaultMax each: they will be stored in your SafeBox and count towards your space.';
   }
 
   @override
-  String get safeboxOfferAction => 'Send via the safe';
+  String get safeboxOfferAction => 'Send via SafeBox';
 
   @override
   String get safeboxSendToChat => 'Send to a chat';
@@ -9865,15 +9861,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get safeboxStoreInTitle => 'Store in your safe';
+  String get safeboxStoreInTitle => 'Store in your SafeBox';
 
   @override
   String safeboxStoreInHint(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'The $count files stay in this folder of your safe after sending.',
-      one: 'The file stays in this folder of your safe after sending.',
+      other:
+          'The $count files stay in this folder of your SafeBox after sending.',
+      one: 'The file stays in this folder of your SafeBox after sending.',
     );
     return '$_temp0';
   }
@@ -9915,7 +9912,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxNotePrivate =>
-      'Only visible in your safe: it is not sent with the photo when you share it.';
+      'Only visible in your SafeBox: it is not sent with the photo when you share it.';
 
   @override
   String get safeboxNoteRecord => 'Record audio (5 min max)';

@@ -4674,8 +4674,6 @@
   "safeboxSeeAll": "Tout voir",
   "safeboxAlbumItems": "{count, plural, =0{Vide pour l'instant} =1{1 élément} other{{count} éléments}}",
   "@safeboxAlbumItems": {"placeholders": {"count": {"type": "int"}}},
-  "safeboxAlbumItemsMore": "Plus de {count} éléments",
-  "@safeboxAlbumItemsMore": {"placeholders": {"count": {"type": "int"}}},
   "safeboxNewAlbum": "Nouvel album",
   "safeboxAddTo": "Ajouter dans…",
   "safeboxUploadsTab": "Envois",

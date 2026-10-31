@@ -2662,7 +2662,6 @@
   "safeboxRecentAlbums": "最近的相册",
   "safeboxSeeAll": "查看全部",
   "safeboxAlbumItems": "{count, plural, other{{count} 项}}",
-  "safeboxAlbumItemsMore": "超过 {count} 项",
   "safeboxNewAlbum": "新建相册",
   "safeboxAddTo": "添加到…",
   "safeboxUploadsTab": "上传",

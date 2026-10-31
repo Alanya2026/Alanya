@@ -553,7 +553,9 @@ class _GrilleRacines extends StatelessWidget {
   }
 }
 
-/// Les albums récents, chacun en mosaïque de ses quatre premiers aperçus.
+/// Les trois derniers albums remplis, chacun en mosaïque de quatre aperçus
+/// (photos et vidéos d'abord), en une seule demande au serveur ; les autres
+/// sont derrière « Tout voir ».
 class _AlbumsRecents extends StatefulWidget {
   const _AlbumsRecents({required this.albumsId});
   final int? albumsId;
@@ -563,7 +565,8 @@ class _AlbumsRecents extends StatefulWidget {
 }
 
 class _AlbumsRecentsState extends State<_AlbumsRecents> {
-  List<SafeboxFolder>? _albums;
+  static const _nombre = 3;
+  List<SafeboxRecentAlbum>? _albums;
 
   @override
   void initState() {
@@ -572,12 +575,9 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
   }
 
   Future<void> _charger() async {
-    final id = widget.albumsId;
-    if (id == null) return;
     try {
-      final p = await context.read<SafeboxController>().api.fetchSafeboxFolder(id);
-      final tries = [...p.folders]..sort((a, b) => (b.updatedAt ?? DateTime(0)).compareTo(a.updatedAt ?? DateTime(0)));
-      if (mounted) setState(() => _albums = tries.take(8).toList());
+      final albums = await context.read<SafeboxController>().api.fetchSafeboxRecentAlbums(limit: _nombre);
+      if (mounted) setState(() => _albums = albums);
     } catch (_) {
       if (mounted) setState(() => _albums = const []);
     }
@@ -622,6 +622,11 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
           child: Row(
             children: [
               Expanded(child: Text(l10n.safeboxRecentAlbums, style: context.text.titleMedium)),
+              IconButton(
+                tooltip: l10n.safeboxNewAlbum,
+                icon: Icon(Icons.add, color: context.colors.primary),
+                onPressed: widget.albumsId == null ? null : _nouvelAlbum,
+              ),
               TextButton(
                 onPressed: () => _ouvrirRacine(context, SafeboxRoot.albums).then((_) => _charger()),
                 child: Text(l10n.safeboxSeeAll),
@@ -629,16 +634,24 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
             ],
           ),
         ),
-        SizedBox(
-          height: 204,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: albums == null
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              ? const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final a in albums) _CarteAlbum(album: a, onTap: () => _ouvrir(a)),
-                    _CarteNouvelAlbum(onTap: _nouvelAlbum),
+                    for (var i = 0; i < _nombre; i += 1) ...[
+                      if (i > 0) AppSpacing.hGapSm,
+                      Expanded(
+                        child: i < albums.length
+                            ? _CarteAlbum(key: ValueKey(albums[i].folder.id), album: albums[i], onTap: () => _ouvrir(albums[i].folder))
+                            // La première place libre invite à créer un album.
+                            : i == albums.length && widget.albumsId != null
+                                ? _CarteNouvelAlbum(onTap: _nouvelAlbum)
+                                : const SizedBox.shrink(),
+                      ),
+                    ],
                   ],
                 ),
         ),
@@ -647,72 +660,48 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
   }
 }
 
-class _CarteAlbum extends StatefulWidget {
-  const _CarteAlbum({required this.album, required this.onTap});
-  final SafeboxFolder album;
+class _CarteAlbum extends StatelessWidget {
+  const _CarteAlbum({super.key, required this.album, required this.onTap});
+  final SafeboxRecentAlbum album;
   final VoidCallback onTap;
 
   @override
-  State<_CarteAlbum> createState() => _CarteAlbumState();
-}
-
-class _CarteAlbumState extends State<_CarteAlbum> {
-  SafeboxFolderPage? _page;
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<SafeboxController>().api.fetchSafeboxFolder(widget.album.id).then((p) {
-      if (mounted) setState(() => _page = p);
-    }).catchError((Object _) {});
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final page = _page;
-    final fichiers = page?.files ?? const <SafeboxFile>[];
-    final n = fichiers.length;
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: InkWell(
-        borderRadius: AppRadius.brMd,
-        onTap: widget.onTap,
-        child: SizedBox(
-          width: 132,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: AppRadius.brMd,
-                child: SizedBox(
-                  width: 132,
-                  height: 132,
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 2,
-                    crossAxisSpacing: 2,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    children: [
-                      for (var i = 0; i < 4; i += 1)
-                        i < n
-                            ? SafeboxFileThumb(file: fichiers[i], fill: true)
-                            : ColoredBox(color: context.semantic.brandContainer),
-                    ],
-                  ),
-                ),
+    final couverture = album.cover;
+    return InkWell(
+      borderRadius: AppRadius.brMd,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: AppRadius.brMd,
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: GridView.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                children: [
+                  for (var i = 0; i < 4; i += 1)
+                    i < couverture.length
+                        ? SafeboxFileThumb(file: couverture[i], fill: true)
+                        : ColoredBox(color: context.semantic.brandContainer),
+                ],
               ),
-              AppSpacing.vGapXs,
-              Text(widget.album.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
-              if (page != null)
-                Text(
-                  page.nextCursor != null ? l10n.safeboxAlbumItemsMore(n) : l10n.safeboxAlbumItems(n + page.folders.length),
-                  style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
-                ),
-            ],
+            ),
           ),
-        ),
+          AppSpacing.vGapXs,
+          Text(album.folder.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
+          Text(
+            context.l10n.safeboxAlbumItems(album.fileCount),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
@@ -726,24 +715,22 @@ class _CarteNouvelAlbum extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         borderRadius: AppRadius.brMd,
         onTap: onTap,
-        child: SizedBox(
-          width: 132,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 132,
-                height: 132,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: Container(
                 decoration: BoxDecoration(
                   borderRadius: AppRadius.brMd,
                   border: Border.all(color: context.colors.outlineVariant),
                 ),
                 child: Icon(Icons.add, color: context.colors.primary, size: AppIconSize.lg),
               ),
-              AppSpacing.vGapXs,
-              Text(context.l10n.safeboxNewAlbum, style: context.text.titleSmall),
-            ],
-          ),
+            ),
+            AppSpacing.vGapXs,
+            Text(context.l10n.safeboxNewAlbum, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
+          ],
         ),
       );
 }

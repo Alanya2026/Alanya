@@ -193,18 +193,76 @@ class SafeboxDownloadManager extends ChangeNotifier {
 /// Aperçus déchiffrés en mémoire (les 200 derniers), gardés CHIFFRÉS sur le
 /// téléphone : rien du coffre n'y est écrit en clair sans que l'inscrit
 /// l'ouvre.
+///
+/// Sur le téléphone, [maxDiskBytes] au plus (30/10/2026) : au-delà, les moins
+/// récemment affichés partent (ils se retéléchargent au besoin) ; ceux d'un
+/// fichier supprimé pour de bon partent tout de suite ([forget]).
 class SafeboxPreviewCache {
-  SafeboxPreviewCache({required SafeboxDownloadTransport transport, Future<Directory> Function()? baseDir})
-      : _transport = transport,
+  SafeboxPreviewCache({
+    required SafeboxDownloadTransport transport,
+    Future<Directory> Function()? baseDir,
+    this.maxDiskBytes = 100 << 20,
+  })  : _transport = transport,
         _baseDir = baseDir ?? safeboxLocalDir;
 
   final SafeboxDownloadTransport _transport;
   final Future<Directory> Function() _baseDir;
+  final int maxDiskBytes;
   final LinkedHashMap<int, Uint8List> _memoire = LinkedHashMap();
   final Map<int, Future<Uint8List?>> _enCours = {};
   static const _max = 200;
 
+  /// Écritures depuis le dernier tri : le dossier n'est parcouru que de temps en temps.
+  int _ecrits = 0;
+  Future<void>? _tri;
+
   Uint8List? peek(int fileId) => _memoire[fileId];
+
+  Future<File> _fichier(int fileId) async => File('${(await _baseDir()).path}/previews/$fileId.sbx');
+
+  /// Les fichiers supprimés pour de bon : leurs aperçus quittent le téléphone.
+  Future<void> forget(Iterable<int> fileIds) async {
+    for (final id in fileIds) {
+      _memoire.remove(id);
+      try {
+        final f = await _fichier(id);
+        if (await f.exists()) await f.delete();
+      } catch (e) {
+        debugPrint('[Coffre] aperçu $id non effacé : $e');
+      }
+    }
+  }
+
+  /// Ramène les aperçus du téléphone sous [maxDiskBytes] (aux trois quarts,
+  /// pour ne pas recommencer à chaque aperçu), les moins récents d'abord.
+  Future<void> prune() => _tri ??= _trier().whenComplete(() => _tri = null);
+
+  Future<void> _trier() async {
+    try {
+      final dir = Directory('${(await _baseDir()).path}/previews');
+      if (!await dir.exists()) return;
+      final fichiers = <(File, int, DateTime)>[];
+      var total = 0;
+      await for (final e in dir.list()) {
+        if (e is! File) continue;
+        final st = await e.stat();
+        fichiers.add((e, st.size, st.modified));
+        total += st.size;
+      }
+      if (total <= maxDiskBytes) return;
+      fichiers.sort((a, b) => a.$3.compareTo(b.$3));
+      final cible = maxDiskBytes * 3 ~/ 4;
+      for (final (f, taille, _) in fichiers) {
+        if (total <= cible) break;
+        try {
+          await f.delete();
+          total -= taille;
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('[Coffre] tri des aperçus impossible : $e');
+    }
+  }
 
   Future<Uint8List?> load(SafeboxFile file) {
     final deja = _memoire[file.id];
@@ -212,16 +270,18 @@ class SafeboxPreviewCache {
     if (file.key == null) return Future.value(null);
     return _enCours.putIfAbsent(file.id, () async {
       try {
-        final base = await _baseDir();
-        final disque = File('${base.path}/previews/${file.id}.sbx');
+        final disque = await _fichier(file.id);
         Uint8List chiffre;
         if (await disque.exists()) {
           chiffre = await disque.readAsBytes();
+          // Affiché à l'instant : il passe après les autres au tri.
+          unawaited(disque.setLastModified(DateTime.now()).catchError((Object _) {}));
         } else {
           if (file.previewUrl == null) return null;
           chiffre = await _transport.getPreview(file.previewUrl!);
           await disque.parent.create(recursive: true);
           await disque.writeAsBytes(chiffre, flush: true);
+          if ((_ecrits += 1) % 50 == 0) unawaited(prune());
         }
         final clair = safeboxDecryptPreviewSync(file.key!, chiffre);
         _memoire[file.id] = clair;

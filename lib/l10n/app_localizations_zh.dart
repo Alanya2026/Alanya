@@ -8341,11 +8341,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String safeboxAlbumItemsMore(int count) {
-    return '超过 $count 项';
-  }
-
-  @override
   String get safeboxNewAlbum => '新建相册';
 
   @override

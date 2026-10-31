@@ -58,6 +58,14 @@ void main() {
         'limits': {'maxFileBytes': go, 'blockBytes': 8 << 20, 'maxPreviewBytes': 262144, 'extensions': {}},
       });
     }
+    if (chemin.endsWith('/safebox/albums/recent')) {
+      expect(req.url.queryParameters['limit'], '3');
+      return json({
+        'albums': [
+          {'id': 30, 'parentId': 15, 'root': 'albums', 'name': 'Kribi 2026', 'depth': 1, 'fileCount': 12, 'cover': []},
+        ],
+      });
+    }
     if (chemin.endsWith('/safebox/folders/15')) {
       return json(dossier(15, 'albums', folders: [
         {'id': 30, 'parentId': 15, 'root': 'albums', 'name': 'Kribi 2026', 'depth': 1},
@@ -108,7 +116,13 @@ void main() {
     for (final r in [fr.safeboxRootPhotos, fr.safeboxRootVideos, fr.safeboxRootAudios, fr.safeboxRootDocuments, fr.safeboxRootAlbums, fr.safeboxRootShare]) {
       expect(find.text(r), findsWidgets, reason: r);
     }
+    // Trois places : un album, puis l'invitation à en créer un ; le « + » du titre aussi.
     expect(find.text('Kribi 2026'), findsOneWidget);
+    expect(find.text(fr.safeboxAlbumItems(12)), findsOneWidget);
+    expect(find.text(fr.safeboxNewAlbum), findsOneWidget);
+    expect(find.byTooltip(fr.safeboxNewAlbum), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is ListView && w.scrollDirection == Axis.horizontal), findsNothing,
+        reason: 'plus de liste qui défile de côté');
     expect(tester.takeException(), isNull);
     await demonter(tester, c);
   });
