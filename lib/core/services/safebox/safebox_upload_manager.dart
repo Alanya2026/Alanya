@@ -250,8 +250,31 @@ class SafeboxUploadJob {
   final String? backupKey;
   final DateTime createdAt;
 
-  /// Octets envoyés pendant le bloc en cours (non gardé).
+  /// Octets envoyés pendant les blocs en cours (non gardé).
   int inFlightBytes = 0;
+
+  /// Débit des dernières secondes, en octets par seconde ; null tant qu'on ne
+  /// le sait pas (non gardé).
+  double? bytesPerSecond;
+  final List<(int, int)> _mesures = [];
+
+  /// Note les octets envoyés à cet instant ; le débit se calcule sur les
+  /// huit dernières secondes.
+  void sampleSpeed([DateTime? now]) {
+    final t = (now ?? DateTime.now()).millisecondsSinceEpoch;
+    final octets = sentBytes;
+    // Après une pause ou une coupure, on repart de zéro.
+    if (_mesures.isNotEmpty && t - _mesures.last.$1 > 30000) {
+      _mesures.clear();
+      bytesPerSecond = null;
+    }
+    _mesures.add((t, octets));
+    while (_mesures.length > 2 && t - _mesures.first.$1 > 8000) {
+      _mesures.removeAt(0);
+    }
+    final (t0, o0) = _mesures.first;
+    if (t - t0 >= 1000) bytesPerSecond = (octets - o0) * 1000 / (t - t0);
+  }
 
   int get storedSize => safeboxEncryptedLength(plainSize);
 
@@ -374,6 +397,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     Future<Uint8List> Function(List<int> key, Uint8List plain, SafeboxBlockPlan plan)? encrypt,
     Future<bool> Function()? unmetered,
     this.networkRetries = const [Duration(seconds: 2), Duration(seconds: 5), Duration(seconds: 15), Duration(seconds: 30)],
+    this.parallelBlocks = 3,
   })  : _transport = transport,
         _store = store ?? PrefsSafeboxJobStore(),
         _sleep = sleep ?? Future<void>.delayed,
@@ -392,6 +416,12 @@ class SafeboxUploadManager extends ChangeNotifier {
   /// attend le réseau ([SafeboxUploadState.waitingNetwork]) et reprendra au
   /// prochain [resumeAll].
   final List<Duration> networkRetries;
+
+  /// Blocs d'un même fichier envoyés en même temps (31/10/2026). Un seul à la
+  /// fois laissait la ligne à l'arrêt pendant le chiffrement et l'attente de
+  /// chaque réponse de MEGA : 900 Mo en 2 h sur une ligne de 100 Mbit/s. Trois
+  /// blocs de 8 Mo en vol : environ 50 Mo de mémoire au plus.
+  final int parallelBlocks;
 
   final List<SafeboxUploadJob> _jobs = [];
   final StreamController<SafeboxFile> _termines = StreamController<SafeboxFile>.broadcast();
@@ -753,45 +783,79 @@ class SafeboxUploadManager extends ChangeNotifier {
         if (!job.done.contains(n)) n,
     ];
     if (manquants.isEmpty) return;
-    final raf = await File(job.sourcePath).open();
-    try {
-      for (var i = 0; i < manquants.length; i += 1) {
-        if (_annules.contains(job.id)) throw SafeboxUploadFailure('CANCELLED');
-        if (_pauses.contains(job.id)) throw _Pause();
-        await _verifierWifi(job);
-        final n = manquants[i];
-        if (!adresses.containsKey(n)) {
-          final lot = manquants.skip(i).take(64).toList();
-          final r = await _avecReprise(() => _transport.urls(job.fileId!, blocks: lot));
-          for (final b in r.blocks) {
-            adresses[b.n] = b.url;
+    // Les adresses d'abord, par lots de 64 : les envois n'attendent plus le serveur.
+    final sansAdresse = [for (final n in manquants) if (!adresses.containsKey(n)) n];
+    for (var i = 0; i < sansAdresse.length; i += 64) {
+      final lot = sansAdresse.skip(i).take(64).toList();
+      final r = await _avecReprise(() => _transport.urls(job.fileId!, blocks: lot));
+      for (final b in r.blocks) {
+        adresses[b.n] = b.url;
+      }
+    }
+    // Plusieurs blocs en vol : pendant que l'un part, le suivant se chiffre.
+    // Au premier arrêt (pause, annulation, coupure), plus aucun bloc ne
+    // commence ; ceux en cours finissent, puis l'arrêt remonte.
+    final file = [...manquants];
+    final enVol = <int, int>{};
+    Object? arret;
+    StackTrace? pile;
+    Future<void> ouvrier() async {
+      final raf = await File(job.sourcePath).open();
+      try {
+        while (arret == null && file.isNotEmpty) {
+          final n = file.removeAt(0);
+          try {
+            if (_annules.contains(job.id)) throw SafeboxUploadFailure('CANCELLED');
+            if (_pauses.contains(job.id)) throw _Pause();
+            await _verifierWifi(job);
+            await _verifierSource(job);
+            final plan = safeboxPlanBlock(n, plainSize: job.plainSize, blockSize: job.blockSize);
+            await raf.setPosition(plan.plainStart);
+            final clair = await raf.read(plan.plainLength);
+            if (clair.length != plan.plainLength) throw SafeboxUploadFailure('SAFEBOX_SOURCE_CHANGED');
+            final chiffre = await _encrypt(cle, clair, plan);
+            if (arret != null) return;
+            await _envoyerUnBloc(job, n, chiffre, adresses, onProgress: (envoye) {
+              enVol[n] = envoye;
+              job.inFlightBytes = enVol.values.fold(0, (s, v) => s + v);
+              job.sampleSpeed();
+              notifyListeners();
+            });
+            enVol.remove(n);
+            job
+              ..done.add(n)
+              ..inFlightBytes = enVol.values.fold(0, (s, v) => s + v)
+              ..sampleSpeed();
+            await _sauver();
+            notifyListeners();
+          } catch (e, st) {
+            enVol.remove(n);
+            arret ??= e;
+            pile ??= st;
           }
         }
-        await _verifierSource(job);
-        final plan = safeboxPlanBlock(n, plainSize: job.plainSize, blockSize: job.blockSize);
-        await raf.setPosition(plan.plainStart);
-        final clair = await raf.read(plan.plainLength);
-        if (clair.length != plan.plainLength) throw SafeboxUploadFailure('SAFEBOX_SOURCE_CHANGED');
-        final chiffre = await _encrypt(cle, clair, plan);
-        await _envoyerUnBloc(job, n, chiffre, adresses);
-        job
-          ..done.add(n)
-          ..inFlightBytes = 0;
-        await _sauver();
-        notifyListeners();
+      } finally {
+        await raf.close();
       }
-    } finally {
-      await raf.close();
     }
+
+    await Future.wait([
+      for (var i = 0; i < (parallelBlocks < 1 ? 1 : parallelBlocks) && i < manquants.length; i += 1) ouvrier(),
+    ]);
+    job.inFlightBytes = 0;
+    if (arret != null) Error.throwWithStackTrace(arret!, pile!);
   }
 
-  Future<void> _envoyerUnBloc(SafeboxUploadJob job, int n, Uint8List chiffre, Map<int, String> adresses) async {
+  Future<void> _envoyerUnBloc(
+    SafeboxUploadJob job,
+    int n,
+    Uint8List chiffre,
+    Map<int, String> adresses, {
+    required void Function(int sent) onProgress,
+  }) async {
     for (var essai = 0;; essai += 1) {
       try {
-        await _avecReprise(() => _transport.putBlock(adresses[n]!, chiffre, onProgress: (sent) {
-              job.inFlightBytes = sent;
-              notifyListeners();
-            }));
+        await _avecReprise(() => _transport.putBlock(adresses[n]!, chiffre, onProgress: onProgress));
         return;
       } on TalkyException catch (e) {
         // 403 : adresse expirée (24 h). Une nouvelle, une fois.

@@ -8556,6 +8556,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String safeboxUploadSpeed(String size) {
+    return '$size/秒';
+  }
+
+  @override
   String get safeboxNoDownloads => '没有下载';
 
   @override

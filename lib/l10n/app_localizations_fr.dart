@@ -9075,6 +9075,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String safeboxUploadSpeed(String size) {
+    return '$size/s';
+  }
+
+  @override
   String get safeboxNoDownloads => 'Aucun téléchargement';
 
   @override

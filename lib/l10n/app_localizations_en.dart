@@ -8974,6 +8974,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String safeboxUploadSpeed(String size) {
+    return '$size/s';
+  }
+
+  @override
   String get safeboxNoDownloads => 'No downloads';
 
   @override

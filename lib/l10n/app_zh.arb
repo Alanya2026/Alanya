@@ -2729,6 +2729,7 @@
   "safeboxInProgress": "进行中",
   "safeboxFinished": "已完成",
   "safeboxBytesOf": "{done} / {total}",
+  "safeboxUploadSpeed": "{size}/秒",
   "safeboxNoDownloads": "没有下载",
   "safeboxExportProgress": "{done}/{total} 个文件",
   "safeboxExportDoneGallery": "已存入相册“Alanya”",

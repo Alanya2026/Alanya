@@ -152,8 +152,11 @@ class _LigneEnvoi extends StatelessWidget {
     final (String etat, Color? couleur) = switch (job.state) {
       SafeboxUploadState.queued => (l10n.safeboxUploadQueued, null),
       SafeboxUploadState.running => (
-          '${l10n.safeboxBytesOf(formatBytes(job.sentBytes, l10n), formatBytes(job.storedSize, l10n))} · '
-              '${(job.progress * 100).floor()} %',
+          [
+            l10n.safeboxBytesOf(formatBytes(job.sentBytes, l10n), formatBytes(job.storedSize, l10n)),
+            '${(job.progress * 100).floor()} %',
+            if (job.bytesPerSecond != null) l10n.safeboxUploadSpeed(formatBytes(job.bytesPerSecond!.round(), l10n)),
+          ].join(' · '),
           context.colors.primary
         ),
       SafeboxUploadState.waitingNetwork => (l10n.safeboxUploadWaitingNetwork, context.semantic.warning),

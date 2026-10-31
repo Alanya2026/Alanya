@@ -20,6 +20,10 @@ class _FauxServeur implements SafeboxTransport {
 
   /// Erreurs à lever, dans l'ordre, au prochain envoi de bloc.
   final List<TalkyException> erreursPut = [];
+
+  /// Blocs en cours d'envoi, et le plus grand nombre vu en même temps.
+  int enVol = 0;
+  int enVolMax = 0;
   TalkyException? erreurReserve;
   bool statusIntrouvable = false;
   int incompletUneFois = 0;
@@ -105,6 +109,11 @@ class _FauxServeur implements SafeboxTransport {
     final n = int.parse(parts[2]);
     final plan = safeboxPlanBlock(n, plainSize: envois[id]!.plain, blockSize: blockSize);
     expect(bytes.length, plan.cipherLength, reason: 'bloc $n de la mauvaise taille');
+    enVol += 1;
+    if (enVol > enVolMax) enVolMax = enVol;
+    // Le réseau prend son temps : les autres blocs ont le temps de partir.
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    enVol -= 1;
     onProgress?.call(bytes.length);
     recus[id]!.add(n);
   }
@@ -222,6 +231,17 @@ void main() {
     expect(m.jobs.single.progress, 1.0);
   });
 
+  test('plusieurs blocs en vol : trois à la fois, jamais plus, et tous arrivent', () async {
+    final m = gestionnaire();
+    final fin = attendreFin(m);
+    // 7 blocs.
+    await m.enqueue(await travail(taille: kSafeboxChunkPlainBytes * 6 + 10), _cle);
+    await fin;
+    expect(serveur.recus[100], {1, 2, 3, 4, 5, 6, 7});
+    expect(serveur.enVolMax, 3);
+    expect(m.jobs.single.progress, 1.0);
+  });
+
   test('coupures passagères : réessayées, puis l\'envoi aboutit', () async {
     serveur.erreursPut.addAll([_reseau, _reseau]);
     final m = gestionnaire();
@@ -266,7 +286,9 @@ void main() {
     final fin = attendreFin(m2);
     await m2.resumeAll();
     await fin;
-    expect(serveur.appels.where((a) => a.startsWith('put')).toList(), ['put blk:100:2', 'put blk:100:3']);
+    // Plusieurs blocs en vol : l'ordre d'arrivée n'est pas fixé.
+    expect(serveur.appels.where((a) => a.startsWith('put')).toList(),
+        unorderedEquals(['put blk:100:2', 'put blk:100:3']));
   });
 
   test('envoi abandonné côté serveur (404) : nouvelle réservation, tout repart', () async {
@@ -334,6 +356,22 @@ void main() {
     expect(store.cles, isEmpty);
     expect(m.jobs, isEmpty);
     expect(File('${dossier.path}/source.bin').existsSync(), isFalse);
+  });
+
+  test('débit : mesuré sur les dernières secondes, oublié après une pause', () {
+    final job = SafeboxUploadJob(
+      id: 'v', folderId: 1, name: 'v.mp4', mime: null, sourcePath: '/x', sourceSize: 1,
+      sourceModifiedMs: 0, ownsSource: false, plainSize: 8 << 20, originalSize: null, compressed: false,
+    )..blockSize = 8 << 20;
+    final t0 = DateTime(2026, 10, 31, 12);
+    job.sampleSpeed(t0);
+    expect(job.bytesPerSecond, isNull, reason: 'pas encore une seconde de mesure');
+    job.inFlightBytes = 4 << 20;
+    job.sampleSpeed(t0.add(const Duration(seconds: 2)));
+    expect(job.bytesPerSecond, 2 << 20, reason: '4 Mio en 2 s');
+    // Après une longue pause, la mesure repart de zéro.
+    job.sampleSpeed(t0.add(const Duration(minutes: 5)));
+    expect(job.bytesPerSecond, isNull);
   });
 
   test('format choisi : gardé avec l\'envoi, même après un redémarrage', () {

@@ -4746,6 +4746,8 @@
   "safeboxFinished": "Terminés",
   "safeboxBytesOf": "{done} sur {total}",
   "@safeboxBytesOf": {"placeholders": {"done": {"type": "String"}, "total": {"type": "String"}}},
+  "safeboxUploadSpeed": "{size}/s",
+  "@safeboxUploadSpeed": {"placeholders": {"size": {"type": "String"}}},
   "safeboxNoDownloads": "Aucun téléchargement",
   "safeboxExportProgress": "{done} sur {total} fichiers",
   "@safeboxExportProgress": {"placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},

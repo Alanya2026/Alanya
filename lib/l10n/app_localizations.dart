@@ -15400,6 +15400,12 @@ abstract class AppLocalizations {
   /// **'{done} sur {total}'**
   String safeboxBytesOf(String done, String total);
 
+  /// No description provided for @safeboxUploadSpeed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size}/s'**
+  String safeboxUploadSpeed(String size);
+
   /// No description provided for @safeboxNoDownloads.
   ///
   /// In fr, this message translates to:

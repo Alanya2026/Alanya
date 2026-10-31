@@ -3810,6 +3810,7 @@
   "safeboxInProgress": "In progress",
   "safeboxFinished": "Finished",
   "safeboxBytesOf": "{done} of {total}",
+  "safeboxUploadSpeed": "{size}/s",
   "safeboxNoDownloads": "No downloads",
   "safeboxExportProgress": "{done} of {total} files",
   "safeboxExportDoneGallery": "In your gallery, “Alanya” album",
