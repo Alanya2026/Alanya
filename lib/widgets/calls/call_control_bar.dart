@@ -128,7 +128,7 @@ class CallControlBar extends StatelessWidget {
                     borderRadius: AppRadius.brPill,
                   ),
                 ),
-                if (isVideo || showCameraInAudio)
+                if (isVideo)
                   ListTile(
                     leading: Icon(
                       CupertinoIcons.switch_camera,

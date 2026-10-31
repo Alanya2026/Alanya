@@ -706,6 +706,30 @@ extension CallSignaling on CallService {
       }
     });
 
+    _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeCommitAck, (data) {
+      if (data is! Map ||
+          _videoUpgradeCommitAck == null ||
+          data['callId']?.toString() != _currentCallId ||
+          data['transitionId']?.toString() != _videoTransitionId ||
+          data['peerId']?.toString() != _remoteUserId?.toString()) {
+        return;
+      }
+      if (!_videoUpgradeCommitAck!.isCompleted) {
+        _videoUpgradeCommitAck!.complete();
+      }
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeCancel, (data) {
+      if (data is! Map ||
+          data['callId']?.toString() != _currentCallId ||
+          data['transitionId']?.toString() != _pendingRemoteVideoCommitId ||
+          data['peerId']?.toString() != _remoteUserId?.toString()) {
+        return;
+      }
+      _pendingRemoteVideoCommitId = null;
+      unawaited(_webrtc.rollbackNegotiation());
+    });
+
     // ICE candidate 1-à-1
     _apiClient.onSocketEvent(SocketEvents.iceCandidate, (data) {
       if (data is! Map || data['candidate'] == null) return;
@@ -1346,6 +1370,11 @@ extension CallSignaling on CallService {
         'isVideoOn': false,
       });
     }
+    _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCommitAck, {
+      'targetUserId': _remoteUserId,
+      'callId': _currentCallId,
+      'transitionId': transitionId,
+    });
     notify();
   }
 

@@ -87,13 +87,16 @@ extension CallControls on CallService {
         const Duration(seconds: 15),
       );
       await _webrtc.handleAnswer(answer);
-      final committed = await _apiClient
-          .sendSocketEventAcked(SocketEvents.callVideoUpgradeCommit, {
+      final commitAck = Completer<void>();
+      _videoUpgradeCommitAck = commitAck;
+      final sentCommit = _apiClient
+          .sendSocketEvent(SocketEvents.callVideoUpgradeCommit, {
             'targetUserId': _remoteUserId.toString(),
             'callId': _currentCallId,
             'transitionId': transitionId,
           });
-      if (!committed) throw StateError('Commit vidéo impossible');
+      if (!sentCommit) throw StateError('Commit vidéo impossible');
+      await commitAck.future.timeout(const Duration(seconds: 5));
       _isVideo = true;
       _isVideoOn = true;
       await CallSessionGuard.instance.updateMode(SessionMode.video);
@@ -112,11 +115,17 @@ extension CallControls on CallService {
           '(rollback=$rolledBack, piste=$discarded)',
         );
       }
+      _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCancel, {
+        'targetUserId': _remoteUserId,
+        'callId': _currentCallId,
+        'transitionId': transitionId,
+      });
       _showTransientMessage(LocaleController.instance.l10n.callFailed);
       debugPrint('[CallService] ** transition audio → vidéo échouée: $error');
     } finally {
       if (identical(_videoUpgradeAnswer, completer)) {
         _videoUpgradeAnswer = null;
+        _videoUpgradeCommitAck = null;
         _videoTransitionId = null;
         _videoTransitionInFlight = false;
         notify();

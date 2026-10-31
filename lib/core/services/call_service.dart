@@ -199,6 +199,7 @@ class CallService extends ChangeNotifier {
   bool _videoTransitionInFlight = false;
   String? _videoTransitionId;
   Completer<RTCSessionDescription>? _videoUpgradeAnswer;
+  Completer<void>? _videoUpgradeCommitAck;
   String? _pendingRemoteVideoCommitId;
 
   // État mute du distant (appel 1-à-1)

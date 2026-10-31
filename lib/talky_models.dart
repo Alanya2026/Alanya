@@ -2319,6 +2319,8 @@ class SocketEvents {
   static const callVideoUpgradeOffer = 'call_video_upgrade_offer';
   static const callVideoUpgradeAnswer = 'call_video_upgrade_answer';
   static const callVideoUpgradeCommit = 'call_video_upgrade_commit';
+  static const callVideoUpgradeCommitAck = 'call_video_upgrade_commit_ack';
+  static const callVideoUpgradeCancel = 'call_video_upgrade_cancel';
   static const callLogUpdated = 'call_log_updated';
 
   // « Ajouter à l'appel » — transfert assisté, 3 participants max (Flutter → Backend)

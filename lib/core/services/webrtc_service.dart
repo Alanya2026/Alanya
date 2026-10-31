@@ -235,18 +235,23 @@ class WebRTCService {
     var succeeded = true;
     final tracks = List<MediaStreamTrack>.from(stream.getVideoTracks());
     if (pc != null) {
-      final senders = await pc.getSenders();
-      for (final sender in senders) {
-        if (sender.track?.kind == 'video') {
-          try {
-            await sender.replaceTrack(null);
-          } catch (error) {
-            succeeded = false;
-            debugPrint(
-              '[WebRTC] ** Erreur retrait piste vidéo du sender: $error',
-            );
+      try {
+        final senders = await pc.getSenders();
+        for (final sender in senders) {
+          if (sender.track?.kind == 'video') {
+            try {
+              await sender.replaceTrack(null);
+            } catch (error) {
+              succeeded = false;
+              debugPrint(
+                '[WebRTC] ** Erreur retrait piste vidéo du sender: $error',
+              );
+            }
           }
         }
+      } catch (error) {
+        succeeded = false;
+        debugPrint('[WebRTC] ** Erreur lecture des senders vidéo: $error');
       }
     }
     for (final track in tracks) {

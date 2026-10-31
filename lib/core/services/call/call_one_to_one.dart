@@ -628,6 +628,7 @@ extension CallOneToOne on CallService {
       pendingVideoAnswer.completeError(StateError('Appel terminé'));
     }
     _videoUpgradeAnswer = null;
+    _videoUpgradeCommitAck = null;
     _videoTransitionId = null;
     _videoTransitionInFlight = false;
     _pendingRemoteVideoCommitId = null;
