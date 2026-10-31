@@ -61,7 +61,8 @@ abstract class SafeboxTransport {
 
   Future<void> cancel(int fileId);
 
-  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress});
+  /// [cancel] : se complète pour couper l'envoi en cours (pause, annulation).
+  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress, Future<void>? cancel});
 }
 
 class ApiSafeboxTransport implements SafeboxTransport {
@@ -117,8 +118,8 @@ class ApiSafeboxTransport implements SafeboxTransport {
   Future<void> cancel(int fileId) => api.cancelSafeboxUpload(fileId);
 
   @override
-  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress}) =>
-      api.putSafeboxBlock(url, bytes, onProgress: onProgress);
+  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress, Future<void>? cancel}) =>
+      api.putSafeboxBlock(url, bytes, onProgress: onProgress, cancel: cancel);
 }
 
 // ── Un envoi ───────────────────────────────────────────────────────────────
@@ -435,6 +436,23 @@ class SafeboxUploadManager extends ChangeNotifier {
   /// blocs, sans rien perdre de ce qui est déjà chez MEGA.
   final Set<String> _pauses = {};
 
+  /// Pour chaque envoi en cours : se complète à la pause ou à l'annulation,
+  /// et coupe tout de suite les blocs en vol (sinon la pause attendait leur
+  /// fin : près de 40 s par bloc de 8 Mo sur une ligne lente).
+  final Map<String, Completer<void>> _coupures = {};
+
+  void _couper(String jobId) {
+    final c = _coupures[jobId];
+    if (c != null && !c.isCompleted) c.complete();
+  }
+
+  /// L'arrêt demandé pour cet envoi, s'il y en a un.
+  Object? _arretDemande(String jobId) => _annules.contains(jobId)
+      ? SafeboxUploadFailure('CANCELLED')
+      : _pauses.contains(jobId)
+          ? _Pause()
+          : null;
+
   /// Les envois connus, du plus ancien au plus récent.
   List<SafeboxUploadJob> get jobs => List.unmodifiable(_jobs);
 
@@ -487,6 +505,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     switch (j.state) {
       case SafeboxUploadState.running:
         _pauses.add(jobId);
+        _couper(jobId);
       case SafeboxUploadState.queued || SafeboxUploadState.waitingNetwork:
         j.state = SafeboxUploadState.paused;
         await _sauver();
@@ -580,6 +599,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     final j = _jobs.where((x) => x.id == jobId).firstOrNull;
     if (j == null) return;
     _annules.add(jobId);
+    _couper(jobId);
     if (j.fileId != null) {
       try {
         await _transport.cancel(j.fileId!);
@@ -667,11 +687,14 @@ class SafeboxUploadManager extends ChangeNotifier {
   }
 
   /// Réessaie [action] après une erreur réseau, selon [networkRetries].
-  Future<T> _avecReprise<T>(Future<T> Function() action) async {
+  /// [arret] : une pause ou une annulation demandée, levée au lieu de réessayer.
+  Future<T> _avecReprise<T>(Future<T> Function() action, {Object? Function()? arret}) async {
     for (var essai = 0;; essai += 1) {
       try {
         return await action();
       } on TalkyException catch (e) {
+        final demande = arret?.call();
+        if (demande != null) throw demande;
         if (e.statusCode != 0) rethrow;
         if (essai >= networkRetries.length) throw _AttendreReseau();
         await _sleep(networkRetries[essai]);
@@ -797,6 +820,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     // commence ; ceux en cours finissent, puis l'arrêt remonte.
     final file = [...manquants];
     final enVol = <int, int>{};
+    final coupure = _coupures[job.id] = Completer<void>();
     Object? arret;
     StackTrace? pile;
     Future<void> ouvrier() async {
@@ -815,7 +839,7 @@ class SafeboxUploadManager extends ChangeNotifier {
             if (clair.length != plan.plainLength) throw SafeboxUploadFailure('SAFEBOX_SOURCE_CHANGED');
             final chiffre = await _encrypt(cle, clair, plan);
             if (arret != null) return;
-            await _envoyerUnBloc(job, n, chiffre, adresses, onProgress: (envoye) {
+            await _envoyerUnBloc(job, n, chiffre, adresses, cancel: coupure.future, onProgress: (envoye) {
               enVol[n] = envoye;
               job.inFlightBytes = enVol.values.fold(0, (s, v) => s + v);
               job.sampleSpeed();
@@ -830,7 +854,8 @@ class SafeboxUploadManager extends ChangeNotifier {
             notifyListeners();
           } catch (e, st) {
             enVol.remove(n);
-            arret ??= e;
+            // Un bloc coupé par la pause ou l'annulation : c'est elle qui remonte.
+            arret ??= _arretDemande(job.id) ?? e;
             pile ??= st;
           }
         }
@@ -839,9 +864,13 @@ class SafeboxUploadManager extends ChangeNotifier {
       }
     }
 
-    await Future.wait([
-      for (var i = 0; i < (parallelBlocks < 1 ? 1 : parallelBlocks) && i < manquants.length; i += 1) ouvrier(),
-    ]);
+    try {
+      await Future.wait([
+        for (var i = 0; i < (parallelBlocks < 1 ? 1 : parallelBlocks) && i < manquants.length; i += 1) ouvrier(),
+      ]);
+    } finally {
+      if (identical(_coupures[job.id], coupure)) _coupures.remove(job.id);
+    }
     job.inFlightBytes = 0;
     if (arret != null) Error.throwWithStackTrace(arret!, pile!);
   }
@@ -852,10 +881,15 @@ class SafeboxUploadManager extends ChangeNotifier {
     Uint8List chiffre,
     Map<int, String> adresses, {
     required void Function(int sent) onProgress,
+    Future<void>? cancel,
   }) async {
     for (var essai = 0;; essai += 1) {
       try {
-        await _avecReprise(() => _transport.putBlock(adresses[n]!, chiffre, onProgress: onProgress));
+        await _avecReprise(
+          () => _transport.putBlock(adresses[n]!, chiffre, onProgress: onProgress, cancel: cancel),
+          // Coupé exprès : pas de nouvel essai.
+          arret: () => _arretDemande(job.id),
+        );
         return;
       } on TalkyException catch (e) {
         // 403 : adresse expirée (24 h). Une nouvelle, une fois.

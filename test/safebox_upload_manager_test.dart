@@ -24,6 +24,9 @@ class _FauxServeur implements SafeboxTransport {
   /// Blocs en cours d'envoi, et le plus grand nombre vu en même temps.
   int enVol = 0;
   int enVolMax = 0;
+
+  /// Temps que met un bloc à partir.
+  Duration delai = const Duration(milliseconds: 20);
   TalkyException? erreurReserve;
   bool statusIntrouvable = false;
   int incompletUneFois = 0;
@@ -96,7 +99,7 @@ class _FauxServeur implements SafeboxTransport {
   }
 
   @override
-  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress}) async {
+  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress, Future<void>? cancel}) async {
     appels.add('put $url');
     if (erreursPut.isNotEmpty) throw erreursPut.removeAt(0);
     final parts = url.split(':');
@@ -112,8 +115,13 @@ class _FauxServeur implements SafeboxTransport {
     enVol += 1;
     if (enVol > enVolMax) enVolMax = enVol;
     // Le réseau prend son temps : les autres blocs ont le temps de partir.
-    await Future<void>.delayed(const Duration(milliseconds: 20));
+    final coupe = await Future.any([
+      Future<void>.delayed(delai).then((_) => false),
+      if (cancel != null) cancel.then((_) => true),
+    ]);
     enVol -= 1;
+    // Coupé par la pause ou l'annulation : comme une requête interrompue.
+    if (coupe) throw TalkyException('interrompu', 0);
     onProgress?.call(bytes.length);
     recus[id]!.add(n);
   }
@@ -382,6 +390,21 @@ void main() {
     expect(SafeboxUploadJob.fromJson(j.toJson()).quality, 'hd');
     // Un envoi préparé avant le 24/10/2026 n'en avait pas.
     expect(SafeboxUploadJob.fromJson(j.toJson()..remove('quality')).quality, isNull);
+  });
+
+  test('pause pendant un bloc lent : prise en compte tout de suite, sans nouvel essai', () async {
+    serveur.delai = const Duration(seconds: 30);
+    final m = gestionnaire();
+    await m.enqueue(await travail(), _cle);
+    await attendreEtat(m, SafeboxUploadState.running);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    final debut = DateTime.now();
+    await m.pause(m.jobs.single.id);
+    await attendreEtat(m, SafeboxUploadState.paused);
+    expect(DateTime.now().difference(debut), lessThan(const Duration(seconds: 2)),
+        reason: 'sans attendre la fin des blocs en vol');
+    expect(attentes, isEmpty, reason: 'une coupure voulue n\'est pas réessayée');
+    expect(serveur.recus[100], isEmpty);
   });
 
   test('pause : arrêt entre deux blocs, rien de perdu, puis reprise sans nouvelle réservation', () async {

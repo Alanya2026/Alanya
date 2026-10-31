@@ -329,12 +329,15 @@ extension SafeboxApi on TalkyApiClient {
 
   /// Envoie un bloc chiffré à son adresse signée. La taille est signée : un
   /// corps d'une autre taille est refusé par MEGA (403).
+  /// [cancel] : se complète pour couper l'envoi tout de suite (pause, annulation).
   Future<void> putSafeboxBlock(
     String url,
     Uint8List bytes, {
     void Function(int sent)? onProgress,
+    Future<void>? cancel,
   }) async {
     final guard = UploadStallGuard(stallTimeout: uploadStallTimeout);
+    unawaited(cancel?.then((_) => guard.abortNow()));
     final request = http.AbortableStreamedRequest('PUT', Uri.parse(url), abortTrigger: guard.abortTrigger);
     request.contentLength = bytes.length;
     const tranche = 64 * 1024;

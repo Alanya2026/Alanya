@@ -293,7 +293,7 @@ class _FauxTransport implements SafeboxTransport {
       (blocks: [for (final n in blocks) SafeboxSignedBlock(n: n, size: 0, url: 'blk:$fileId:$n')], preview: null);
 
   @override
-  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress}) async =>
+  Future<void> putBlock(String url, Uint8List bytes, {void Function(int sent)? onProgress, Future<void>? cancel}) async =>
       onProgress?.call(bytes.length);
 
   @override

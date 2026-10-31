@@ -34,6 +34,12 @@ class UploadStallGuard {
   /// L'envoi est terminé (réussi ou non) : plus rien à surveiller.
   void stop() => _timer?.cancel();
 
+  /// Coupe l'envoi tout de suite (pause ou annulation demandée).
+  void abortNow() {
+    _timer?.cancel();
+    if (!_abort.isCompleted) _abort.complete();
+  }
+
   void _arm() {
     _timer?.cancel();
     if (_abort.isCompleted) return;
