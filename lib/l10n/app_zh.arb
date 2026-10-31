@@ -2911,6 +2911,8 @@
   "safeboxCompressRemember": "记住我的选择",
   "safeboxSend": "上传",
   "safeboxPreparing": "正在准备…",
+  "safeboxPreparingFile": "{count, plural, other{正在准备 {count} 个文件…}}",
+  "safeboxCompressionFailed": "{count, plural, other{无法压缩 {count} 个文件（如「{name}」），将以原始质量发送。}}",
   "safeboxTransfers": "上传任务",
   "safeboxTransfersCount": "{count} 个上传任务进行中",
   "safeboxUploadQueued": "排队中",

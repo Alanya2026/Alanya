@@ -3,7 +3,6 @@
 //  un fichier du téléphone entre d'abord dans Partager (sur l'espace de
 //  l'expéditeur), puis part dans la discussion dès la fin de son envoi.
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +14,7 @@ import '../../core/utils/byte_format.dart';
 import '../../core/utils/safebox_share_payload.dart';
 import '../../talky_api_client.dart';
 import 'safebox_compression_sheet.dart';
+import 'safebox_file_picker.dart';
 import 'safebox_widgets.dart';
 
 /// Ouvre l'écran d'envoi. Rend le contenu du message à envoyer (fichier pris
@@ -45,6 +45,7 @@ Future<bool> sendPhoneFilesViaSafebox(
   if (racine == null) return false;
   final partager = SafeboxFolder(id: racine, parentId: null, root: SafeboxRoot.partager, name: null, depth: 0);
   final tri = c.triage(picks, partager);
+  forgetSafeboxPickCopies(tri.rejected.map((r) => r.pick));
   if (tri.rejected.isNotEmpty) {
     final r = tri.rejected.first;
     safeboxSnack(
@@ -64,16 +65,24 @@ Future<bool> sendPhoneFilesViaSafebox(
     conversationId: conversationId,
     send: true,
   );
-  if (qualite == null) return false;
+  if (qualite == null) {
+    forgetSafeboxPickCopies(tri.ok);
+    return false;
+  }
   // Plusieurs fichiers partent en un seul message, à la fin du dernier envoi (lot 9).
-  await c.addFiles(
+  final echecs = await c.addFiles(
     tri.ok,
     partager,
     quality: qualite,
     shareConversationId: conversationId,
     shareTitle: l10n.safeboxShareBatchTitle(tri.ok.length),
   );
-  if (context.mounted) safeboxSnack(context, l10n.safeboxShareQueued);
+  if (!context.mounted) return true;
+  safeboxSnack(
+    context,
+    echecs.isEmpty ? l10n.safeboxShareQueued : l10n.safeboxCompressionFailed(echecs.length, echecs.first),
+    error: echecs.isNotEmpty,
+  );
   return true;
 }
 
@@ -113,13 +122,15 @@ class _SafeboxSendScreenState extends State<SafeboxSendScreen> {
   /// Fichier du téléphone : déposé dans Partager, il partira dans la
   /// discussion à la fin de l'envoi.
   Future<void> _depuisLeTelephone() async {
-    final res = await FilePicker.platform.pickFiles(withData: false);
-    final f = res?.files.single;
-    if (f == null || f.path == null || !mounted) return;
+    final choisis = await pickSafeboxPhoneFiles(context, multiple: false);
+    if (choisis == null || choisis.isEmpty || !mounted) {
+      if (choisis != null) forgetSafeboxPickCopies(choisis);
+      return;
+    }
     final parti = await sendPhoneFilesViaSafebox(
       context,
       conversationId: widget.conversationId,
-      picks: [SafeboxPick(path: f.path!, name: f.name, size: f.size)],
+      picks: choisis,
     );
     if (parti && mounted) Navigator.pop(context);
   }

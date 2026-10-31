@@ -37,10 +37,25 @@ import 'safebox_upload_manager.dart';
 
 /// Un fichier choisi par l'inscrit, pas encore préparé.
 class SafeboxPick {
-  const SafeboxPick({required this.path, required this.name, required this.size});
+  const SafeboxPick({required this.path, required this.name, required this.size, this.temporary = false});
   final String path;
   final String name;
   final int size;
+
+  /// Une copie faite par l'application pour l'envoi (pas l'original du
+  /// téléphone) : effacée une fois envoyée, ou si l'envoi est abandonné.
+  final bool temporary;
+}
+
+/// Efface les copies faites pour des fichiers finalement pas envoyés.
+void forgetSafeboxPickCopies(Iterable<SafeboxPick> picks) {
+  for (final p in picks) {
+    if (!p.temporary) continue;
+    try {
+      final f = File(p.path);
+      if (f.existsSync()) f.deleteSync();
+    } catch (_) {}
+  }
 }
 
 /// Pourquoi un fichier choisi n'est pas parti.
@@ -421,7 +436,10 @@ class SafeboxController extends ChangeNotifier {
   /// Envoyés ensemble dans une discussion ([shareConversationId]), plusieurs
   /// fichiers y partent en un seul message, titré [shareTitle], quand le
   /// dernier est arrivé (lot 9).
-  Future<void> addFiles(
+  ///
+  /// Rend les noms des fichiers dont la compression a échoué : ils partent
+  /// en Original, et l'écran le dit.
+  Future<List<String>> addFiles(
     List<SafeboxPick> picks,
     SafeboxFolder folder, {
     required SafeboxQuality quality,
@@ -440,7 +458,7 @@ class SafeboxController extends ChangeNotifier {
       await _ecrireGroupes();
     }
     try {
-      await _preparer(picks, folder, prep, quality: quality, hevc: hevc, maxApercu: maxApercu,
+      return await _preparer(picks, folder, prep, quality: quality, hevc: hevc, maxApercu: maxApercu,
           shareConversationId: shareConversationId, shareGroup: groupe);
     } finally {
       if (groupe != null) {
@@ -450,7 +468,7 @@ class SafeboxController extends ChangeNotifier {
     }
   }
 
-  Future<void> _preparer(
+  Future<List<String>> _preparer(
     List<SafeboxPick> picks,
     SafeboxFolder folder,
     SafeboxMediaPrep prep, {
@@ -460,6 +478,7 @@ class SafeboxController extends ChangeNotifier {
     int? shareConversationId,
     String? shareGroup,
   }) async {
+    final echecs = <String>[];
     for (final pick in picks) {
       // L'empreinte de l'original : la sauvegarde automatique ne renverra pas
       // une photo déjà ajoutée à la main (lot 10).
@@ -479,8 +498,10 @@ class SafeboxController extends ChangeNotifier {
         shareConversationId: shareConversationId,
         shareGroup: shareGroup,
         sourceFp: empreinte,
+        onCompressionFailed: () => echecs.add(pick.name),
       );
     }
+    return echecs;
   }
 
   /// Prépare un fichier (compression, aperçu chiffré, détails) et le confie
@@ -498,20 +519,27 @@ class SafeboxController extends ChangeNotifier {
     bool wifiOnly = false,
     String? backupKey,
     String? source,
+    void Function()? onCompressionFailed,
   }) async {
     try {
       var chemin = pick.path;
       var nom = pick.name;
       var possede = false;
       final famille = familyOf(pick.name);
-      final c = await prep.compress(pick.path, pick.name, famille, quality, hevc: hevc);
+      final c = await prep.compress(pick.path, pick.name, famille, quality,
+          hevc: hevc, onFailure: (_) => onCompressionFailed?.call());
       if (c != null) {
         chemin = c.path;
         nom = c.name;
         possede = true;
+        // La compression a sa propre copie : celle du choix ne sert plus.
+        forgetSafeboxPickCopies([pick]);
       }
       final st = await File(chemin).stat();
-      if (st.size <= 0) return null;
+      if (st.size <= 0) {
+        forgetSafeboxPickCopies([pick]);
+        return null;
+      }
       final cle = safeboxNewFileKey();
       String? cheminApercu;
       var tailleApercu = 0;
@@ -533,7 +561,9 @@ class SafeboxController extends ChangeNotifier {
           sourcePath: chemin,
           sourceSize: st.size,
           sourceModifiedMs: st.modified.millisecondsSinceEpoch,
-          ownsSource: possede,
+          // Une copie (compression, ou faite au choix) part après l'envoi ;
+          // jamais l'original du téléphone.
+          ownsSource: possede || pick.temporary,
           plainSize: st.size,
           originalSize: possede ? pick.size : null,
           compressed: possede,
@@ -554,6 +584,8 @@ class SafeboxController extends ChangeNotifier {
       return id;
     } catch (e) {
       debugPrint('[Coffre] préparation de ${pick.name} impossible : $e');
+      // Rien n'est parti : la copie faite au choix ne sert plus.
+      if (!uploads.jobs.any((j) => j.sourcePath == pick.path)) forgetSafeboxPickCopies([pick]);
       return null;
     }
   }

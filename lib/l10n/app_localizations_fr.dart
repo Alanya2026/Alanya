@@ -9881,6 +9881,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxPreparing => 'Préparation…';
 
   @override
+  String safeboxPreparingFile(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Préparation des $count fichiers…',
+      one: 'Préparation du fichier…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCompressionFailed(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Compression impossible pour $count fichiers : ils partent en Original.',
+      one: 'Compression impossible pour « $name » : il part en Original.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get safeboxTransfers => 'Envois en cours';
 
   @override

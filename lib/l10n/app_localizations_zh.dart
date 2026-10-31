@@ -9258,6 +9258,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxPreparing => '正在准备…';
 
   @override
+  String safeboxPreparingFile(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '正在准备 $count 个文件…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCompressionFailed(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '无法压缩 $count 个文件（如「$name」），将以原始质量发送。',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get safeboxTransfers => '上传任务';
 
   @override

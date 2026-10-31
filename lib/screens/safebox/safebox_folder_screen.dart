@@ -30,12 +30,13 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_backup_screens.dart';
 import 'safebox_chat_picker.dart';
+import 'safebox_compression_sheet.dart';
 import 'safebox_download_sheet.dart';
+import 'safebox_file_picker.dart';
 import 'safebox_grid.dart';
+import 'safebox_move_picker.dart';
 import 'safebox_note_widgets.dart';
 import 'safebox_photo_screen.dart';
-import 'safebox_compression_sheet.dart';
-import 'safebox_move_picker.dart';
 import 'safebox_received_list.dart';
 import 'safebox_share_widgets.dart';
 import 'safebox_transfers_screen.dart';
@@ -258,13 +259,13 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
       SafeboxRoot.audios => FileType.audio,
       SafeboxRoot.documents || SafeboxRoot.albums || SafeboxRoot.partager => FileType.any,
     };
-    final res = await FilePicker.platform.pickFiles(allowMultiple: true, type: type, withData: false);
-    if (res == null || !mounted) return;
-    final choisis = [
-      for (final f in res.files)
-        if (f.path != null) SafeboxPick(path: f.path!, name: f.name, size: f.size),
-    ];
+    final choisis = await pickSafeboxPhoneFiles(context, type: type);
+    if (choisis == null || !mounted) {
+      if (choisis != null) forgetSafeboxPickCopies(choisis);
+      return;
+    }
     final tri = _c.triage(choisis, page.folder);
+    forgetSafeboxPickCopies(tri.rejected.map((r) => r.pick));
     if (tri.rejected.isNotEmpty) {
       final r = tri.rejected.first;
       final message = switch (r.reason) {
@@ -280,9 +281,15 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
 
     // Original, HD ou Compressé (décision du 24/10/2026), espace compris.
     final qualite = await askSafeboxQuality(context, picks: tri.ok, folder: page.folder);
-    if (qualite == null || !mounted) return;
+    if (qualite == null || !mounted) {
+      forgetSafeboxPickCopies(tri.ok);
+      return;
+    }
     safeboxSnack(context, l10n.safeboxPreparing);
-    await _c.addFiles(tri.ok, page.folder, quality: qualite);
+    final echecs = await _c.addFiles(tri.ok, page.folder, quality: qualite);
+    if (echecs.isNotEmpty && mounted) {
+      safeboxSnack(context, l10n.safeboxCompressionFailed(echecs.length, echecs.first), error: true);
+    }
   }
 
   // ── Fichiers ─────────────────────────────────────────────────────────────

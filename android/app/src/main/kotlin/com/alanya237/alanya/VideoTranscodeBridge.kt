@@ -192,9 +192,20 @@ object VideoTranscodeBridge {
         val effects = mutableListOf<Effect>()
         val w = facts["width"] as? Int
         val h = facts["height"] as? Int
-        // Jamais d'agrandissement : seule une vidéo plus grande est réduite.
-        if (w != null && h != null && minOf(w, h) > maxShortSide) {
-            effects += Presentation.createForShortSide(maxShortSide)
+        if (w != null && h != null && w > 0 && h > 0) {
+            // Dimensions à l'écran (une vidéo tournée de 90° a largeur et hauteur inversées).
+            val tournee = (facts["rotation"] as? Int ?: 0) % 180 != 0
+            val (ew, eh) = if (tournee) h to w else w to h
+            // Jamais d'agrandissement : seule une vidéo plus grande est réduite.
+            val echelle = minOf(1.0, maxShortSide.toDouble() / minOf(ew, eh))
+            // Multiples de 16 : l'encodeur H.265 du Galaxy S10 refuse une vidéo
+            // de 886 × 480 (ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED) et la
+            // compression était alors abandonnée. 886 devient 880, sans effet visible.
+            val cw = maxOf(16, (ew * echelle).toInt() / 16 * 16)
+            val ch = maxOf(16, (eh * echelle).toInt() / 16 * 16)
+            if (cw != ew || ch != eh) {
+                effects += Presentation.createForWidthAndHeight(cw, ch, Presentation.LAYOUT_STRETCH_TO_FIT)
+            }
         }
         val fps = facts["frameRate"] as? Double
         if (fps != null && fps > maxFrameRate + 0.5) {
@@ -262,6 +273,18 @@ object VideoTranscodeBridge {
                         exportException: ExportException,
                     ) {
                         Log.w(TAG, "conversion échouée (${exportException.errorCodeName}): ${exportException.message}")
+                        // L'encodeur H.265 refuse : un second essai en H.264, que
+                        // tous les téléphones savent faire.
+                        if (videoMime == MimeTypes.VIDEO_H265 && !answered) {
+                            running.remove(id)
+                            File(output).delete()
+                            answered = true
+                            val enH264 = mutableMapOf<Any?, Any?>()
+                            args?.forEach { (k, v) -> enH264[k] = v }
+                            enH264["videoMime"] = MimeTypes.VIDEO_H264
+                            mainHandler.post { transcode(context, enH264, result) }
+                            return
+                        }
                         finish { result.error("transcode_failed", exportException.errorCodeName, null) }
                     }
                 })
