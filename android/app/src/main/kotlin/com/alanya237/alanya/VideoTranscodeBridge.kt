@@ -239,6 +239,24 @@ object VideoTranscodeBridge {
                                 // consigne est tenue, le HEVC garde son avantage.
                                 .setBitrateMode(MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR)
                                 .setiFrameIntervalSeconds(iFrameSeconds)
+                                // Profil et niveau fixés : sinon Media3 reprend ceux de la
+                                // vidéo d'origine (« avc1.64001E », niveau 3.0, trop bas
+                                // pour 848 × 480 à 30 i/s, et absurde pour du H.265), et
+                                // l'encodeur refuse (ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED,
+                                // Galaxy S10, 31/10/2026). Le niveau 4.1 couvre le 1080p.
+                                .apply {
+                                    if (videoMime == MimeTypes.VIDEO_H265) {
+                                        setEncodingProfileLevel(
+                                            MediaCodecInfo.CodecProfileLevel.HEVCProfileMain,
+                                            MediaCodecInfo.CodecProfileLevel.HEVCMainTierLevel41,
+                                        )
+                                    } else {
+                                        setEncodingProfileLevel(
+                                            MediaCodecInfo.CodecProfileLevel.AVCProfileHigh,
+                                            MediaCodecInfo.CodecProfileLevel.AVCLevel41,
+                                        )
+                                    }
+                                }
                                 .build()
                         )
                         .setRequestedAudioEncoderSettings(

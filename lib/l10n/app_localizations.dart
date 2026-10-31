@@ -16558,6 +16558,12 @@ abstract class AppLocalizations {
   /// **'Annuler l\'envoi'**
   String get safeboxCancelUpload;
 
+  /// No description provided for @safeboxCancelUploadConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler l\'envoi de « {name} » ? Ce qui est déjà parti sera perdu.'**
+  String safeboxCancelUploadConfirm(String name);
+
   /// No description provided for @safeboxClearFinished.
   ///
   /// In fr, this message translates to:

@@ -2922,6 +2922,7 @@
   "safeboxUploadDone": "已添加到保险箱",
   "safeboxRetry": "重试",
   "safeboxCancelUpload": "取消上传",
+  "safeboxCancelUploadConfirm": "取消发送「{name}」？已发送的部分将丢失。",
   "safeboxClearFinished": "清除列表",
   "safeboxNoTransfers": "没有正在进行的上传",
   "safeboxWrongFamily": "此文件应放入“{folder}”。",

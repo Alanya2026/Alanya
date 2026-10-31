@@ -9835,6 +9835,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxCancelUpload => 'Cancel upload';
 
   @override
+  String safeboxCancelUploadConfirm(String name) {
+    return 'Cancel sending “$name”? What\'s already been sent will be lost.';
+  }
+
+  @override
   String get safeboxClearFinished => 'Clear list';
 
   @override
