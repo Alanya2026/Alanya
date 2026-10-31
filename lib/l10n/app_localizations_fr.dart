@@ -9956,6 +9956,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxCancelUpload => 'Annuler l\'envoi';
 
   @override
+  String safeboxCancelUploadConfirm(String name) {
+    return 'Annuler l\'envoi de « $name » ? Ce qui est déjà parti sera perdu.';
+  }
+
+  @override
   String get safeboxClearFinished => 'Effacer la liste';
 
   @override

@@ -8,6 +8,10 @@
 //  fichier choisi : 12 s d'attente sans rien à l'écran pour une vidéo de
 //  568 Mo, et la copie restait dans le cache.
 //
+//  Lire l'original demande l'autorisation de la galerie (celle de la
+//  sauvegarde automatique) : elle est demandée au premier choix
+//  ([askGalleryAccess]). Refusée, le fichier est copié comme avant.
+//
 //  Ailleurs qu'Android : file_picker, comme avant.
 
 import 'dart:io';
@@ -17,18 +21,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/services/safebox/safebox_backup.dart';
 import '../../core/services/safebox/safebox_controller.dart';
+import '../../core/services/safebox/safebox_device_media.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import 'safebox_widgets.dart';
 
 const _canal = MethodChannel('com.alanya/safebox_documents');
 
-/// Les fichiers choisis, ou null si l'inscrit renonce.
+/// Les fichiers choisis, ou null si l'inscrit renonce. [askGalleryAccess] :
+/// demander d'abord l'autorisation de la galerie, pour lire les photos,
+/// vidéos et audios sans les copier (inutile pour des documents).
 Future<List<SafeboxPick>?> pickSafeboxPhoneFiles(
   BuildContext context, {
   FileType type = FileType.any,
   bool multiple = true,
+  bool askGalleryAccess = true,
 }) async {
   if (!Platform.isAndroid) {
     final res = await FilePicker.platform.pickFiles(allowMultiple: multiple, type: type, withData: false);
@@ -37,6 +46,14 @@ Future<List<SafeboxPick>?> pickSafeboxPhoneFiles(
       for (final f in res.files)
         if (f.path != null) SafeboxPick(path: f.path!, name: f.name, size: f.size),
     ];
+  }
+  if (askGalleryAccess) {
+    final galerie = PhoneSafeboxDeviceSource();
+    try {
+      // Une seule fois : déjà accordée ou refusée pour de bon, rien ne s'affiche.
+      if (await galerie.access() == SafeboxMediaAccess.denied) await galerie.requestAccess();
+    } catch (_) {}
+    if (!context.mounted) return null;
   }
   final choisis = await _canal.invokeListMethod<Map<dynamic, dynamic>>('pickFiles', {
     'mimeTypes': switch (type) {

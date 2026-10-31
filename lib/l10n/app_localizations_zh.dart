@@ -9321,6 +9321,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxCancelUpload => '取消上传';
 
   @override
+  String safeboxCancelUploadConfirm(String name) {
+    return '取消发送「$name」？已发送的部分将丢失。';
+  }
+
+  @override
   String get safeboxClearFinished => '清除列表';
 
   @override

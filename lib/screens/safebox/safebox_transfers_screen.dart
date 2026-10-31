@@ -203,15 +203,27 @@ class _LigneEnvoi extends StatelessWidget {
         SafeboxUploadState.queued ||
         SafeboxUploadState.waitingNetwork ||
         SafeboxUploadState.waitingWifi =>
-          IconButton(
-            tooltip: l10n.safeboxPause,
-            icon: const Icon(Icons.pause_circle_outline),
-            onPressed: () => c.uploads.pause(job.id),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: l10n.safeboxPause,
+                icon: const Icon(Icons.pause_circle_outline),
+                onPressed: () => c.uploads.pause(job.id),
+              ),
+              _Annuler(job: job),
+            ],
           ),
-        SafeboxUploadState.paused => IconButton(
-            tooltip: l10n.safeboxResume,
-            icon: Icon(Icons.play_circle_outline, color: context.colors.primary),
-            onPressed: () => c.uploads.resume(job.id),
+        SafeboxUploadState.paused => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: l10n.safeboxResume,
+                icon: Icon(Icons.play_circle_outline, color: context.colors.primary),
+                onPressed: () => c.uploads.resume(job.id),
+              ),
+              _Annuler(job: job),
+            ],
           ),
         SafeboxUploadState.failed => Row(
             mainAxisSize: MainAxisSize.min,
@@ -221,6 +233,32 @@ class _LigneEnvoi extends StatelessWidget {
             ],
           ),
         SafeboxUploadState.completed => Icon(Icons.check_circle, color: context.semantic.success),
+      },
+    );
+  }
+}
+
+/// Annuler un envoi en cours, en attente ou en pause : après confirmation,
+/// pour ne pas perdre un gros envoi sur un faux geste. Le serveur libère
+/// l'espace réservé.
+class _Annuler extends StatelessWidget {
+  const _Annuler({required this.job});
+  final SafeboxUploadJob job;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return IconButton(
+      tooltip: l10n.safeboxCancelUpload,
+      icon: const Icon(Icons.close),
+      onPressed: () async {
+        final c = context.read<SafeboxController>();
+        final ok = await safeboxConfirm(
+          context,
+          message: l10n.safeboxCancelUploadConfirm(job.name),
+          action: l10n.safeboxCancelUpload,
+        );
+        if (ok) await c.uploads.cancel(job.id);
       },
     );
   }

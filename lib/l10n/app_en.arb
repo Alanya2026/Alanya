@@ -4007,6 +4007,7 @@
   "safeboxUploadDone": "Added to SafeBox",
   "safeboxRetry": "Retry",
   "safeboxCancelUpload": "Cancel upload",
+  "safeboxCancelUploadConfirm": "Cancel sending “{name}”? What's already been sent will be lost.",
   "safeboxClearFinished": "Clear list",
   "safeboxNoTransfers": "No uploads in progress",
   "safeboxWrongFamily": "This file belongs in \"{folder}\".",

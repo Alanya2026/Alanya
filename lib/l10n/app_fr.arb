@@ -5007,6 +5007,8 @@
   "safeboxUploadDone": "Ajouté au coffre",
   "safeboxRetry": "Réessayer",
   "safeboxCancelUpload": "Annuler l'envoi",
+  "safeboxCancelUploadConfirm": "Annuler l'envoi de « {name} » ? Ce qui est déjà parti sera perdu.",
+  "@safeboxCancelUploadConfirm": {"placeholders": {"name": {"type": "String"}}},
   "safeboxClearFinished": "Effacer la liste",
   "safeboxNoTransfers": "Aucun envoi en cours",
   "safeboxWrongFamily": "Ce fichier va dans « {folder} ».",

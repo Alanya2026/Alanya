@@ -259,7 +259,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
       SafeboxRoot.audios => FileType.audio,
       SafeboxRoot.documents || SafeboxRoot.albums || SafeboxRoot.partager => FileType.any,
     };
-    final choisis = await pickSafeboxPhoneFiles(context, type: type);
+    final choisis = await pickSafeboxPhoneFiles(context, type: type, askGalleryAccess: widget.root != SafeboxRoot.documents);
     if (choisis == null || !mounted) {
       if (choisis != null) forgetSafeboxPickCopies(choisis);
       return;
