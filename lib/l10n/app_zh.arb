@@ -529,6 +529,8 @@
   "chats": "聊天",
   "creating": "创建中…",
   "videoCall": "视频通话",
+  "switchToVideoCall": "切换为视频通话？",
+  "switchToVideoCallBody": "您的摄像头将开启。如果切换失败，音频通话仍会保持。",
   "unpin": "取消置顶",
   "micMuted": "麦克风已静音",
   "outgoingCalls": "去电",

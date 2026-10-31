@@ -543,6 +543,8 @@
   "chats": "Chats",
   "creating": "Creating...",
   "videoCall": "Video call",
+  "switchToVideoCall": "Switch to a video call?",
+  "switchToVideoCallBody": "Your camera will turn on. The audio call remains available if the transition fails.",
   "unpin": "Unpin",
   "micMuted": "Mic muted",
   "outgoingCalls": "Outgoing calls",

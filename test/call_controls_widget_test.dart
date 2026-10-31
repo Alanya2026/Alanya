@@ -66,6 +66,7 @@ void main() {
   group('CallControlBar — sortie audio accessible en vidéo (F3, T7)', () {
     Widget bar({
       required bool isVideo,
+      bool showCameraInAudio = false,
       CallAudioRoute route = CallAudioRoute.earpiece,
       List<CallAudioRoute> routes = const [
         CallAudioRoute.earpiece,
@@ -81,6 +82,7 @@ void main() {
           audioRoute: route,
           audioRoutes: routes,
           useVideoChrome: isVideo,
+          showCameraInAudio: showCameraInAudio,
           onMute: () {},
           onSpeaker: onSpeaker ?? () {},
           onCamera: () {},
@@ -93,6 +95,20 @@ void main() {
       expect(find.byIcon(Icons.bluetooth_audio), findsNothing);
       // L'écouteur est la sortie par défaut d'un appel voix.
       expect(find.byType(CallControlBar), findsOneWidget);
+    });
+
+    testWidgets('un appel audio peut afficher le bouton de passage en vidéo',
+        (tester) async {
+      await tester.pumpWidget(bar(
+        isVideo: false,
+        showCameraInAudio: true,
+      ));
+
+      expect(find.byIcon(Icons.videocam), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Passer à un appel vidéo ?'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('un casque Bluetooth se voit sur le bouton', (tester) async {

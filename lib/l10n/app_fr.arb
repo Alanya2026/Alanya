@@ -929,6 +929,8 @@
   "chats": "Discussions",
   "creating": "Création...",
   "videoCall": "Appel vidéo",
+  "switchToVideoCall": "Passer à un appel vidéo ?",
+  "switchToVideoCallBody": "Votre caméra sera activée. L'appel audio reste inchangé si la transition échoue.",
   "unpin": "Désépingler",
   "micMuted": "Micro coupé",
   "outgoingCalls": "Appels émis",

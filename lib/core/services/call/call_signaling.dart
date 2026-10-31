@@ -15,12 +15,16 @@ extension CallSignaling on CallService {
       final incomingCallerId = data['callerId']?.toString() ?? '';
       // Cold start via CallKit : l'utilisateur a déjà tapé « Accepter » avant que
       // l'offre WebRTC arrive — on attend l'offer avec status=incoming.
-      final waitingForOffer = _status == CallStatus.incoming && _pendingOffer == null;
-      final callerMatches = incomingCallerId.isNotEmpty &&
+      final waitingForOffer =
+          _status == CallStatus.incoming && _pendingOffer == null;
+      final callerMatches =
+          incomingCallerId.isNotEmpty &&
           (incomingCallerId == _remoteUserId?.toString() ||
-              (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId));
+              (_autoAnswerOnNextIncoming &&
+                  _autoAnswerCallerId == incomingCallerId));
       // Glare : les deux correspondent se appellent — basculer sortant → entrant.
-      final outgoingGlare = (_status == CallStatus.outgoing ||
+      final outgoingGlare =
+          (_status == CallStatus.outgoing ||
               _status == CallStatus.connecting) &&
           incomingCallerId.isNotEmpty &&
           incomingCallerId == _remoteUserId?.toString();
@@ -58,21 +62,29 @@ extension CallSignaling on CallService {
       // session précédente — ré-afficherait un écran/sonnerie fantôme.
       if (_isTerminalCallId(incomingCallId) ||
           await EndedCallRegistry.isEnded(incomingCallId)) {
-        debugPrint('[CallService] 🛡 incoming_call ignoré: callId=$incomingCallId déjà traité (terminal)');
+        debugPrint(
+          '[CallService] 🛡 incoming_call ignoré: callId=$incomingCallId déjà traité (terminal)',
+        );
         return;
       }
       if (_alreadyHandledIncomingCallId(incomingCallId)) {
-        debugPrint('[CallService] 🛡 incoming_call dupliqué ignoré: callId=$incomingCallId');
+        debugPrint(
+          '[CallService] 🛡 incoming_call dupliqué ignoré: callId=$incomingCallId',
+        );
         return;
       }
       final offer = data['offer'];
       if (offer is! Map || offer['sdp'] == null) {
-        debugPrint('[CallService] 🛡 incoming_call ignoré: offer absente/invalide');
+        debugPrint(
+          '[CallService] 🛡 incoming_call ignoré: offer absente/invalide',
+        );
         return;
       }
       _remoteUserId = int.tryParse(incomingCallerId);
       if (_remoteUserId == null) {
-        debugPrint('[CallService] 🛡 incoming_call ignoré: callerId non numérique');
+        debugPrint(
+          '[CallService] 🛡 incoming_call ignoré: callerId non numérique',
+        );
         return;
       }
       _remoteUserName = data['callerName'] as String?;
@@ -83,7 +95,9 @@ extension CallSignaling on CallService {
       _cancelAwaitingOfferTimeout();
       _adoptServerCallId(incomingCallId);
       _status = CallStatus.incoming;
-      debugPrint('[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo');
+      debugPrint(
+        '[CallService] !!Statut changé à INCOMING. Caller: $_remoteUserName ($_remoteUserId), Vidéo: $_isVideo',
+      );
 
       // Préchauffage : la sonnerie dure plusieurs secondes, autant s'en servir.
       //
@@ -112,8 +126,11 @@ extension CallSignaling on CallService {
       _armIncomingRingSafety();
       notify();
 
-      if (_autoAnswerOnNextIncoming && _autoAnswerCallerId == incomingCallerId) {
-        debugPrint('[CallService] ⚡ Auto-answer en 500ms (CallKit pré-accepté)');
+      if (_autoAnswerOnNextIncoming &&
+          _autoAnswerCallerId == incomingCallerId) {
+        debugPrint(
+          '[CallService] ⚡ Auto-answer en 500ms (CallKit pré-accepté)',
+        );
         _autoAnswerOnNextIncoming = false;
         _autoAnswerCallerId = null;
 
@@ -139,7 +156,9 @@ extension CallSignaling on CallService {
             'callId=$incomingCallId',
           );
         } else {
-          debugPrint('[CallService] 📲 CallKit depuis socket (app en arrière-plan)');
+          debugPrint(
+            '[CallService] 📲 CallKit depuis socket (app en arrière-plan)',
+          );
           unawaited(
             _callKit
                 .showIncoming(
@@ -151,8 +170,8 @@ extension CallSignaling on CallService {
                   silent: false,
                 )
                 .catchError((e) {
-              debugPrint('[CallService] ** CallKit showIncoming error: $e');
-            }),
+                  debugPrint('[CallService] ** CallKit showIncoming error: $e');
+                }),
           );
         }
       } else if (presentation ==
@@ -198,15 +217,19 @@ extension CallSignaling on CallService {
       // avant nous. On ne le découvrait jamais : le registre était interrogé
       // sur une clé que personne n'écrivait.
       if (await EndedCallRegistry.isEnded(serverCallId!)) {
-        debugPrint('[CallService] 🛡 call_ringing: $serverCallId déjà terminal → fin');
+        debugPrint(
+          '[CallService] 🛡 call_ringing: $serverCallId déjà terminal → fin',
+        );
         await notifyCallEndedFromExternal(callId: serverCallId);
         return;
       }
       if (!kIsWeb) {
-        unawaited(persistOutgoingSnapshot(
-          phase: 'connecting',
-          serverCallId: serverCallId,
-        ));
+        unawaited(
+          persistOutgoingSnapshot(
+            phase: 'connecting',
+            serverCallId: serverCallId,
+          ),
+        );
       }
     });
 
@@ -259,17 +282,21 @@ extension CallSignaling on CallService {
           );
           _adoptServerCallId(serverCallId);
         }
-        unawaited(persistOutgoingSnapshot(
-          phase: 'connected',
-          serverCallId: serverCallId,
-        ));
+        unawaited(
+          persistOutgoingSnapshot(
+            phase: 'connected',
+            serverCallId: serverCallId,
+          ),
+        );
         // UI « En cours » tout de suite ; CallKit setConnected en arrière-plan.
         notify();
         if (!kIsWeb) {
           await _markCallSessionConnected();
         }
       } catch (e) {
-        debugPrint('[CallService] ** Erreur handleAnswer: $e — teardown + notif du pair');
+        debugPrint(
+          '[CallService] ** Erreur handleAnswer: $e — teardown + notif du pair',
+        );
         // L'appel a été décroché mais la négociation locale échoue : on termine
         // proprement ET on prévient le pair (end_call), au lieu de juste repasser
         // idle — ce qui laissait fuiter CallSessionGuard / WebRTC / CallKit.
@@ -280,7 +307,9 @@ extension CallSignaling on CallService {
     // Appel rejeté par le destinataire
     _apiClient.onSocketEvent(SocketEvents.callRejected, (data) async {
       final callId = (data is Map ? data['callId'] : null)?.toString();
-      debugPrint('[CallService] 📞 Appel rejeté callId=$callId status=$_status');
+      debugPrint(
+        '[CallService] 📞 Appel rejeté callId=$callId status=$_status',
+      );
       // Même garde que call_busy / call_no_answer juste en dessous. Sans elle,
       // un refus tardif — celui d'une invitation en conférence que la couche
       // native poste en refus 1-à-1, par exemple — raccrochait l'appel en cours.
@@ -290,7 +319,9 @@ extension CallSignaling on CallService {
         currentCallId: _currentCallId,
         currentCallIdIsLocal: !_serverCallIdKnown,
       )) {
-        debugPrint('[CallService] 🛡 call_rejected ignoré: status=$_status callId=$callId');
+        debugPrint(
+          '[CallService] 🛡 call_rejected ignoré: status=$_status callId=$callId',
+        );
         return;
       }
       _markTerminalCallId(callId ?? _currentCallId);
@@ -299,12 +330,15 @@ extension CallSignaling on CallService {
 
     // Appel terminé par l'autre côté, ou stop multi-device (answered/rejected elsewhere).
     _apiClient.onSocketEvent(SocketEvents.callEnded, (data) async {
-      final map = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+      final map = data is Map
+          ? Map<String, dynamic>.from(data)
+          : <String, dynamic>{};
       // Adressé à un invité, il vise son invitation — l'identifiant que son
       // CallKit connaît —, pas la session.
       final callId = endedCallId(map);
       final reason = map['reason']?.toString();
-      final claimedElsewhere = reason == 'answered_elsewhere' ||
+      final claimedElsewhere =
+          reason == 'answered_elsewhere' ||
           reason == 'rejected_elsewhere' ||
           map['claimedByAnotherDevice'] == true ||
           map['claimedByAnotherDevice']?.toString() == 'true';
@@ -325,7 +359,9 @@ extension CallSignaling on CallService {
               callId == _currentCallId ||
               callId == _confSessionId ||
               callId == _groupRoomId)) {
-        debugPrint('[CallService] 🛡 call_ended elsewhere ignoré (média local actif)');
+        debugPrint(
+          '[CallService] 🛡 call_ended elsewhere ignoré (média local actif)',
+        );
         return;
       }
 
@@ -436,12 +472,12 @@ extension CallSignaling on CallService {
           currentCallId: _currentCallId,
           currentCallIdIsLocal: !_serverCallIdKnown,
         )) {
-          debugPrint('[CallService] 🛡 call_error $code ignoré: status=$_status');
+          debugPrint(
+            '[CallService] 🛡 call_error $code ignoré: status=$_status',
+          );
           return;
         }
-        _showTransientMessage(
-          LocaleController.instance.l10n.callFailed,
-        );
+        _showTransientMessage(LocaleController.instance.l10n.callFailed);
         await _terminateCall();
       }
     });
@@ -465,7 +501,9 @@ extension CallSignaling on CallService {
         currentCallId: _currentCallId,
         currentCallIdIsLocal: !_serverCallIdKnown,
       )) {
-        debugPrint('[CallService] 🛡 call_failed ignoré: status=$_status callId=$failedCallId');
+        debugPrint(
+          '[CallService] 🛡 call_failed ignoré: status=$_status callId=$failedCallId',
+        );
         return;
       }
       _cancelOutgoingTimeout();
@@ -480,7 +518,9 @@ extension CallSignaling on CallService {
       if (code == 'CALL_BLOCKED') {
         _showTransientMessage(LocaleController.instance.l10n.callImpossible);
       } else if (code == 'CALLER_BUSY') {
-        _showTransientMessage(LocaleController.instance.l10n.aCallIsAlreadyInProgress);
+        _showTransientMessage(
+          LocaleController.instance.l10n.aCallIsAlreadyInProgress,
+        );
       } else if (reason != null && reason.isNotEmpty) {
         _showTransientMessage(reason);
       } else {
@@ -581,12 +621,14 @@ extension CallSignaling on CallService {
       await _terminateCall();
 
       if (peerId == null) return;
-      unawaited(showVoicemailSheet(
-        peerUserId: peerId,
-        peerName: peerName,
-        conversationID: conversationID,
-        didRing: didRing,
-      ));
+      unawaited(
+        showVoicemailSheet(
+          peerUserId: peerId,
+          peerName: peerName,
+          conversationID: conversationID,
+          didRing: didRing,
+        ),
+      );
     });
 
     // Pas de réponse (timeout serveur sur un appel resté en sonnerie).
@@ -620,11 +662,48 @@ extension CallSignaling on CallService {
     });
 
     _apiClient.onSocketEvent(SocketEvents.callRejoinOffer, (data) async {
-      if (data is Map) await _handleCallRejoinOffer(Map<String, dynamic>.from(data));
+      if (data is Map)
+        await _handleCallRejoinOffer(Map<String, dynamic>.from(data));
     });
 
     _apiClient.onSocketEvent(SocketEvents.callRejoinAnswer, (data) async {
-      if (data is Map) await _handleCallRejoinAnswer(Map<String, dynamic>.from(data));
+      if (data is Map)
+        await _handleCallRejoinAnswer(Map<String, dynamic>.from(data));
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeOffer, (data) async {
+      if (data is Map) {
+        await _handleVideoUpgradeOffer(Map<String, dynamic>.from(data));
+      }
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeAnswer, (data) {
+      if (data is! Map ||
+          !_videoTransitionInFlight ||
+          _videoUpgradeAnswer == null ||
+          data['transitionId']?.toString() != _videoTransitionId ||
+          data['callId']?.toString() != _currentCallId) {
+        return;
+      }
+      final answer = data['answer'];
+      if (answer is! Map || answer['sdp'] is! String) return;
+      if (!_videoUpgradeAnswer!.isCompleted) {
+        _videoUpgradeAnswer!.complete(
+          RTCSessionDescription(
+            answer['sdp'] as String,
+            answer['type']?.toString() ?? 'answer',
+          ),
+        );
+      }
+    });
+
+    _apiClient.onSocketEvent(SocketEvents.callVideoUpgradeCommit, (data) {
+      if (data is Map &&
+          data['callId']?.toString() == _currentCallId &&
+          data['transitionId']?.toString() == _pendingRemoteVideoCommitId &&
+          data['peerId']?.toString() == _remoteUserId?.toString()) {
+        unawaited(_commitRemoteVideoUpgrade());
+      }
     });
 
     // ICE candidate 1-à-1
@@ -645,7 +724,9 @@ extension CallSignaling on CallService {
           ? data['generation'] as int
           : int.tryParse(data['generation']?.toString() ?? '');
       if (!_webrtc.acceptsIceGeneration(gen)) {
-        debugPrint('[CallService] 🛡 ice_candidate génération périmée gen=$gen');
+        debugPrint(
+          '[CallService] 🛡 ice_candidate génération périmée gen=$gen',
+        );
         return;
       }
       // `as String` non nullable levait ici sur un candidat sans chaîne — or
@@ -680,7 +761,9 @@ extension CallSignaling on CallService {
     _apiClient.onSocketEvent(SocketEvents.groupCallInvite, (data) {
       if (data is! Map) return;
       if (_status != CallStatus.idle) {
-        debugPrint('[CallService] 🛡 group_call_invite ignoré: status=$_status');
+        debugPrint(
+          '[CallService] 🛡 group_call_invite ignoré: status=$_status',
+        );
         return;
       }
       if (_isMeetingActive()) {
@@ -733,7 +816,9 @@ extension CallSignaling on CallService {
             '[CallService] 📲 CallKit natif Android groupe (socket ignoré pour UI)',
           );
         } else {
-          debugPrint('[CallService] 📲 CallKit groupe depuis socket (app en arrière-plan)');
+          debugPrint(
+            '[CallService] 📲 CallKit groupe depuis socket (app en arrière-plan)',
+          );
           unawaited(
             _callKit
                 .showIncoming(
@@ -746,8 +831,10 @@ extension CallSignaling on CallService {
                   silent: false,
                 )
                 .catchError((e) {
-              debugPrint('[CallService] ** CallKit group showIncoming error: $e');
-            }),
+                  debugPrint(
+                    '[CallService] ** CallKit group showIncoming error: $e',
+                  );
+                }),
           );
         }
       } else if (presentation ==
@@ -784,7 +871,9 @@ extension CallSignaling on CallService {
     // Liste des participants existants
     _apiClient.onSocketEvent(SocketEvents.groupParticipants, (data) {
       if (data is! Map) return;
-      final participants = (data['participants'] as List?)?.map((e) => e.toString()).toList() ?? [];
+      final participants =
+          (data['participants'] as List?)?.map((e) => e.toString()).toList() ??
+          [];
       _groupParticipants = participants;
       // Le serveur fait foi : qui n'y figure plus est parti pendant mon absence,
       // et son `group_user_left` s'est perdu avec ma socket.
@@ -793,7 +882,9 @@ extension CallSignaling on CallService {
         localIds: _groupRoster.keys.toList(),
         myId: _myRosterId,
       )) {
-        debugPrint('[CallService] roster purgé de $id (absent de group_participants)');
+        debugPrint(
+          '[CallService] roster purgé de $id (absent de group_participants)',
+        );
         _groupRoster.remove(id);
         _pendingGroupMedia.forget(id);
         _removeGroupPeer(id);
@@ -818,23 +909,26 @@ extension CallSignaling on CallService {
         if (_groupRoster.containsKey(id)) continue;
         final intId = int.tryParse(id);
         if (intId == null) continue;
-        _apiClient.getUserById(intId).then((u) {
-          final nom = (u['nom'] as String?) ?? '';
-          final pseudo = (u['pseudo'] as String?) ?? '';
-          _groupRoster[id] = GroupParticipantInfo(
-            id: id,
-            name: nom.isNotEmpty
-                ? nom
-                : (pseudo.isNotEmpty
-                    ? pseudo
-                    : LocaleController.instance.l10n.participantFallback),
-            photo: u['avatar_url'] as String?,
-          );
-          _applyPendingGroupStates(id);
-          notify();
-        }).catchError((e) {
-          debugPrint('[CallService] roster getUserById($id) failed: $e');
-        });
+        _apiClient
+            .getUserById(intId)
+            .then((u) {
+              final nom = (u['nom'] as String?) ?? '';
+              final pseudo = (u['pseudo'] as String?) ?? '';
+              _groupRoster[id] = GroupParticipantInfo(
+                id: id,
+                name: nom.isNotEmpty
+                    ? nom
+                    : (pseudo.isNotEmpty
+                          ? pseudo
+                          : LocaleController.instance.l10n.participantFallback),
+                photo: u['avatar_url'] as String?,
+              );
+              _applyPendingGroupStates(id);
+              notify();
+            })
+            .catchError((e) {
+              debugPrint('[CallService] roster getUserById($id) failed: $e');
+            });
       }
     });
 
@@ -903,7 +997,9 @@ extension CallSignaling on CallService {
       // pas tomber sur la marque de son départ.
       final inviteId = conferenceInviteId(data) ?? sessionId;
       if (_isTerminalCallId(inviteId)) {
-        debugPrint('[CallService] 🛡 call_conf_invite ignoré: invitation déjà soldée ($inviteId)');
+        debugPrint(
+          '[CallService] 🛡 call_conf_invite ignoré: invitation déjà soldée ($inviteId)',
+        );
         return;
       }
 
@@ -952,7 +1048,9 @@ extension CallSignaling on CallService {
 
         if (presentation == IncomingPresentationAction.showNativeCallKit) {
           if (_nativeAndroidHandlesIncomingCallUi) {
-            debugPrint('[CallService] 📲 CallKit natif Android (session à trois)');
+            debugPrint(
+              '[CallService] 📲 CallKit natif Android (session à trois)',
+            );
           } else {
             unawaited(
               _callKit
@@ -969,8 +1067,10 @@ extension CallSignaling on CallService {
                     silent: false,
                   )
                   .catchError((e) {
-                debugPrint('[CallService] ** CallKit conf showIncoming error: $e');
-              }),
+                    debugPrint(
+                      '[CallService] ** CallKit conf showIncoming error: $e',
+                    );
+                  }),
             );
           }
         } else if (presentation ==
@@ -980,7 +1080,9 @@ extension CallSignaling on CallService {
           _startFlutterIncomingRinging(inviteId);
         }
       } else {
-        debugPrint('[CallService] 🔀 call_conf_invite fusionné session=$sessionId');
+        debugPrint(
+          '[CallService] 🔀 call_conf_invite fusionné session=$sessionId',
+        );
         notify();
       }
     });
@@ -1033,7 +1135,9 @@ extension CallSignaling on CallService {
       // du gagnant avant son propre refus. Effacer le tour ici retirerait la
       // cible du transfert gagnant, et ce téléphone n'émettrait jamais le
       // call_conf_ready qui le déclenche.
-      if (addRejectedResetsRound(hasPendingInvitee: _confPendingInvitee != null)) {
+      if (addRejectedResetsRound(
+        hasPendingInvitee: _confPendingInvitee != null,
+      )) {
         _transferStatus = CallTransferStatus.cancelled;
         _isTransferInitiator = false;
         _transferTargetId = null;
@@ -1067,7 +1171,9 @@ extension CallSignaling on CallService {
           : int.tryParse(data['generation']?.toString() ?? '');
       final localGen = _groupPeerIceGeneration[fromUserId] ?? 0;
       if (gen != null && gen < localGen) {
-        debugPrint('[CallService] 🛡 group_answer gen périmée peer=$fromUserId');
+        debugPrint(
+          '[CallService] 🛡 group_answer gen périmée peer=$fromUserId',
+        );
         return;
       }
       final pc = _groupPeerConnections[fromUserId];
@@ -1112,7 +1218,7 @@ extension CallSignaling on CallService {
         debugPrint('[CallService] group addCandidate échoué $fromUserId: $e');
       }
     });
- 
+
     // Mute state 1-à-1 : l'autre participant a coupé/activé son micro
     _apiClient.onSocketEvent(SocketEvents.callMuteState, (data) {
       if (data is! Map) return;
@@ -1139,7 +1245,9 @@ extension CallSignaling on CallService {
       final userId = data['userId']?.toString();
       final isMuted = data['isMuted'] == true;
       if (userId == null) return;
-      debugPrint('[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted');
+      debugPrint(
+        '[CallService] 🎙 Group mute state: userId=$userId isMuted=$isMuted',
+      );
       // Un état reçu avant l'entrée de roster était perdu sans retour : le
       // serveur ne le réémet pas, et l'émetteur n'a aucun moyen de savoir
       // qu'on l'a jeté. On le garde de côté jusqu'à ce que le roster arrive.
@@ -1153,10 +1261,83 @@ extension CallSignaling on CallService {
       final userId = data['userId']?.toString();
       final isVideoOn = data['isVideoOn'] != false;
       if (userId == null) return;
-      debugPrint('[CallService] 📹 Group video state: userId=$userId isVideoOn=$isVideoOn');
+      debugPrint(
+        '[CallService] 📹 Group video state: userId=$userId isVideoOn=$isVideoOn',
+      );
       _pendingGroupMedia.recordVideoOn(userId, isVideoOn);
       _applyPendingGroupStates(userId);
     });
+  }
+
+  Future<void> _handleVideoUpgradeOffer(Map<String, dynamic> data) async {
+    if (!kCallAudioToVideoEnabled ||
+        _groupRoomId != null ||
+        _confSessionId != null ||
+        _status != CallStatus.connected ||
+        data['callId']?.toString() != _currentCallId ||
+        data['peerId']?.toString() != _remoteUserId?.toString()) {
+      return;
+    }
+    final transitionId = data['transitionId']?.toString();
+    final offer = data['offer'];
+    if (transitionId == null ||
+        transitionId.length < 8 ||
+        offer is! Map ||
+        offer['sdp'] is! String ||
+        _videoTransitionInFlight) {
+      return;
+    }
+
+    _videoTransitionInFlight = true;
+    _videoTransitionId = transitionId;
+    notify();
+    try {
+      await _webrtc.handleOffer(
+        RTCSessionDescription(
+          offer['sdp'] as String,
+          offer['type']?.toString() ?? 'offer',
+        ),
+      );
+      final answer = await _webrtc.createAnswer();
+      final sent = _apiClient.sendSocketEvent(
+        SocketEvents.callVideoUpgradeAnswer,
+        {
+          'targetUserId': _remoteUserId.toString(),
+          'callId': _currentCallId,
+          'transitionId': transitionId,
+          'answer': {'sdp': answer.sdp, 'type': answer.type},
+        },
+      );
+      if (!sent) throw StateError('Socket indisponible pour la réponse vidéo');
+      _pendingRemoteVideoCommitId = transitionId;
+    } catch (error) {
+      await _webrtc.rollbackNegotiation();
+      debugPrint('[CallService] ** offre audio → vidéo refusée: $error');
+    } finally {
+      _videoTransitionId = null;
+      _videoTransitionInFlight = false;
+      notify();
+    }
+  }
+
+  Future<void> _commitRemoteVideoUpgrade() async {
+    final transitionId = _pendingRemoteVideoCommitId;
+    if (transitionId == null ||
+        _status != CallStatus.connected ||
+        _remoteUserId == null) {
+      return;
+    }
+    _pendingRemoteVideoCommitId = null;
+    _isVideo = true;
+    _isVideoOn = false;
+    _isRemoteVideoOn = true;
+    await CallSessionGuard.instance.updateMode(SessionMode.video);
+    await _bindSessionRenderers();
+    _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
+      'toUserId': _remoteUserId,
+      'isVideoOn': false,
+    });
+    notify();
   }
 
   /// Applique à [userId] les états micro/caméra reçus, s'il est au roster.

@@ -34,14 +34,18 @@ class User {
   final String avatarUrl;
   final String bio;
   final int typeCompte;
+
   /// Genre de compte : 0 personnel, 1 business, 2 officiel (`users.account_type`).
   final int accountType;
+
   /// État de certification : 2 = vérifié (`users.verification_status`).
   final int verificationStatus;
+
   /// Fin de validité de la certification (`users.verified_until`).
   final String? verifiedUntil;
   final bool isOnline;
   final String lastSeen;
+
   /// Vrai si ce contact préféré a été ajouté par code QR (scan ou lien).
   /// Donnée de RELATION, pas d'identité — et nullable à dessein : null veut
   /// dire « la source ne portait pas cette information » (recherche,
@@ -126,67 +130,66 @@ class User {
   }
 
   factory User.fromJson(Map<String, dynamic> json) => User(
-        alanyaID: json['alanyaID'] ?? 0,
-        nom: json['nom'] ?? '',
-        pseudo: json['pseudo'] ?? '',
-        alanyaPhone: json['alanyaPhone'] ?? '',
-        email: json['email'] ?? '',
-        idPays: json['idPays'] ?? 10,
-        avatarUrl: normalizeAvatarUrl(json['avatar_url']?.toString()),
-        bio: json['bio']?.toString() ?? '',
-        typeCompte: json['type_compte'] ?? 0,
-        accountType: _asInt(json['account_type']) ?? 0,
-        verificationStatus: _asInt(json['verification_status']) ?? 0,
-        verifiedUntil: json['verified_until']?.toString(),
-        isOnline: json['is_online'] == 1 || json['is_online'] == true,
-        lastSeen: json['last_seen'] ?? '',
-        addedViaQr:
-            json.containsKey('addedVia') ? json['addedVia'] == 'qr' : null,
-        preferredAddedAt: json['addedAt'] != null
-            ? DateTime.tryParse(json['addedAt'].toString())
-            : null,
-        preferredNote: json.containsKey('addedNote')
-            ? (json['addedNote']?.toString() ?? '')
-            : null,
-        preferredName: json.containsKey('customName')
-            ? (json['customName']?.toString() ?? '')
-            : null,
-        genre: json['genre']?.toString(),
-        age: _asInt(json['age']),
-        anneeNaissance: _asInt(json['annee_naissance']),
-        ville: json['ville']?.toString(),
-        exclus: json['exclus'] == 1 || json['exclus'] == true,
-        excludeAt: json['exclude_at'],
-        excludeReason: json['exclude_reason'],
-        createdAt: json['created_at'],
-        paysLibelle: json['pays_libelle'],
-      );
+    alanyaID: json['alanyaID'] ?? 0,
+    nom: json['nom'] ?? '',
+    pseudo: json['pseudo'] ?? '',
+    alanyaPhone: json['alanyaPhone'] ?? '',
+    email: json['email'] ?? '',
+    idPays: json['idPays'] ?? 10,
+    avatarUrl: normalizeAvatarUrl(json['avatar_url']?.toString()),
+    bio: json['bio']?.toString() ?? '',
+    typeCompte: json['type_compte'] ?? 0,
+    accountType: _asInt(json['account_type']) ?? 0,
+    verificationStatus: _asInt(json['verification_status']) ?? 0,
+    verifiedUntil: json['verified_until']?.toString(),
+    isOnline: json['is_online'] == 1 || json['is_online'] == true,
+    lastSeen: json['last_seen'] ?? '',
+    addedViaQr: json.containsKey('addedVia') ? json['addedVia'] == 'qr' : null,
+    preferredAddedAt: json['addedAt'] != null
+        ? DateTime.tryParse(json['addedAt'].toString())
+        : null,
+    preferredNote: json.containsKey('addedNote')
+        ? (json['addedNote']?.toString() ?? '')
+        : null,
+    preferredName: json.containsKey('customName')
+        ? (json['customName']?.toString() ?? '')
+        : null,
+    genre: json['genre']?.toString(),
+    age: _asInt(json['age']),
+    anneeNaissance: _asInt(json['annee_naissance']),
+    ville: json['ville']?.toString(),
+    exclus: json['exclus'] == 1 || json['exclus'] == true,
+    excludeAt: json['exclude_at'],
+    excludeReason: json['exclude_reason'],
+    createdAt: json['created_at'],
+    paysLibelle: json['pays_libelle'],
+  );
 
   Map<String, dynamic> toJson() => {
-        'alanyaID': alanyaID,
-        'nom': nom,
-        'pseudo': pseudo,
-        'alanyaPhone': alanyaPhone,
-        'email': email,
-        'idPays': idPays,
-        'avatar_url': avatarUrl,
-        'bio': bio,
-        'type_compte': typeCompte,
-        'account_type': accountType,
-        'verification_status': verificationStatus,
-        if (verifiedUntil != null) 'verified_until': verifiedUntil,
-        'is_online': isOnline,
-        'last_seen': lastSeen,
-        'genre': genre,
-        'age': age,
-        'annee_naissance': anneeNaissance,
-        'ville': ville,
-        'pays_libelle': paysLibelle,
-        'exclus': exclus,
-        'exclude_at': excludeAt,
-        'exclude_reason': excludeReason,
-        'created_at': createdAt,
-      };
+    'alanyaID': alanyaID,
+    'nom': nom,
+    'pseudo': pseudo,
+    'alanyaPhone': alanyaPhone,
+    'email': email,
+    'idPays': idPays,
+    'avatar_url': avatarUrl,
+    'bio': bio,
+    'type_compte': typeCompte,
+    'account_type': accountType,
+    'verification_status': verificationStatus,
+    if (verifiedUntil != null) 'verified_until': verifiedUntil,
+    'is_online': isOnline,
+    'last_seen': lastSeen,
+    'genre': genre,
+    'age': age,
+    'annee_naissance': anneeNaissance,
+    'ville': ville,
+    'pays_libelle': paysLibelle,
+    'exclus': exclus,
+    'exclude_at': excludeAt,
+    'exclude_reason': excludeReason,
+    'created_at': createdAt,
+  };
 }
 
 // ── ACCOUNT LIFECYCLE ────────────────────────────────────────────────
@@ -258,33 +261,33 @@ class MyMediaItem {
   });
 
   factory MyMediaItem.fromJson(Map<String, dynamic> json) => MyMediaItem(
-        msgID: json['msgID'] is int
-            ? json['msgID'] as int
-            : int.tryParse(json['msgID']?.toString() ?? '') ?? 0,
-        conversationID: json['conversationID'] is int
-            ? json['conversationID'] as int
-            : int.tryParse(json['conversationID']?.toString() ?? '') ?? 0,
-        senderID: json['senderID'] is int
-            ? json['senderID'] as int
-            : int.tryParse(json['senderID']?.toString() ?? '') ?? 0,
-        senderName: json['senderName']?.toString(),
-        isMine: json['isMine'] == true,
-        type: json['type'] is int
-            ? json['type'] as int
-            : int.tryParse(json['type']?.toString() ?? '') ?? 0,
-        mediaUrl: json['mediaUrl']?.toString() ?? '',
-        mediaName: json['mediaName']?.toString(),
-        mediaThumb: json['mediaThumb']?.toString(),
-        mediaDuration: json['mediaDuration'] is int
-            ? json['mediaDuration'] as int
-            : int.tryParse(json['mediaDuration']?.toString() ?? ''),
-        mediaSize: json['mediaSize'] is int
-            ? json['mediaSize'] as int
-            : int.tryParse(json['mediaSize']?.toString() ?? ''),
-        sendAt: json['sendAt'] != null
-            ? DateTime.tryParse(json['sendAt'].toString())
-            : null,
-      );
+    msgID: json['msgID'] is int
+        ? json['msgID'] as int
+        : int.tryParse(json['msgID']?.toString() ?? '') ?? 0,
+    conversationID: json['conversationID'] is int
+        ? json['conversationID'] as int
+        : int.tryParse(json['conversationID']?.toString() ?? '') ?? 0,
+    senderID: json['senderID'] is int
+        ? json['senderID'] as int
+        : int.tryParse(json['senderID']?.toString() ?? '') ?? 0,
+    senderName: json['senderName']?.toString(),
+    isMine: json['isMine'] == true,
+    type: json['type'] is int
+        ? json['type'] as int
+        : int.tryParse(json['type']?.toString() ?? '') ?? 0,
+    mediaUrl: json['mediaUrl']?.toString() ?? '',
+    mediaName: json['mediaName']?.toString(),
+    mediaThumb: json['mediaThumb']?.toString(),
+    mediaDuration: json['mediaDuration'] is int
+        ? json['mediaDuration'] as int
+        : int.tryParse(json['mediaDuration']?.toString() ?? ''),
+    mediaSize: json['mediaSize'] is int
+        ? json['mediaSize'] as int
+        : int.tryParse(json['mediaSize']?.toString() ?? ''),
+    sendAt: json['sendAt'] != null
+        ? DateTime.tryParse(json['sendAt'].toString())
+        : null,
+  );
 
   bool get isImage => type == 1;
   bool get isVideo => type == 2;
@@ -309,15 +312,12 @@ class MyMediaPage {
     final raw = json['items'];
     final list = raw is List
         ? raw
-            .whereType<Map>()
-            .map((e) => MyMediaItem.fromJson(Map<String, dynamic>.from(e)))
-            .toList()
+              .whereType<Map>()
+              .map((e) => MyMediaItem.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
         : <MyMediaItem>[];
     final nc = json['nextCursor'];
-    return MyMediaPage(
-      items: list,
-      nextCursor: nc?.toString(),
-    );
+    return MyMediaPage(items: list, nextCursor: nc?.toString());
   }
 }
 
@@ -354,28 +354,28 @@ class PrivacyPrefs {
   });
 
   factory PrivacyPrefs.fromJson(Map<String, dynamic> json) => PrivacyPrefs(
-        lastSeenVisibility:
-            json['lastSeenVisibility']?.toString() ?? PrivacyVisibility.everyone,
-        onlineVisibility:
-            json['onlineVisibility']?.toString() ?? PrivacyVisibility.everyone,
-        readReceiptsEnabled: json['readReceiptsEnabled'] == true ||
-            json['readReceiptsEnabled'] == 1,
-        profilePhotoVisibility: json['profilePhotoVisibility']?.toString() ??
-            PrivacyVisibility.everyone,
-        addMePolicy:
-            json['addMePolicy']?.toString() ?? PrivacyVisibility.everyone,
-        previewMode:
-            json['previewMode']?.toString() ?? NotificationPreviewMode.full,
-      );
+    lastSeenVisibility:
+        json['lastSeenVisibility']?.toString() ?? PrivacyVisibility.everyone,
+    onlineVisibility:
+        json['onlineVisibility']?.toString() ?? PrivacyVisibility.everyone,
+    readReceiptsEnabled:
+        json['readReceiptsEnabled'] == true || json['readReceiptsEnabled'] == 1,
+    profilePhotoVisibility:
+        json['profilePhotoVisibility']?.toString() ??
+        PrivacyVisibility.everyone,
+    addMePolicy: json['addMePolicy']?.toString() ?? PrivacyVisibility.everyone,
+    previewMode:
+        json['previewMode']?.toString() ?? NotificationPreviewMode.full,
+  );
 
   Map<String, dynamic> toJson() => {
-        'lastSeenVisibility': lastSeenVisibility,
-        'onlineVisibility': onlineVisibility,
-        'readReceiptsEnabled': readReceiptsEnabled,
-        'profilePhotoVisibility': profilePhotoVisibility,
-        'addMePolicy': addMePolicy,
-        'previewMode': previewMode,
-      };
+    'lastSeenVisibility': lastSeenVisibility,
+    'onlineVisibility': onlineVisibility,
+    'readReceiptsEnabled': readReceiptsEnabled,
+    'profilePhotoVisibility': profilePhotoVisibility,
+    'addMePolicy': addMePolicy,
+    'previewMode': previewMode,
+  };
 
   PrivacyPrefs copyWith({
     String? lastSeenVisibility,
@@ -384,16 +384,15 @@ class PrivacyPrefs {
     String? profilePhotoVisibility,
     String? addMePolicy,
     String? previewMode,
-  }) =>
-      PrivacyPrefs(
-        lastSeenVisibility: lastSeenVisibility ?? this.lastSeenVisibility,
-        onlineVisibility: onlineVisibility ?? this.onlineVisibility,
-        readReceiptsEnabled: readReceiptsEnabled ?? this.readReceiptsEnabled,
-        profilePhotoVisibility:
-            profilePhotoVisibility ?? this.profilePhotoVisibility,
-        addMePolicy: addMePolicy ?? this.addMePolicy,
-        previewMode: previewMode ?? this.previewMode,
-      );
+  }) => PrivacyPrefs(
+    lastSeenVisibility: lastSeenVisibility ?? this.lastSeenVisibility,
+    onlineVisibility: onlineVisibility ?? this.onlineVisibility,
+    readReceiptsEnabled: readReceiptsEnabled ?? this.readReceiptsEnabled,
+    profilePhotoVisibility:
+        profilePhotoVisibility ?? this.profilePhotoVisibility,
+    addMePolicy: addMePolicy ?? this.addMePolicy,
+    previewMode: previewMode ?? this.previewMode,
+  );
 }
 
 // ── APP SETTINGS ─────────────────────────────────────────────────────
@@ -425,27 +424,24 @@ class AppSettings {
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
-        themeMode: json['themeMode']?.toString() ?? AppThemeMode.system,
-        locale: json['locale']?.toString() ?? 'fr',
-        playbackSpeedVoice:
-            _toDouble(json['playbackSpeedVoice'], fallback: 1.0),
-        playbackSpeedVideo:
-            _toDouble(json['playbackSpeedVideo'], fallback: 1.0),
-        playbackSpeedMusic:
-            _toDouble(json['playbackSpeedMusic'], fallback: 1.0),
-        reduceMotion: json['reduceMotion'] == true || json['reduceMotion'] == 1,
-        fontScale: _toDouble(json['fontScale'], fallback: 1.0),
-      );
+    themeMode: json['themeMode']?.toString() ?? AppThemeMode.system,
+    locale: json['locale']?.toString() ?? 'fr',
+    playbackSpeedVoice: _toDouble(json['playbackSpeedVoice'], fallback: 1.0),
+    playbackSpeedVideo: _toDouble(json['playbackSpeedVideo'], fallback: 1.0),
+    playbackSpeedMusic: _toDouble(json['playbackSpeedMusic'], fallback: 1.0),
+    reduceMotion: json['reduceMotion'] == true || json['reduceMotion'] == 1,
+    fontScale: _toDouble(json['fontScale'], fallback: 1.0),
+  );
 
   Map<String, dynamic> toJson() => {
-        'themeMode': themeMode,
-        'locale': locale,
-        'playbackSpeedVoice': playbackSpeedVoice,
-        'playbackSpeedVideo': playbackSpeedVideo,
-        'playbackSpeedMusic': playbackSpeedMusic,
-        'reduceMotion': reduceMotion,
-        'fontScale': fontScale,
-      };
+    'themeMode': themeMode,
+    'locale': locale,
+    'playbackSpeedVoice': playbackSpeedVoice,
+    'playbackSpeedVideo': playbackSpeedVideo,
+    'playbackSpeedMusic': playbackSpeedMusic,
+    'reduceMotion': reduceMotion,
+    'fontScale': fontScale,
+  };
 
   AppSettings copyWith({
     String? themeMode,
@@ -455,16 +451,15 @@ class AppSettings {
     double? playbackSpeedMusic,
     bool? reduceMotion,
     double? fontScale,
-  }) =>
-      AppSettings(
-        themeMode: themeMode ?? this.themeMode,
-        locale: locale ?? this.locale,
-        playbackSpeedVoice: playbackSpeedVoice ?? this.playbackSpeedVoice,
-        playbackSpeedVideo: playbackSpeedVideo ?? this.playbackSpeedVideo,
-        playbackSpeedMusic: playbackSpeedMusic ?? this.playbackSpeedMusic,
-        reduceMotion: reduceMotion ?? this.reduceMotion,
-        fontScale: fontScale ?? this.fontScale,
-      );
+  }) => AppSettings(
+    themeMode: themeMode ?? this.themeMode,
+    locale: locale ?? this.locale,
+    playbackSpeedVoice: playbackSpeedVoice ?? this.playbackSpeedVoice,
+    playbackSpeedVideo: playbackSpeedVideo ?? this.playbackSpeedVideo,
+    playbackSpeedMusic: playbackSpeedMusic ?? this.playbackSpeedMusic,
+    reduceMotion: reduceMotion ?? this.reduceMotion,
+    fontScale: fontScale ?? this.fontScale,
+  );
 }
 
 double _toDouble(dynamic value, {required double fallback}) {
@@ -489,20 +484,20 @@ class DndSchedule {
   });
 
   factory DndSchedule.fromJson(Map<String, dynamic> json) => DndSchedule(
-        enabled: json['enabled'] == true || json['enabled'] == 1,
-        startTime: json['startTime']?.toString() ?? '22:00',
-        endTime: json['endTime']?.toString() ?? '07:00',
-        daysBitmask: json['daysBitmask'] is int
-            ? json['daysBitmask'] as int
-            : int.tryParse(json['daysBitmask']?.toString() ?? '') ?? 127,
-      );
+    enabled: json['enabled'] == true || json['enabled'] == 1,
+    startTime: json['startTime']?.toString() ?? '22:00',
+    endTime: json['endTime']?.toString() ?? '07:00',
+    daysBitmask: json['daysBitmask'] is int
+        ? json['daysBitmask'] as int
+        : int.tryParse(json['daysBitmask']?.toString() ?? '') ?? 127,
+  );
 
   Map<String, dynamic> toJson() => {
-        'enabled': enabled,
-        'startTime': startTime,
-        'endTime': endTime,
-        'daysBitmask': daysBitmask,
-      };
+    'enabled': enabled,
+    'startTime': startTime,
+    'endTime': endTime,
+    'daysBitmask': daysBitmask,
+  };
 
   bool isDayEnabled(int mondayBasedIndex) {
     if (mondayBasedIndex < 0 || mondayBasedIndex > 6) return false;
@@ -514,13 +509,12 @@ class DndSchedule {
     String? startTime,
     String? endTime,
     int? daysBitmask,
-  }) =>
-      DndSchedule(
-        enabled: enabled ?? this.enabled,
-        startTime: startTime ?? this.startTime,
-        endTime: endTime ?? this.endTime,
-        daysBitmask: daysBitmask ?? this.daysBitmask,
-      );
+  }) => DndSchedule(
+    enabled: enabled ?? this.enabled,
+    startTime: startTime ?? this.startTime,
+    endTime: endTime ?? this.endTime,
+    daysBitmask: daysBitmask ?? this.daysBitmask,
+  );
 }
 
 // ── RÉPONDEUR ────────────────────────────────────────────────────────
@@ -560,16 +554,16 @@ class VoicemailSlot {
   });
 
   factory VoicemailSlot.fromJson(Map<String, dynamic> json) => VoicemailSlot(
-        dayBit: int.tryParse(json['dayBit']?.toString() ?? '') ?? 0,
-        startTime: json['startTime']?.toString() ?? '00:00',
-        endTime: json['endTime']?.toString() ?? '00:00',
-      );
+    dayBit: int.tryParse(json['dayBit']?.toString() ?? '') ?? 0,
+    startTime: json['startTime']?.toString() ?? '00:00',
+    endTime: json['endTime']?.toString() ?? '00:00',
+  );
 
   Map<String, dynamic> toJson() => {
-        'dayBit': dayBit,
-        'startTime': startTime,
-        'endTime': endTime,
-      };
+    'dayBit': dayBit,
+    'startTime': startTime,
+    'endTime': endTime,
+  };
 
   VoicemailSlot copyWith({int? dayBit, String? startTime, String? endTime}) =>
       VoicemailSlot(
@@ -663,26 +657,30 @@ class VoicemailSchedule {
     return int.tryParse(value.toString());
   }
 
-  factory VoicemailSchedule.fromJson(Map<String, dynamic> json) =>
-      VoicemailSchedule(
-        enabled: json['enabled'] == true || json['enabled'] == 1,
-        slots: (json['slots'] as List?)
-                ?.map((e) => VoicemailSlot.fromJson(Map<String, dynamic>.from(e as Map)))
-                .toList() ??
-            const [],
-        untilAt: _parseUtc(json['untilAt']),
-        noAnswerEnabled:
-            json['noAnswerEnabled'] == true || json['noAnswerEnabled'] == 1,
-        greetingUrl: json['greetingUrl']?.toString(),
-        greetingSeconds: _parseInt(json['greetingSeconds']),
-        maxSlotsPerDay: _parseInt(json['maxSlotsPerDay']) ?? 3,
-        timezone: json['timezone']?.toString(),
-        bypassListId: _parseInt(json['bypassListId']),
-        active: json['active'] == true || json['active'] == 1,
-        activeUntil: _parseUtc(json['activeUntil']),
-        resolvedTimezone:
-            json['resolvedTimezone']?.toString() ?? 'Africa/Douala',
-      );
+  factory VoicemailSchedule.fromJson(
+    Map<String, dynamic> json,
+  ) => VoicemailSchedule(
+    enabled: json['enabled'] == true || json['enabled'] == 1,
+    slots:
+        (json['slots'] as List?)
+            ?.map(
+              (e) =>
+                  VoicemailSlot.fromJson(Map<String, dynamic>.from(e as Map)),
+            )
+            .toList() ??
+        const [],
+    untilAt: _parseUtc(json['untilAt']),
+    noAnswerEnabled:
+        json['noAnswerEnabled'] == true || json['noAnswerEnabled'] == 1,
+    greetingUrl: json['greetingUrl']?.toString(),
+    greetingSeconds: _parseInt(json['greetingSeconds']),
+    maxSlotsPerDay: _parseInt(json['maxSlotsPerDay']) ?? 3,
+    timezone: json['timezone']?.toString(),
+    bypassListId: _parseInt(json['bypassListId']),
+    active: json['active'] == true || json['active'] == 1,
+    activeUntil: _parseUtc(json['activeUntil']),
+    resolvedTimezone: json['resolvedTimezone']?.toString() ?? 'Africa/Douala',
+  );
 
   /// Les plages d'un jour, triées par heure de début.
   List<VoicemailSlot> slotsForDay(int dayBit) =>
@@ -714,18 +712,18 @@ class VoicemailSchedule {
 
   @override
   int get hashCode => Object.hash(
-        enabled,
-        Object.hashAll(slots),
-        untilAt,
-        noAnswerEnabled,
-        greetingUrl,
-        greetingSeconds,
-        timezone,
-        bypassListId,
-        active,
-        activeUntil,
-        resolvedTimezone,
-      );
+    enabled,
+    Object.hashAll(slots),
+    untilAt,
+    noAnswerEnabled,
+    greetingUrl,
+    greetingSeconds,
+    timezone,
+    bypassListId,
+    active,
+    activeUntil,
+    resolvedTimezone,
+  );
 }
 
 // ── EXPORT JOB ───────────────────────────────────────────────────────
@@ -770,15 +768,16 @@ class ExportJob {
     final jobId = json['jobId'] is int
         ? json['jobId'] as int
         : int.tryParse(json['jobId']?.toString() ?? '') ??
-            int.tryParse(json['id']?.toString() ?? '') ??
-            0;
+              int.tryParse(json['id']?.toString() ?? '') ??
+              0;
     final status = json['status']?.toString() ?? ExportJobStatus.pending;
     return ExportJob(
       jobId: jobId,
       status: status,
-      includeMessages: json['includeMessages'] == true ||
-          json['includeMessages'] == 1,
-      errorMessage: json['errorMessage']?.toString() ?? json['error']?.toString(),
+      includeMessages:
+          json['includeMessages'] == true || json['includeMessages'] == 1,
+      errorMessage:
+          json['errorMessage']?.toString() ?? json['error']?.toString(),
       expiresAt: _parseDateTime(json['expiresAt']),
       createdAt: _parseDateTime(json['createdAt']),
       completedAt: _parseDateTime(json['completedAt']),
@@ -808,10 +807,10 @@ class Pays {
   });
 
   factory Pays.fromJson(Map<String, dynamic> json) => Pays(
-        idPays: json['idPays'] ?? 0,
-        libelle: json['libelle'] ?? '',
-        prefix: json['prefix'] ?? '',
-      );
+    idPays: json['idPays'] ?? 0,
+    libelle: json['libelle'] ?? '',
+    prefix: json['prefix'] ?? '',
+  );
 }
 
 // ── MESSAGE ──────────────────────────────────────────────────────────
@@ -829,11 +828,14 @@ class Message {
   final String sendAt;
   final String? deliveredAt;
   final String? readAt;
+
   /// Instant (horloge de l'expéditeur) où il a appuyé sur LocaleController.instance.l10n.commonSend.
   final String? clickSentAt;
+
   /// Fuseau horaire de l'expéditeur (pays enregistré), renvoyé par le
   /// serveur — dérivé via jointure, jamais capturé ni stocké par message.
   final String? messageTz;
+
   /// Décalage horaire (heures) du pays de l'expéditeur, pour un affichage
   /// direct type "UTC+1" sans interpréter [messageTz].
   final int? messageTzOffset;
@@ -891,47 +893,47 @@ class Message {
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
-        msgID: json['msgID'] ?? 0,
-        senderID: json['senderID'] ?? 0,
-        conversationID: json['conversationID'] ?? 0,
-        content: json['content'],
-        type: json['type'] ?? 0,
-        status: json['status'] ?? 1,
-        sendAt: json['sendAt'] ?? '',
-        deliveredAt: json['deliveredAt'],
-        readAt: json['readAt'],
-        clickSentAt: json['clickSentAt'],
-        messageTz: json['messageTz'],
-        messageTzOffset: json['messageTzOffset'] is int
-            ? json['messageTzOffset'] as int
-            : int.tryParse(json['messageTzOffset']?.toString() ?? ''),
-        mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
-        mediaName: json['mediaName'],
-        mediaDuration: json['mediaDuration'],
-        mediaSize: json['mediaSize'] is int
-            ? json['mediaSize'] as int
-            : int.tryParse(json['mediaSize']?.toString() ?? ''),
-        mediaPageCount: json['mediaPageCount'] is int
-            ? json['mediaPageCount'] as int
-            : int.tryParse(json['mediaPageCount']?.toString() ?? ''),
-        replyToID: json['replyToID'],
-        replyToContent: json['replyToContent'],
-        isEdited: json['isEdited'] == 1 || json['isEdited'] == true,
-        editedAt: json['editedAt'],
-        isDeleted: json['isDeleted'] == 1 || json['isDeleted'] == true,
-        deletedForID: json['deletedForID'] is int
-            ? json['deletedForID'] as int
-            : (json['deletedForID'] == null
-                ? null
-                : int.tryParse(json['deletedForID'].toString())),
-        isStatusReply: json['isStatusReply'] ?? 0,
-        isForwarded: json['isForwarded'] == 1 || json['isForwarded'] == true,
-        isPinned: json['isPinned'] == 1 || json['isPinned'] == true,
-        isViewOnce: json['isViewOnce'] == 1 || json['isViewOnce'] == true,
-        senderNom: json['sender_nom'],
-        senderPseudo: json['sender_pseudo'],
-        senderAvatar: normalizeBackendUrl(json['sender_avatar']?.toString()),
-      );
+    msgID: json['msgID'] ?? 0,
+    senderID: json['senderID'] ?? 0,
+    conversationID: json['conversationID'] ?? 0,
+    content: json['content'],
+    type: json['type'] ?? 0,
+    status: json['status'] ?? 1,
+    sendAt: json['sendAt'] ?? '',
+    deliveredAt: json['deliveredAt'],
+    readAt: json['readAt'],
+    clickSentAt: json['clickSentAt'],
+    messageTz: json['messageTz'],
+    messageTzOffset: json['messageTzOffset'] is int
+        ? json['messageTzOffset'] as int
+        : int.tryParse(json['messageTzOffset']?.toString() ?? ''),
+    mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
+    mediaName: json['mediaName'],
+    mediaDuration: json['mediaDuration'],
+    mediaSize: json['mediaSize'] is int
+        ? json['mediaSize'] as int
+        : int.tryParse(json['mediaSize']?.toString() ?? ''),
+    mediaPageCount: json['mediaPageCount'] is int
+        ? json['mediaPageCount'] as int
+        : int.tryParse(json['mediaPageCount']?.toString() ?? ''),
+    replyToID: json['replyToID'],
+    replyToContent: json['replyToContent'],
+    isEdited: json['isEdited'] == 1 || json['isEdited'] == true,
+    editedAt: json['editedAt'],
+    isDeleted: json['isDeleted'] == 1 || json['isDeleted'] == true,
+    deletedForID: json['deletedForID'] is int
+        ? json['deletedForID'] as int
+        : (json['deletedForID'] == null
+              ? null
+              : int.tryParse(json['deletedForID'].toString())),
+    isStatusReply: json['isStatusReply'] ?? 0,
+    isForwarded: json['isForwarded'] == 1 || json['isForwarded'] == true,
+    isPinned: json['isPinned'] == 1 || json['isPinned'] == true,
+    isViewOnce: json['isViewOnce'] == 1 || json['isViewOnce'] == true,
+    senderNom: json['sender_nom'],
+    senderPseudo: json['sender_pseudo'],
+    senderAvatar: normalizeBackendUrl(json['sender_avatar']?.toString()),
+  );
 
   // Texte affiché dans le résumé de conversation
   String get displayContent {
@@ -954,11 +956,16 @@ class Message {
     if (content != null && content!.isNotEmpty) return content!;
     if (mediaName != null) return mediaName!;
     switch (type) {
-      case 1: return LocaleController.instance.l10n.photo;
-      case 2: return LocaleController.instance.l10n.video;
-      case 3: return LocaleController.instance.l10n.audio;
-      case 4: return LocaleController.instance.l10n.file;
-      default: return '';
+      case 1:
+        return LocaleController.instance.l10n.photo;
+      case 2:
+        return LocaleController.instance.l10n.video;
+      case 3:
+        return LocaleController.instance.l10n.audio;
+      case 4:
+        return LocaleController.instance.l10n.file;
+      default:
+        return '';
     }
   }
 }
@@ -985,7 +992,8 @@ class MessageReaction {
     this.userPseudo,
   });
 
-  factory MessageReaction.fromJson(Map<String, dynamic> json) => MessageReaction(
+  factory MessageReaction.fromJson(Map<String, dynamic> json) =>
+      MessageReaction(
         msgID: json['msgID'] is int
             ? json['msgID'] as int
             : int.tryParse(json['msgID']?.toString() ?? '') ?? 0,
@@ -1045,16 +1053,16 @@ class Participant {
   /// Le serveur aplatit le rôle dans l'objet utilisateur (`attachParticipants`),
   /// il n'y a donc pas d'objet imbriqué à déballer.
   factory Participant.fromJson(Map<String, dynamic> json) => Participant(
-        user: User.fromJson(json),
-        role: (json['role'] as num?)?.toInt() ?? GroupRole.member,
-        joinedAt: json['joinedAt']?.toString(),
-      );
+    user: User.fromJson(json),
+    role: (json['role'] as num?)?.toInt() ?? GroupRole.member,
+    joinedAt: json['joinedAt']?.toString(),
+  );
 
   Map<String, dynamic> toJson() => {
-        ...user.toJson(),
-        'role': role,
-        if (joinedAt != null) 'joinedAt': joinedAt,
-      };
+    ...user.toJson(),
+    'role': role,
+    if (joinedAt != null) 'joinedAt': joinedAt,
+  };
 }
 
 class Conversation {
@@ -1083,8 +1091,10 @@ class Conversation {
   final String? mutedUntil;
   final bool muteForever;
   final bool mentionsOnly;
+
   /// msgID système en attente d'ack « Rester » (null = bannière absente).
   final int? myPendingJoinMsgID;
+
   /// Borne d'historique pour le viewer (ISO) — null = historique complet.
   final String? myHistoryCutoffAt;
   // Jointure participants
@@ -1122,36 +1132,37 @@ class Conversation {
   static bool _flag(dynamic v) => v == 1 || v == true || v == '1';
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
-        conversID: json['conversID'] ?? 0,
-        isGroup: _flag(json['isGroup']),
-        groupName: json['GroupName'],
-        groupPhoto: normalizeBackendUrl(json['groupPhoto']?.toString()),
-        description: json['description'],
-        createdBy: (json['createdBy'] as num?)?.toInt(),
-        lastMessage: json['lastMessage'],
-        lastMessageAt: json['lastMessageAt'],
-        lastMessageSenderID: json['lastMessageSenderID'],
-        lastMessageType: json['lastMessageType'],
-        lastMessageStatus: json['lastMessageStatus'],
-        updatedAt: json['updatedAt']?.toString(),
-        onlyAdminsCanSend: _flag(json['onlyAdminsCanSend']),
-        onlyAdminsCanEditInfo: _flag(json['onlyAdminsCanEditInfo']),
-        hideHistoryForNewMembers: _flag(json['hideHistoryForNewMembers']),
-        onlyAdminsCanAddMembers: _flag(json['onlyAdminsCanAddMembers']),
-        unreadCount: json['unreadCount'] ?? 0,
-        isPinned: _flag(json['isPinned']),
-        isArchived: _flag(json['isArchived']),
-        myRole: (json['myRole'] as num?)?.toInt() ?? GroupRole.member,
-        mutedUntil: json['mutedUntil']?.toString(),
-        muteForever: _flag(json['muteForever']),
-        mentionsOnly: _flag(json['mentionsOnly']),
-        myPendingJoinMsgID: (json['myPendingJoinMsgID'] as num?)?.toInt(),
-        myHistoryCutoffAt: json['myHistoryCutoffAt']?.toString(),
-        participants: (json['participants'] as List?)
-                ?.map((e) => Participant.fromJson(e as Map<String, dynamic>))
-                .toList() ??
-            [],
-      );
+    conversID: json['conversID'] ?? 0,
+    isGroup: _flag(json['isGroup']),
+    groupName: json['GroupName'],
+    groupPhoto: normalizeBackendUrl(json['groupPhoto']?.toString()),
+    description: json['description'],
+    createdBy: (json['createdBy'] as num?)?.toInt(),
+    lastMessage: json['lastMessage'],
+    lastMessageAt: json['lastMessageAt'],
+    lastMessageSenderID: json['lastMessageSenderID'],
+    lastMessageType: json['lastMessageType'],
+    lastMessageStatus: json['lastMessageStatus'],
+    updatedAt: json['updatedAt']?.toString(),
+    onlyAdminsCanSend: _flag(json['onlyAdminsCanSend']),
+    onlyAdminsCanEditInfo: _flag(json['onlyAdminsCanEditInfo']),
+    hideHistoryForNewMembers: _flag(json['hideHistoryForNewMembers']),
+    onlyAdminsCanAddMembers: _flag(json['onlyAdminsCanAddMembers']),
+    unreadCount: json['unreadCount'] ?? 0,
+    isPinned: _flag(json['isPinned']),
+    isArchived: _flag(json['isArchived']),
+    myRole: (json['myRole'] as num?)?.toInt() ?? GroupRole.member,
+    mutedUntil: json['mutedUntil']?.toString(),
+    muteForever: _flag(json['muteForever']),
+    mentionsOnly: _flag(json['mentionsOnly']),
+    myPendingJoinMsgID: (json['myPendingJoinMsgID'] as num?)?.toInt(),
+    myHistoryCutoffAt: json['myHistoryCutoffAt']?.toString(),
+    participants:
+        (json['participants'] as List?)
+            ?.map((e) => Participant.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+  );
 
   bool get iAmAdmin => myRole >= GroupRole.admin;
   bool get iAmOwner => myRole == GroupRole.owner;
@@ -1204,14 +1215,14 @@ class Conversation {
 // type: 0=audio, 1=vidéo
 
 class Call {
-  final int idCall;        // IDcall en DB
+  final int idCall; // IDcall en DB
   final int idCaller;
   final int idReceiver;
-  final int type;          // 0=audio, 1=vidéo
-  final int status;        // 0=en cours,1=terminé,2=rejeté,3=manqué
+  final int type; // 0=audio, 1=vidéo
+  final int status; // 0=en cours,1=terminé,2=rejeté,3=manqué
   final String createdAt;
   final String? startTime;
-  final int? duree;        // en secondes
+  final int? duree; // en secondes
   // Jointure users
   final User? caller;
   final User? receiver;
@@ -1230,35 +1241,35 @@ class Call {
   });
 
   factory Call.fromJson(Map<String, dynamic> json) => Call(
-        idCall: json['IDcall'] ?? json['idCall'] ?? 0,
-        idCaller: json['idCaller'] ?? 0,
-        idReceiver: json['idReceiver'] ?? 0,
-        type: json['type'] ?? 0,
-        status: json['status'] ?? 0,
-        createdAt: json['created_at'] ?? '',
-        startTime: json['start_time'],
-        duree: json['duree'],
-        caller: json['caller_nom'] != null
-            ? User.fromJson({
-                'alanyaID': json['idCaller'],
-                'nom': json['caller_nom'],
-                'pseudo': json['caller_pseudo'] ?? '',
-                'avatar_url': json['caller_avatar'] ?? '',
-                'alanyaPhone': '',
-                'email': '',
-              })
-            : null,
-        receiver: json['receiver_nom'] != null
-            ? User.fromJson({
-                'alanyaID': json['idReceiver'],
-                'nom': json['receiver_nom'],
-                'pseudo': json['receiver_pseudo'] ?? '',
-                'avatar_url': json['receiver_avatar'] ?? '',
-                'alanyaPhone': '',
-                'email': '',
-              })
-            : null,
-      );
+    idCall: json['IDcall'] ?? json['idCall'] ?? 0,
+    idCaller: json['idCaller'] ?? 0,
+    idReceiver: json['idReceiver'] ?? 0,
+    type: json['type'] ?? 0,
+    status: json['status'] ?? 0,
+    createdAt: json['created_at'] ?? '',
+    startTime: json['start_time'],
+    duree: json['duree'],
+    caller: json['caller_nom'] != null
+        ? User.fromJson({
+            'alanyaID': json['idCaller'],
+            'nom': json['caller_nom'],
+            'pseudo': json['caller_pseudo'] ?? '',
+            'avatar_url': json['caller_avatar'] ?? '',
+            'alanyaPhone': '',
+            'email': '',
+          })
+        : null,
+    receiver: json['receiver_nom'] != null
+        ? User.fromJson({
+            'alanyaID': json['idReceiver'],
+            'nom': json['receiver_nom'],
+            'pseudo': json['receiver_pseudo'] ?? '',
+            'avatar_url': json['receiver_avatar'] ?? '',
+            'alanyaPhone': '',
+            'email': '',
+          })
+        : null,
+  );
 
   bool get isVideo => type == 1;
 
@@ -1283,10 +1294,14 @@ class Call {
     switch (status) {
       // 0 annonçait « En cours » — sur des lignes vieilles de plusieurs mois,
       // faute d'être jamais reclassées. C'est un appel resté sans réponse.
-      case 0: return LocaleController.instance.l10n.noAnswer2;
-      case 1: return LocaleController.instance.l10n.ended2;
-      case 2: return LocaleController.instance.l10n.rejected;
-      case 3: return LocaleController.instance.l10n.missed;
+      case 0:
+        return LocaleController.instance.l10n.noAnswer2;
+      case 1:
+        return LocaleController.instance.l10n.ended2;
+      case 2:
+        return LocaleController.instance.l10n.rejected;
+      case 3:
+        return LocaleController.instance.l10n.missed;
       // 4 et 5 : renvoyé au répondeur. Ce n'est pas « manqué » — dans un cas le
       // téléphone n'a jamais sonné, dans l'autre l'appel a trouvé son
       // répondeur. Le journal dit la même chose des deux : ce qui les sépare
@@ -1295,7 +1310,8 @@ class Call {
       case 4:
       case 5:
         return LocaleController.instance.l10n.voicemailCallStatus;
-      default: return '';
+      default:
+        return '';
     }
   }
 
@@ -1315,12 +1331,12 @@ class Call {
 class Meeting {
   final int idMeeting;
   final int idOrganiser;
-  final String startTime;  // start_time en DB
-  final int duree;         // en minutes
-  final String objet;      // titre de la réunion
-  final String room;       // code de la room
+  final String startTime; // start_time en DB
+  final int duree; // en minutes
+  final String objet; // titre de la réunion
+  final String room; // code de la room
   final bool isEnd;
-  final int typeMedia;     // 0=audio+vidéo, 1=audio only
+  final int typeMedia; // 0=audio+vidéo, 1=audio only
   final bool reminderSent;
   // Jointure
   final String? organiserNom;
@@ -1345,28 +1361,30 @@ class Meeting {
   });
 
   factory Meeting.fromJson(Map<String, dynamic> json) => Meeting(
-        idMeeting: json['idMeeting'] ?? 0,
-        idOrganiser: json['idOrganiser'] ?? 0,
-        startTime: json['start_time'] ?? '',
-        duree: json['duree'] ?? 60,
-        objet: json['objet'] ?? LocaleController.instance.l10n.meeting,
-        room: json['room'] ?? '',
-        isEnd: json['isEnd'] == 1 || json['isEnd'] == true,
-        typeMedia: json['type_media'] ?? 0,
-        reminderSent: json['reminder_sent'] == 1 || json['reminder_sent'] == true,
-        organiserNom: json['organiser_nom'],
-        organiserPseudo: json['organiser_pseudo'],
-        organiserAvatar: normalizeBackendUrl(json['organiser_avatar']?.toString()),
-        participants: (json['participants'] as List?)
-                ?.map((e) => MeetingParticipant.fromJson(e as Map<String, dynamic>))
-                .toList() ??
-            [],
-      );
+    idMeeting: json['idMeeting'] ?? 0,
+    idOrganiser: json['idOrganiser'] ?? 0,
+    startTime: json['start_time'] ?? '',
+    duree: json['duree'] ?? 60,
+    objet: json['objet'] ?? LocaleController.instance.l10n.meeting,
+    room: json['room'] ?? '',
+    isEnd: json['isEnd'] == 1 || json['isEnd'] == true,
+    typeMedia: json['type_media'] ?? 0,
+    reminderSent: json['reminder_sent'] == 1 || json['reminder_sent'] == true,
+    organiserNom: json['organiser_nom'],
+    organiserPseudo: json['organiser_pseudo'],
+    organiserAvatar: normalizeBackendUrl(json['organiser_avatar']?.toString()),
+    participants:
+        (json['participants'] as List?)
+            ?.map((e) => MeetingParticipant.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        [],
+  );
 
   DateTime get startDateTime {
     final dt = DateTime.tryParse(startTime) ?? DateTime.now();
     return dt.isUtc ? dt.toLocal() : dt;
   }
+
   DateTime get endDateTime => startDateTime.add(Duration(minutes: duree));
   bool get isToday {
     final now = DateTime.now();
@@ -1378,7 +1396,8 @@ class Meeting {
 class MeetingParticipant {
   final int idMeeting;
   final int participantID; // IDparticipant en DB
-  final int status;        // 0=invité jamais rejoint, 1=a rejoint au moins une fois, 2=inutilisé
+  final int
+  status; // 0=invité jamais rejoint, 1=a rejoint au moins une fois, 2=inutilisé
   final bool connecte;
   final int duree;
   // Jointure users
@@ -1386,8 +1405,7 @@ class MeetingParticipant {
 
   /// Nom à afficher (cf. [User.displayName]) ; null comme [nom] et [pseudo]
   /// quand le serveur n'a fourni ni l'un ni l'autre.
-  String? get displayNom =>
-      ContactAliases.of(participantID) ?? nom ?? pseudo;
+  String? get displayNom => ContactAliases.of(participantID) ?? nom ?? pseudo;
   final String? pseudo;
   final String? avatarUrl;
   final bool? isOnline;
@@ -1471,27 +1489,27 @@ class Statut {
   });
 
   factory Statut.fromJson(Map<String, dynamic> json) => Statut(
-        id: json['ID'] ?? 0,
-        alanyaID: json['alanyaID'] ?? 0,
-        type: json['type'] ?? 0,
-        text: json['text'],
-        textEn: json['text_en'] ?? json['textEn'],
-        mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
-        mediaDurationMs: json['mediaDurationMs'],
-        backgroundColor: json['backgroundColor'],
-        createdAt: json['createdAt'] ?? '',
-        expiredAt: json['expiredAt'] ?? '',
-        viewedBy: json['viewedBy'] ?? 0,
-        likedBy: json['likedBy'] ?? 0,
-        likedByMe: json['likedByMe'] == 1 || json['likedByMe'] == true,
-        seenByMe: json['seenByMe'] == 1 || json['seenByMe'] == true,
-        nom: json['nom'],
-        pseudo: json['pseudo'],
-        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
-        isOnline: json['is_online'] == 1 || json['is_online'] == true,
-        accountType: _asInt(json['account_type']),
-        verificationStatus: _asInt(json['verification_status']),
-      );
+    id: json['ID'] ?? 0,
+    alanyaID: json['alanyaID'] ?? 0,
+    type: json['type'] ?? 0,
+    text: json['text'],
+    textEn: json['text_en'] ?? json['textEn'],
+    mediaUrl: normalizeBackendUrl(json['mediaUrl']?.toString()),
+    mediaDurationMs: json['mediaDurationMs'],
+    backgroundColor: json['backgroundColor'],
+    createdAt: json['createdAt'] ?? '',
+    expiredAt: json['expiredAt'] ?? '',
+    viewedBy: json['viewedBy'] ?? 0,
+    likedBy: json['likedBy'] ?? 0,
+    likedByMe: json['likedByMe'] == 1 || json['likedByMe'] == true,
+    seenByMe: json['seenByMe'] == 1 || json['seenByMe'] == true,
+    nom: json['nom'],
+    pseudo: json['pseudo'],
+    avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
+    isOnline: json['is_online'] == 1 || json['is_online'] == true,
+    accountType: _asInt(json['account_type']),
+    verificationStatus: _asInt(json['verification_status']),
+  );
 
   bool get isExpired =>
       DateTime.now().isAfter(DateTime.tryParse(expiredAt) ?? DateTime.now());
@@ -1511,29 +1529,28 @@ class Statut {
     int? likedBy,
     bool? likedByMe,
     bool? seenByMe,
-  }) =>
-      Statut(
-        id: id,
-        alanyaID: alanyaID,
-        type: type,
-        text: text,
-        textEn: textEn,
-        mediaUrl: mediaUrl,
-        mediaDurationMs: mediaDurationMs,
-        backgroundColor: backgroundColor,
-        createdAt: createdAt,
-        expiredAt: expiredAt,
-        viewedBy: viewedBy ?? this.viewedBy,
-        likedBy: likedBy ?? this.likedBy,
-        likedByMe: likedByMe ?? this.likedByMe,
-        seenByMe: seenByMe ?? this.seenByMe,
-        nom: nom,
-        pseudo: pseudo,
-        avatarUrl: avatarUrl,
-        isOnline: isOnline,
-        accountType: accountType,
-        verificationStatus: verificationStatus,
-      );
+  }) => Statut(
+    id: id,
+    alanyaID: alanyaID,
+    type: type,
+    text: text,
+    textEn: textEn,
+    mediaUrl: mediaUrl,
+    mediaDurationMs: mediaDurationMs,
+    backgroundColor: backgroundColor,
+    createdAt: createdAt,
+    expiredAt: expiredAt,
+    viewedBy: viewedBy ?? this.viewedBy,
+    likedBy: likedBy ?? this.likedBy,
+    likedByMe: likedByMe ?? this.likedByMe,
+    seenByMe: seenByMe ?? this.seenByMe,
+    nom: nom,
+    pseudo: pseudo,
+    avatarUrl: avatarUrl,
+    isOnline: isOnline,
+    accountType: accountType,
+    verificationStatus: verificationStatus,
+  );
 }
 
 // ── STATUT_VIEW (qui a vu/liké un statut) ─────────────────────────
@@ -1563,26 +1580,26 @@ class StatutView {
   });
 
   factory StatutView.fromJson(Map<String, dynamic> json) => StatutView(
-        statutID: json['statutID'] ?? 0,
-        alanyaID: json['alanyaID'] ?? 0,
-        nom: json['nom'] ?? '',
-        pseudo: json['pseudo'] ?? '',
-        avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
-        seenAt: json['seenAt'] ?? '',
-        liked: json['liked'] == 1 || json['liked'] == true,
-        likedAt: json['likedAt'],
-      );
+    statutID: json['statutID'] ?? 0,
+    alanyaID: json['alanyaID'] ?? 0,
+    nom: json['nom'] ?? '',
+    pseudo: json['pseudo'] ?? '',
+    avatarUrl: normalizeBackendUrl(json['avatar_url']?.toString()),
+    seenAt: json['seenAt'] ?? '',
+    liked: json['liked'] == 1 || json['liked'] == true,
+    likedAt: json['likedAt'],
+  );
 
   StatutView copyWith({bool? liked, String? likedAt}) => StatutView(
-        statutID: statutID,
-        alanyaID: alanyaID,
-        nom: nom,
-        pseudo: pseudo,
-        avatarUrl: avatarUrl,
-        seenAt: seenAt,
-        liked: liked ?? this.liked,
-        likedAt: likedAt ?? this.likedAt,
-      );
+    statutID: statutID,
+    alanyaID: alanyaID,
+    nom: nom,
+    pseudo: pseudo,
+    avatarUrl: avatarUrl,
+    seenAt: seenAt,
+    liked: liked ?? this.liked,
+    likedAt: likedAt ?? this.likedAt,
+  );
 }
 
 // ── PREFERRED CONTACT ────────────────────────────────────────────────
@@ -1702,45 +1719,46 @@ class ContactList {
   });
 
   factory ContactList.fromJson(Map<String, dynamic> json) => ContactList(
-        idList: (json['idList'] as num?)?.toInt() ?? 0,
-        name: json['name']?.toString() ?? '',
-        kind: _nullableContactListKind(json['kind']),
-        color: (json['color']?.toString().isEmpty ?? true)
-            ? null
-            : json['color'].toString(),
-        memberLimit: (json['memberLimit'] as num?)?.toInt(),
-        memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
-        messageSoundType: _nonEmpty(json['messageSoundType']),
-        messageSoundId: _nonEmpty(json['messageSoundId']),
-        messageSoundName: _nonEmpty(json['messageSoundName']),
-        callSoundType: _nonEmpty(json['callSoundType']),
-        callSoundId: _nonEmpty(json['callSoundId']),
-        callSoundName: _nonEmpty(json['callSoundName']),
-        messageSoundUrl: _nonEmpty(json['messageSoundUrl']),
-        callSoundUrl: _nonEmpty(json['callSoundUrl']),
-        soundPriority: (json['soundPriority'] as num?)?.toInt(),
-        soundSyncSupported: json.containsKey('messageSoundType') ||
-            json.containsKey('callSoundType') ||
-            json.containsKey('soundPriority'),
-      );
+    idList: (json['idList'] as num?)?.toInt() ?? 0,
+    name: json['name']?.toString() ?? '',
+    kind: _nullableContactListKind(json['kind']),
+    color: (json['color']?.toString().isEmpty ?? true)
+        ? null
+        : json['color'].toString(),
+    memberLimit: (json['memberLimit'] as num?)?.toInt(),
+    memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+    messageSoundType: _nonEmpty(json['messageSoundType']),
+    messageSoundId: _nonEmpty(json['messageSoundId']),
+    messageSoundName: _nonEmpty(json['messageSoundName']),
+    callSoundType: _nonEmpty(json['callSoundType']),
+    callSoundId: _nonEmpty(json['callSoundId']),
+    callSoundName: _nonEmpty(json['callSoundName']),
+    messageSoundUrl: _nonEmpty(json['messageSoundUrl']),
+    callSoundUrl: _nonEmpty(json['callSoundUrl']),
+    soundPriority: (json['soundPriority'] as num?)?.toInt(),
+    soundSyncSupported:
+        json.containsKey('messageSoundType') ||
+        json.containsKey('callSoundType') ||
+        json.containsKey('soundPriority'),
+  );
 
   Map<String, dynamic> toJson() => {
-        'idList': idList,
-        'name': name,
-        'kind': kind,
-        'color': color,
-        'memberLimit': memberLimit,
-        'memberCount': memberCount,
-        'messageSoundType': messageSoundType,
-        'messageSoundId': messageSoundId,
-        'messageSoundName': messageSoundName,
-        'callSoundType': callSoundType,
-        'callSoundId': callSoundId,
-        'callSoundName': callSoundName,
-        'messageSoundUrl': messageSoundUrl,
-        'callSoundUrl': callSoundUrl,
-        'soundPriority': soundPriority,
-      };
+    'idList': idList,
+    'name': name,
+    'kind': kind,
+    'color': color,
+    'memberLimit': memberLimit,
+    'memberCount': memberCount,
+    'messageSoundType': messageSoundType,
+    'messageSoundId': messageSoundId,
+    'messageSoundName': messageSoundName,
+    'callSoundType': callSoundType,
+    'callSoundId': callSoundId,
+    'callSoundName': callSoundName,
+    'messageSoundUrl': messageSoundUrl,
+    'callSoundUrl': callSoundUrl,
+    'soundPriority': soundPriority,
+  };
 }
 
 String? _nonEmpty(dynamic raw) {
@@ -1944,8 +1962,7 @@ class Trip {
   /// Heure à laquelle le cercle sera prévenu si rien n'est confirmé. C'est la
   /// phrase du contrat affichée au départ — jamais déduite, toujours calculée
   /// à partir des valeurs que le serveur a figées dans le trajet.
-  DateTime? get alertAt =>
-      etaAt?.add(Duration(minutes: graceMinutes));
+  DateTime? get alertAt => etaAt?.add(Duration(minutes: graceMinutes));
 
   factory Trip.fromJson(Map<String, dynamic> json, {bool? isOwner}) {
     final dest = json['destination'];
@@ -1968,26 +1985,31 @@ class Trip {
       stale: json['stale'] == true,
       startedAt:
           DateTime.tryParse(json['startedAt']?.toString() ?? '')?.toLocal() ??
-              DateTime.now(),
-      alertedAt:
-          DateTime.tryParse(json['alertedAt']?.toString() ?? '')?.toLocal(),
-      closedAt: DateTime.tryParse(json['closedAt']?.toString() ?? '')?.toLocal(),
+          DateTime.now(),
+      alertedAt: DateTime.tryParse(
+        json['alertedAt']?.toString() ?? '',
+      )?.toLocal(),
+      closedAt: DateTime.tryParse(
+        json['closedAt']?.toString() ?? '',
+      )?.toLocal(),
       closeReason: json['closeReason']?.toString(),
       isOwner: isOwner ?? false,
-      watcherCount: (json['watcherCount'] as num?)?.toInt() ??
+      watcherCount:
+          (json['watcherCount'] as num?)?.toInt() ??
           (json['watchers'] is List ? (json['watchers'] as List).length : 0),
-      watchersSeenCount: (json['watchersSeenCount'] as num?)?.toInt() ??
+      watchersSeenCount:
+          (json['watchersSeenCount'] as num?)?.toInt() ??
           (json['watchers'] is List
               ? (json['watchers'] as List)
-                  .whereType<Map>()
-                  .where((w) => w['seenAt'] != null)
-                  .length
+                    .whereType<Map>()
+                    .where((w) => w['seenAt'] != null)
+                    .length
               : null),
       watchers: json['watchers'] is List
           ? (json['watchers'] as List)
-              .whereType<Map>()
-              .map((w) => TripWatcher.fromJson(w.cast<String, dynamic>()))
-              .toList()
+                .whereType<Map>()
+                .map((w) => TripWatcher.fromJson(w.cast<String, dynamic>()))
+                .toList()
           : const [],
     );
   }
@@ -2013,11 +2035,11 @@ class TripWatcher {
   });
 
   factory TripWatcher.fromJson(Map<String, dynamic> json) => TripWatcher(
-        alanyaID: (json['alanyaID'] as num?)?.toInt() ?? 0,
-        nom: json['nom']?.toString() ?? '',
-        avatarUrl: json['avatarUrl']?.toString(),
-        seenAt: DateTime.tryParse(json['seenAt']?.toString() ?? '')?.toLocal(),
-      );
+    alanyaID: (json['alanyaID'] as num?)?.toInt() ?? 0,
+    nom: json['nom']?.toString() ?? '',
+    avatarUrl: json['avatarUrl']?.toString(),
+    seenAt: DateTime.tryParse(json['seenAt']?.toString() ?? '')?.toLocal(),
+  );
 }
 
 /// Cadence GPS servie par le serveur.
@@ -2055,13 +2077,23 @@ class TripPolicy {
     this.maxDurationH = 12,
   });
 
-  static const fallback = TripPolicy(regimes: {
-    'nominal': TripRegime(
-        accuracy: 'balanced', filterM: 75, floorS: 15, beatS: 90),
-    'approach': TripRegime(
-        accuracy: 'high', filterM: 30, floorS: 8, beatS: 30),
-    'alert': TripRegime(accuracy: 'best', filterM: 15, floorS: 5, beatS: 15),
-  });
+  static const fallback = TripPolicy(
+    regimes: {
+      'nominal': TripRegime(
+        accuracy: 'balanced',
+        filterM: 75,
+        floorS: 15,
+        beatS: 90,
+      ),
+      'approach': TripRegime(
+        accuracy: 'high',
+        filterM: 30,
+        floorS: 8,
+        beatS: 30,
+      ),
+      'alert': TripRegime(accuracy: 'best', filterM: 15, floorS: 5, beatS: 15),
+    },
+  );
 
   TripRegime regime(String name) => regimes[name] ?? regimes['nominal']!;
 
@@ -2094,32 +2126,30 @@ class TripPolicy {
     if (json == null) return fallback;
     final raw = json['regimes'];
     if (raw is! Map || raw.isEmpty) return fallback;
-    final byKind = <String, int>{
-      TripKind.taxi: 450,
-      TripKind.walk: 75,
-    };
+    final byKind = <String, int>{TripKind.taxi: 450, TripKind.walk: 75};
     final rawKind = json['filterMByKind'];
     if (rawKind is Map) {
       final taxi = (rawKind['taxi'] as num?)?.toInt();
-      final walk = (rawKind['walk'] as num?)?.toInt() ??
+      final walk =
+          (rawKind['walk'] as num?)?.toInt() ??
           (rawKind['meeting'] as num?)?.toInt();
       if (taxi != null) byKind[TripKind.taxi] = taxi;
       if (walk != null) byKind[TripKind.walk] = walk;
     }
     return TripPolicy(
-      regimes: raw.map((k, v) => MapEntry(
-            k.toString(),
-            TripRegime.fromJson((v as Map).cast<String, dynamic>()),
-          )),
+      regimes: raw.map(
+        (k, v) => MapEntry(
+          k.toString(),
+          TripRegime.fromJson((v as Map).cast<String, dynamic>()),
+        ),
+      ),
       filterMByKind: byKind,
       staleFactor: (json['staleFactor'] as num?)?.toInt() ?? 3,
       staleMarginS: (json['staleMarginS'] as num?)?.toInt() ?? 30,
       maxAccuracyM: (json['maxAccuracyM'] as num?)?.toInt() ?? 100,
       lowBatteryPct: (json['lowBatteryPct'] as num?)?.toInt() ?? 15,
-      graceMinutes:
-          (json['contract']?['graceMinutes'] as num?)?.toInt() ?? 10,
-      maxDurationH:
-          (json['contract']?['maxDurationH'] as num?)?.toInt() ?? 12,
+      graceMinutes: (json['contract']?['graceMinutes'] as num?)?.toInt() ?? 10,
+      maxDurationH: (json['contract']?['maxDurationH'] as num?)?.toInt() ?? 12,
     );
   }
 }
@@ -2144,11 +2174,11 @@ class TripRegime {
   });
 
   factory TripRegime.fromJson(Map<String, dynamic> json) => TripRegime(
-        accuracy: json['accuracy']?.toString() ?? 'balanced',
-        filterM: (json['filterM'] as num?)?.toInt() ?? 75,
-        floorS: (json['floorS'] as num?)?.toInt() ?? 15,
-        beatS: (json['beatS'] as num?)?.toInt() ?? 90,
-      );
+    accuracy: json['accuracy']?.toString() ?? 'balanced',
+    filterM: (json['filterM'] as num?)?.toInt() ?? 75,
+    floorS: (json['floorS'] as num?)?.toInt() ?? 15,
+    beatS: (json['beatS'] as num?)?.toInt() ?? 90,
+  );
 }
 
 // ── SOCKET EVENTS ────────────────────────────────────────────────────
@@ -2156,9 +2186,9 @@ class TripRegime {
 
 class SocketEvents {
   // Auth socket
-  static const authLogin    = 'auth:login';
+  static const authLogin = 'auth:login';
   static const authVerified = 'auth:verified';
-  static const authError    = 'auth:error';
+  static const authError = 'auth:error';
   static const authConflict = 'auth:conflict';
 
   /// Un appareil du compte vient d'être déconnecté à distance. Payload :
@@ -2197,31 +2227,35 @@ class SocketEvents {
   static const voicemailGreetingUpdated = 'voicemail_greeting_updated';
 
   // Présence
-  static const presenceOnline   = 'presence:online';
-  static const presenceOffline  = 'presence:offline';
-  static const presenceUpdated  = 'presence:updated';
+  static const presenceOnline = 'presence:online';
+  static const presenceOffline = 'presence:offline';
+  static const presenceUpdated = 'presence:updated';
 
   // Chat
-  static const joinConversation  = 'join_conversation';
+  static const joinConversation = 'join_conversation';
   static const joinedConversation = 'joined_conversation';
-  static const messageSend       = 'message:send';
-  static const messageReceived   = 'message:received';
-  static const messageSent       = 'message:sent';
+  static const messageSend = 'message:send';
+  static const messageReceived = 'message:received';
+  static const messageSent = 'message:sent';
+
   /// Échec d'envoi métier / validation (payload: clientId, code, message).
   static const messageSendFailed = 'message:send_failed';
-  static const messageUpdated    = 'message:updated';
-  static const messageDeleted    = 'message:deleted';
-  static const messagesDeleted   = 'messages:deleted';
-  static const messagePinned     = 'message:pinned';
-  static const messageViewed     = 'message:viewed';
+  static const messageUpdated = 'message:updated';
+  static const messageDeleted = 'message:deleted';
+  static const messagesDeleted = 'messages:deleted';
+  static const messagePinned = 'message:pinned';
+  static const messageViewed = 'message:viewed';
+
   /// Réaction posée/retirée sur un message. Payload : { msgID, conversationID,
   /// userID, emoji }. `emoji` absent/vide = réaction retirée.
-  static const messageReaction   = 'message:reaction';
-  static const messageDelivered  = 'message:delivered';
-  static const messageRead       = 'message:read';
-  static const messageStatus     = 'message:status';
+  static const messageReaction = 'message:reaction';
+  static const messageDelivered = 'message:delivered';
+  static const messageRead = 'message:read';
+  static const messageStatus = 'message:status';
+
   /// Sync badge non-lus entre appareils du même compte (local uniquement).
-  static const inboxSync         = 'inbox:sync';
+  static const inboxSync = 'inbox:sync';
+
   /// Réservé au cas « je n'avais pas cette conversation » : 1-1, création de
   /// groupe, membre ajouté. N'est plus un upsert générique.
   static const conversationCreated = 'conversation:created';
@@ -2242,122 +2276,130 @@ class SocketEvents {
   /// ce dernier et n'apprendrait jamais son exclusion.
   static const groupParticipantRemoved = 'group:participant:removed';
 
-  static const typingStart       = 'typing:start';
-  static const typingStop        = 'typing:stop';
-  static const typingStarted     = 'typing:started';
-  static const typingStopped     = 'typing:stopped';
+  static const typingStart = 'typing:start';
+  static const typingStop = 'typing:stop';
+  static const typingStarted = 'typing:started';
+  static const typingStopped = 'typing:stopped';
 
   // Appels 1-1 (Flutter → Backend)
-  static const callUser    = 'call_user';
-  static const answerCall  = 'answer_call';
-  static const rejectCall  = 'reject_call';
+  static const callUser = 'call_user';
+  static const answerCall = 'answer_call';
+  static const rejectCall = 'reject_call';
   static const iceCandidate = 'ice_candidate';
-  static const endCall     = 'end_call';
-  static const callRejoin  = 'call_rejoin';
+  static const endCall = 'end_call';
+  static const callRejoin = 'call_rejoin';
   static const callRejoinAnswer = 'call_rejoin_answer';
   static const callResumeAck = 'call_resume_ack';
   static const callResumeReject = 'call_resume_reject';
 
   // Appels 1-1 (Backend → Flutter)
-  static const incomingCall  = 'incoming_call';
+  static const incomingCall = 'incoming_call';
+
   /// L'appel est créé et le destinataire sonne : { callId, targetId, isVideo }.
   /// Émis à la seule socket de l'appelant, qui adopte alors l'identifiant du
   /// serveur. Sans lui, il n'apprenait le sien qu'au décrochage — et tout
   /// événement terminal reçu pendant la sonnerie était jeté faute de
   /// correspondance.
-  static const callRinging   = 'call_ringing';
-  static const callAnswered  = 'call_answered';
-  static const callRejected  = 'call_rejected';
-  static const callEnded     = 'call_ended';
-  static const callError     = 'call_error';
-  static const callFailed    = 'call_failed';
-  static const callBusy      = 'call_busy';       // cible occupée (ringing/in_call)
+  static const callRinging = 'call_ringing';
+  static const callAnswered = 'call_answered';
+  static const callRejected = 'call_rejected';
+  static const callEnded = 'call_ended';
+  static const callError = 'call_error';
+  static const callFailed = 'call_failed';
+  static const callBusy = 'call_busy'; // cible occupée (ringing/in_call)
   /// Le répondeur du destinataire est actif : { callId, targetId, reason,
   /// isVideo, conversationID }. Émis à la seule socket de l'appelant, EN LIEU
   /// ET PLACE de `call_ringing` — rien n'a sonné et rien n'a été armé côté
   /// serveur. L'appelant démonte son sortant et se voit proposer de laisser un
   /// message vocal dans la conversation transmise.
   static const callVoicemail = 'call_voicemail';
-  static const callNoAnswer  = 'call_no_answer';  // timeout serveur sans réponse
-  static const callResume    = 'call_resume';
+  static const callNoAnswer = 'call_no_answer'; // timeout serveur sans réponse
+  static const callResume = 'call_resume';
   static const callRejoinOffer = 'call_rejoin_offer';
+  static const callVideoUpgradeOffer = 'call_video_upgrade_offer';
+  static const callVideoUpgradeAnswer = 'call_video_upgrade_answer';
+  static const callVideoUpgradeCommit = 'call_video_upgrade_commit';
   static const callLogUpdated = 'call_log_updated';
 
   // « Ajouter à l'appel » — transfert assisté, 3 participants max (Flutter → Backend)
   static const callAddParticipant = 'call_add_participant';
-  static const callAddCancel      = 'call_add_cancel';
-  static const callConfJoin       = 'call_conf_join';
-  static const callConfReject     = 'call_conf_reject';
-  static const callConfReady      = 'call_conf_ready';
+  static const callAddCancel = 'call_add_cancel';
+  static const callConfJoin = 'call_conf_join';
+  static const callConfReject = 'call_conf_reject';
+  static const callConfReady = 'call_conf_ready';
 
   // « Ajouter à l'appel » (Backend → Flutter)
-  static const callAddPending     = 'call_add_pending';   // aux 2 présents : l'invité sonne
-  static const callConfInvite     = 'call_conf_invite';   // à l'invité
-  static const callConfJoined     = 'call_conf_joined';   // aux présents : offrir à l'arrivant
-  static const callConfPeers      = 'call_conf_peers';    // à l'invité : qui va lui offrir
-  static const callConfFailed     = 'call_conf_failed';   // invitation soldée
-  static const callConfLeft       = 'call_conf_left';     // un participant s'est retiré
-  static const callAddRejected    = 'call_add_rejected';  // demande d'ajout refusée
-  static const callTransferArmed  = 'call_transfer_armed'; // countdown initiateur
-  static const callTransferDone   = 'call_transfer_done';  // UI initiateur
+  static const callAddPending =
+      'call_add_pending'; // aux 2 présents : l'invité sonne
+  static const callConfInvite = 'call_conf_invite'; // à l'invité
+  static const callConfJoined =
+      'call_conf_joined'; // aux présents : offrir à l'arrivant
+  static const callConfPeers =
+      'call_conf_peers'; // à l'invité : qui va lui offrir
+  static const callConfFailed = 'call_conf_failed'; // invitation soldée
+  static const callConfLeft = 'call_conf_left'; // un participant s'est retiré
+  static const callAddRejected = 'call_add_rejected'; // demande d'ajout refusée
+  static const callTransferArmed =
+      'call_transfer_armed'; // countdown initiateur
+  static const callTransferDone = 'call_transfer_done'; // UI initiateur
 
   // Appels groupe (Flutter → Backend)
-  static const createGroupCall    = 'create_group_call';
-  static const joinGroupCall      = 'join_group_call';
-  static const leaveGroupCall     = 'leave_group_call';
-  static const endGroupCall       = 'end_group_call';
-  static const groupOffer         = 'group_offer';
-  static const groupAnswer        = 'group_answer';
-  static const groupIceCandidate  = 'group_ice_candidate';
+  static const createGroupCall = 'create_group_call';
+  static const joinGroupCall = 'join_group_call';
+  static const leaveGroupCall = 'leave_group_call';
+  static const endGroupCall = 'end_group_call';
+  static const groupOffer = 'group_offer';
+  static const groupAnswer = 'group_answer';
+  static const groupIceCandidate = 'group_ice_candidate';
 
   // Appels groupe (Backend → Flutter)
-  static const groupCallInvite    = 'group_call_invite';
-  static const groupUserJoined    = 'group_user_joined';
-  static const groupParticipants  = 'group_participants';
-  static const groupCallEnded     = 'group_call_ended';
-  static const groupUserLeft      = 'group_user_left';
+  static const groupCallInvite = 'group_call_invite';
+  static const groupUserJoined = 'group_user_joined';
+  static const groupParticipants = 'group_participants';
+  static const groupCallEnded = 'group_call_ended';
+  static const groupUserLeft = 'group_user_left';
 
   // Mute state (Flutter ↔ Backend ↔ Flutter)
-  static const callMuteState      = 'call:mute_state';
-  static const groupMuteState     = 'group:mute_state';
-  static const callVideoState     = 'call:video_state';
-  static const groupVideoState    = 'group:video_state';
-  static const meetingMuteState   = 'meeting:mute_state';
-  static const meetingVideoState  = 'meeting:video_state';
+  static const callMuteState = 'call:mute_state';
+  static const groupMuteState = 'group:mute_state';
+  static const callVideoState = 'call:video_state';
+  static const groupVideoState = 'group:video_state';
+  static const meetingMuteState = 'meeting:mute_state';
+  static const meetingVideoState = 'meeting:video_state';
 
   // Meetings (Flutter → Backend)
-  static const meetingCreate      = 'meeting:create';
-  static const meetingJoinRoom    = 'meeting:join_room';
-  static const meetingJoinRequest   = 'meeting:join_request';
+  static const meetingCreate = 'meeting:create';
+  static const meetingJoinRoom = 'meeting:join_room';
+  static const meetingJoinRequest = 'meeting:join_request';
   static const meetingJoinRequested = 'meeting:join_requested';
-  static const meetingJoinAccept    = 'meeting:join_accept';
+  static const meetingJoinAccept = 'meeting:join_accept';
   static const meetingJoinDecline = 'meeting:join_decline';
-  static const meetingStart       = 'meeting:start';
-  static const meetingEnd         = 'meeting:end';
-  static const meetingLeave       = 'meeting:leave';
-  static const meetingChat        = 'meeting:chat';
-  static const meetingOffer       = 'meeting:offer';
-  static const meetingAnswer      = 'meeting:answer';
+  static const meetingStart = 'meeting:start';
+  static const meetingEnd = 'meeting:end';
+  static const meetingLeave = 'meeting:leave';
+  static const meetingChat = 'meeting:chat';
+  static const meetingOffer = 'meeting:offer';
+  static const meetingAnswer = 'meeting:answer';
   static const meetingIceCandidate = 'meeting:ice_candidate';
 
   // Meetings (Backend → Flutter)
-  static const meetingCreated     = 'meeting:created';
-  static const meetingRoomJoined  = 'meeting:room_joined';
-  static const meetingJoinDenied  = 'meeting:join_denied';
-  static const meetingUserJoined  = 'meeting:user_joined';
-  static const meetingUserLeft    = 'meeting:user_left';
-  static const meetingAccepted    = 'meeting:accepted';
-  static const meetingDeclined    = 'meeting:declined';
-  static const meetingStarted     = 'meeting:started';
-  static const meetingEnded       = 'meeting:ended';
-  static const meetingMessage     = 'meeting:message';
+  static const meetingCreated = 'meeting:created';
+  static const meetingRoomJoined = 'meeting:room_joined';
+  static const meetingJoinDenied = 'meeting:join_denied';
+  static const meetingUserJoined = 'meeting:user_joined';
+  static const meetingUserLeft = 'meeting:user_left';
+  static const meetingAccepted = 'meeting:accepted';
+  static const meetingDeclined = 'meeting:declined';
+  static const meetingStarted = 'meeting:started';
+  static const meetingEnded = 'meeting:ended';
+  static const meetingMessage = 'meeting:message';
 
   // Statuts (Backend → Flutter)
-  static const statusCreated  = 'status:created';
-  static const statusViewed   = 'status:viewed';
-  static const statusLiked    = 'status:liked';
-  static const statusUnliked  = 'status:unliked';
-  static const statusDeleted  = 'status:deleted';
+  static const statusCreated = 'status:created';
+  static const statusViewed = 'status:viewed';
+  static const statusLiked = 'status:liked';
+  static const statusUnliked = 'status:unliked';
+  static const statusDeleted = 'status:deleted';
 
   // ── Trajets de confiance ───────────────────────────────────────────
   // La room `trip_<id>` ne porte QUE le flux de positions. Tout ce qui doit
@@ -2366,21 +2408,21 @@ class SocketEvents {
 
   /// Client → serveur. Rejoint le flux d'un trajet. Le serveur répond par
   /// [tripStateEvent], qui porte aussi la politique de cadence à appliquer.
-  static const tripSubscribe   = 'trip:subscribe';
+  static const tripSubscribe = 'trip:subscribe';
   static const tripUnsubscribe = 'trip:unsubscribe';
 
   /// Une position. Émise sans attendre d'accusé : si elle se perd, la suivante
   /// la remplace. Refusée si l'appareil n'est pas le porteur du trajet.
-  static const tripPosition    = 'trip:position';
+  static const tripPosition = 'trip:position';
 
   /// Vidange du tampon hors ligne, 200 points au plus. Chaque point garde son
   /// horodatage de capture ; le serveur déduplique par `clientSeq`.
   static const tripPositionBatch = 'trip:position_batch';
-  static const tripBatchAck      = 'trip:batch_ack';
+  static const tripBatchAck = 'trip:batch_ack';
 
   /// Reprend l'émission depuis cet appareil. L'ancien porteur reçoit
   /// [tripDeviceRevoked] et arrête son suivi — sans quoi la trace zigzaguerait.
-  static const tripClaimDevice   = 'trip:claim_device';
+  static const tripClaimDevice = 'trip:claim_device';
   static const tripDeviceRevoked = 'trip:device_revoked';
 
   /// GPS coupé, permission retirée, économiseur de batterie. Information, pas
@@ -2388,15 +2430,15 @@ class SocketEvents {
   static const tripSignal = 'trip:signal';
 
   /// « J'ai vu » — le seul retour qu'un destinataire puisse donner.
-  static const tripSeen        = 'trip:seen';
+  static const tripSeen = 'trip:seen';
   static const tripWatcherSeen = 'trip:watcher_seen';
 
   // Serveur → client
-  static const tripStateEvent  = 'trip:state';
-  static const tripStarted     = 'trip:started';
-  static const tripCardUpdate  = 'trip:card_update';
-  static const tripStale       = 'trip:stale';
-  static const tripAlert       = 'trip:alert';
-  static const tripClosed      = 'trip:closed';
-  static const tripError       = 'trip:error';
+  static const tripStateEvent = 'trip:state';
+  static const tripStarted = 'trip:started';
+  static const tripCardUpdate = 'trip:card_update';
+  static const tripStale = 'trip:stale';
+  static const tripAlert = 'trip:alert';
+  static const tripClosed = 'trip:closed';
+  static const tripError = 'trip:error';
 }

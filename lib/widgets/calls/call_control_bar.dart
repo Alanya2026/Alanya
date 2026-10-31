@@ -21,6 +21,7 @@ class CallControlBar extends StatelessWidget {
     required this.audioRoute,
     required this.audioRoutes,
     required this.useVideoChrome,
+    this.showCameraInAudio = false,
     required this.onMute,
     required this.onSpeaker,
     required this.onCamera,
@@ -77,9 +78,10 @@ class CallControlBar extends StatelessWidget {
   String _routeAction(BuildContext context) => audioRoutes.length > 2
       ? '${context.l10n.changeAudioOutput} · ${_routeLabel(context)}'
       : (audioRoute == CallAudioRoute.speaker
-          ? context.l10n.turnOffSpeaker
-          : context.l10n.turnOnSpeaker);
+            ? context.l10n.turnOffSpeaker
+            : context.l10n.turnOnSpeaker);
   final bool useVideoChrome;
+  final bool showCameraInAudio;
   final VoidCallback onMute;
   final VoidCallback onSpeaker;
   final VoidCallback onCamera;
@@ -154,7 +156,11 @@ class CallControlBar extends StatelessWidget {
                     subtitle: audioRoutes.length > 2
                         ? Text(
                             _routeLabel(ctx),
-                            style: TextStyle(color: callUi.onControlSurface.withValues(alpha: 0.7)),
+                            style: TextStyle(
+                              color: callUi.onControlSurface.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
                           )
                         : null,
                     onTap: () {
@@ -233,11 +239,15 @@ class CallControlBar extends StatelessWidget {
               vertical: AppSpacing.md,
             ),
             decoration: BoxDecoration(
-              color: useVideoChrome ? callUi.videoChromeSurface : callUi.controlSurface,
+              color: useVideoChrome
+                  ? callUi.videoChromeSurface
+                  : callUi.controlSurface,
               borderRadius: AppRadius.brPill,
               border: useVideoChrome
                   ? null
-                  : Border.all(color: callUi.controlBorder.withValues(alpha: 0.5)),
+                  : Border.all(
+                      color: callUi.controlBorder.withValues(alpha: 0.5),
+                    ),
               boxShadow: useVideoChrome
                   ? null
                   : [
@@ -252,23 +262,32 @@ class CallControlBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _ControlButton(
-                  icon: isMuted ? CupertinoIcons.mic_off : CupertinoIcons.mic_solid,
+                  icon: isMuted
+                      ? CupertinoIcons.mic_off
+                      : CupertinoIcons.mic_solid,
                   active: isMuted,
                   useVideoChrome: useVideoChrome,
-                  semanticsLabel: isMuted ? context.l10n.unmuteMic : context.l10n.muteMic,
+                  semanticsLabel: isMuted
+                      ? context.l10n.unmuteMic
+                      : context.l10n.muteMic,
                   onTap: () {
                     HapticFeedback.selectionClick();
                     onMute();
                   },
                 ),
                 AppSpacing.hGapMd,
-                if (isVideo)
+                if (isVideo || showCameraInAudio)
                   _ControlButton(
-                    icon: isVideoOn ? Icons.videocam : Icons.videocam_off,
-                    active: !isVideoOn,
+                    icon: isVideo && !isVideoOn
+                        ? Icons.videocam_off
+                        : Icons.videocam,
+                    active: isVideo && !isVideoOn,
                     useVideoChrome: useVideoChrome,
-                    semanticsLabel:
-                        isVideoOn ? context.l10n.turnOffCamera : context.l10n.enableCamera,
+                    semanticsLabel: isVideo
+                        ? (isVideoOn
+                              ? context.l10n.turnOffCamera
+                              : context.l10n.enableCamera)
+                        : context.l10n.switchToVideoCall,
                     onTap: () {
                       HapticFeedback.selectionClick();
                       onCamera();

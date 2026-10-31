@@ -1696,6 +1696,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoCall => 'Video call';
 
   @override
+  String get switchToVideoCall => 'Switch to a video call?';
+
+  @override
+  String get switchToVideoCallBody =>
+      'Your camera will turn on. The audio call remains available if the transition fails.';
+
+  @override
   String get unpin => 'Unpin';
 
   @override

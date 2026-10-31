@@ -1634,6 +1634,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoCall => '视频通话';
 
   @override
+  String get switchToVideoCall => '切换为视频通话？';
+
+  @override
+  String get switchToVideoCallBody => '您的摄像头将开启。如果切换失败，音频通话仍会保持。';
+
+  @override
   String get unpin => '取消置顶';
 
   @override

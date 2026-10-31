@@ -44,8 +44,12 @@ extension CallOneToOne on CallService {
 
     try {
       final type = isVideo ? CallType.video : CallType.audio;
-      _webrtc.onLocalStream  = (_) { notify(); };
-      _webrtc.onRemoteStream = (_) { notify(); };
+      _webrtc.onLocalStream = (_) {
+        notify();
+      };
+      _webrtc.onRemoteStream = (_) {
+        notify();
+      };
 
       // Capture et serveurs ICE sont indépendants : les lancer de front met le
       // micro en route sans attendre le réseau. Voir `answerCall` pour le
@@ -94,9 +98,10 @@ extension CallOneToOne on CallService {
           if (_currentCallId != null) 'callId': _currentCallId,
         };
         if (_outgoingIceOutbox.length < CallService._maxOutgoingIceReplay) {
-          _outgoingIceOutbox.add(
-            (generation: _webrtc.iceGeneration, payload: payload),
-          );
+          _outgoingIceOutbox.add((
+            generation: _webrtc.iceGeneration,
+            payload: payload,
+          ));
         }
         _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
       };
@@ -111,10 +116,7 @@ extension CallOneToOne on CallService {
         'callerName': myName,
         'callerPhoto': myPhoto,
         'isVideo': isVideo,
-        'offer': {
-          'sdp': offer.sdp,
-          'type': offer.type,
-        },
+        'offer': {'sdp': offer.sdp, 'type': offer.type},
       });
 
       _status = CallStatus.connecting;
@@ -122,7 +124,8 @@ extension CallOneToOne on CallService {
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: isVideo,
-          displayName: targetUserName ?? LocaleController.instance.l10n.callNoun,
+          displayName:
+              targetUserName ?? LocaleController.instance.l10n.callNoun,
           handle: targetUserId.toString(),
         );
         await persistOutgoingSnapshot(phase: 'connecting');
@@ -144,7 +147,9 @@ extension CallOneToOne on CallService {
       // Vaut pour tous les états terminaux rapides — `call_busy`,
       // `call_failed`, `call_rejected` — pas seulement pour le répondeur.
       if (_status != CallStatus.outgoing && _status != CallStatus.connecting) {
-        debugPrint('[CallService] 🛡 initiateCall: appel déjà terminé pendant la mise en place');
+        debugPrint(
+          '[CallService] 🛡 initiateCall: appel déjà terminé pendant la mise en place',
+        );
         return;
       }
 
@@ -156,7 +161,8 @@ extension CallOneToOne on CallService {
       // abandonne l'appel pour ne pas laisser le ringback tourner indéfiniment.
       _cancelOutgoingTimeout();
       _outgoingTimeoutTimer = Timer(CallService._outgoingTimeout, () async {
-        if (_status == CallStatus.outgoing || _status == CallStatus.connecting) {
+        if (_status == CallStatus.outgoing ||
+            _status == CallStatus.connecting) {
           debugPrint('[CallService] ⏰ Timeout local appel sortant — abandon');
           _markTerminalCallId(_currentCallId);
           await _terminateCall();
@@ -187,7 +193,9 @@ extension CallOneToOne on CallService {
       return;
     }
     if (_pendingOffer == null) {
-      debugPrint('[CallService] ⏳ answerCall: offre pas encore reçue → attente bornée');
+      debugPrint(
+        '[CallService] ⏳ answerCall: offre pas encore reçue → attente bornée',
+      );
       // Ne PAS revenir en silence (bouton mort). On arme l'auto-réponse pour la
       // vraie offre, on coupe la sonnerie puisque l'utilisateur a accepté, on
       // affiche « connexion en cours » et on borne l'attente (teardown si l'offre
@@ -252,8 +260,12 @@ extension CallOneToOne on CallService {
 
     try {
       final type = _isVideo ? CallType.video : CallType.audio;
-      _webrtc.onLocalStream  = (_) { notify(); };
-      _webrtc.onRemoteStream = (_) { notify(); };
+      _webrtc.onLocalStream = (_) {
+        notify();
+      };
+      _webrtc.onRemoteStream = (_) {
+        notify();
+      };
 
       // Le micro d'abord, le réseau ensuite.
       //
@@ -270,8 +282,9 @@ extension CallOneToOne on CallService {
       // l'acquisition média échoue la première, plus personne ne l'attendrait.
       final mediaFuture = _webrtc.acquireLocalMedia(type);
       final iceFuture = _apiClient.fetchIceServers();
-      final socketFuture =
-          _apiClient.ensureSocketReady().catchError((_) => false);
+      final socketFuture = _apiClient.ensureSocketReady().catchError(
+        (_) => false,
+      );
 
       await mediaFuture;
       if (!await appelToujoursLa()) return;
@@ -280,7 +293,9 @@ extension CallOneToOne on CallService {
       await _initAudioRoute(isVideo: _isVideo);
 
       if (!await socketFuture) {
-        debugPrint('[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})');
+        debugPrint(
+          '[CallService] ** Socket non prêt après 5s (connected=${_apiClient.isSocketConnected})',
+        );
         _errorMessage = LocaleController.instance.l10n.socketNotConnected;
         // Teardown complet (au lieu d'un simple idle) : ferme CallKit, coupe la
         // sonnerie et réinitialise l'état pour ne pas laisser d'écran/état
@@ -320,9 +335,10 @@ extension CallOneToOne on CallService {
           if (_currentCallId != null) 'callId': _currentCallId,
         };
         if (_outgoingIceOutbox.length < CallService._maxOutgoingIceReplay) {
-          _outgoingIceOutbox.add(
-            (generation: _webrtc.iceGeneration, payload: payload),
-          );
+          _outgoingIceOutbox.add((
+            generation: _webrtc.iceGeneration,
+            payload: payload,
+          ));
         }
         _apiClient.sendSocketEvent(SocketEvents.iceCandidate, payload);
       };
@@ -354,10 +370,7 @@ extension CallOneToOne on CallService {
         {
           'callerId': _remoteUserId.toString(),
           'callId': _currentCallId,
-          'answer': {
-            'sdp': answer.sdp,
-            'type': answer.type,
-          },
+          'answer': {'sdp': answer.sdp, 'type': answer.type},
         },
       );
       if (!reponseAccusee) {
@@ -375,10 +388,7 @@ extension CallOneToOne on CallService {
           {
             'callerId': _remoteUserId.toString(),
             'callId': _currentCallId,
-            'answer': {
-              'sdp': answer.sdp,
-              'type': answer.type,
-            },
+            'answer': {'sdp': answer.sdp, 'type': answer.type},
           },
         );
         if (!secondeChance) {
@@ -404,7 +414,8 @@ extension CallOneToOne on CallService {
       if (!kIsWeb) {
         await _acquireCallSession(
           isVideo: _isVideo,
-          displayName: _remoteUserName ?? LocaleController.instance.l10n.callNoun,
+          displayName:
+              _remoteUserName ?? LocaleController.instance.l10n.callNoun,
           handle: _remoteUserId.toString(),
           // startCallKit: true, y compris pour un entrant déjà accepté : c'est
           // ICI que le foreground service Android est démarré, et nulle part
@@ -470,7 +481,8 @@ extension CallOneToOne on CallService {
 
     try {
       if (_remoteUserId != null) {
-        final mode = (_status == CallStatus.connected ||
+        final mode =
+            (_status == CallStatus.connected ||
                 _status == CallStatus.reconnecting)
             ? await _webrtc.detectConnectionMode()
             : null;
@@ -521,8 +533,10 @@ extension CallOneToOne on CallService {
 
     bool accuse;
     try {
-      accuse =
-          await _apiClient.sendSocketEventAcked(SocketEvents.endCall, payload);
+      accuse = await _apiClient.sendSocketEventAcked(
+        SocketEvents.endCall,
+        payload,
+      );
     } catch (e) {
       debugPrint('[CallService] endCall socket error: $e');
       accuse = false;
@@ -571,8 +585,8 @@ extension CallOneToOne on CallService {
     }
     // Capturé avant le teardown : le son ne doit sonner que si une conversation
     // était établie, pas sur un rejet, un timeout ou un échec de connexion.
-    final wasConnected = _status == CallStatus.connected ||
-        _status == CallStatus.reconnecting;
+    final wasConnected =
+        _status == CallStatus.connected || _status == CallStatus.reconnecting;
     try {
       speakingDetector.stop();
       _cancelAllReconnectTimers();
@@ -609,6 +623,14 @@ extension CallOneToOne on CallService {
   }
 
   void _resetCallState() {
+    final pendingVideoAnswer = _videoUpgradeAnswer;
+    if (pendingVideoAnswer != null && !pendingVideoAnswer.isCompleted) {
+      pendingVideoAnswer.completeError(StateError('Appel terminé'));
+    }
+    _videoUpgradeAnswer = null;
+    _videoTransitionId = null;
+    _videoTransitionInFlight = false;
+    _pendingRemoteVideoCommitId = null;
     _resetCallUiState();
     _clearIncomingPresentation();
     _cancelOutgoingTimeout();

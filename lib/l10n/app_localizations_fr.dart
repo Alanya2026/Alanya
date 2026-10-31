@@ -1715,6 +1715,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoCall => 'Appel vidéo';
 
   @override
+  String get switchToVideoCall => 'Passer à un appel vidéo ?';
+
+  @override
+  String get switchToVideoCallBody =>
+      'Votre caméra sera activée. L\'appel audio reste inchangé si la transition échoue.';
+
+  @override
   String get unpin => 'Désépingler';
 
   @override

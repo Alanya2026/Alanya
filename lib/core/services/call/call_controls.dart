@@ -24,6 +24,10 @@ extension CallControls on CallService {
   }
 
   Future<void> toggleCamera() async {
+    if (!_isVideo || !_webrtc.hasLocalVideoTrack) {
+      await _enableCameraWithRenegotiation();
+      return;
+    }
     await _webrtc.toggleCamera();
     _isVideoOn = !_isVideoOn;
     final isGroup = _groupRoomId != null;
@@ -39,6 +43,79 @@ extension CallControls on CallService {
       });
     }
     notify();
+  }
+
+  Future<void> upgradeAudioToVideo() =>
+      _enableCameraWithRenegotiation(announceMode: true);
+
+  Future<void> _enableCameraWithRenegotiation({
+    bool announceMode = false,
+  }) async {
+    if (_groupRoomId != null ||
+        _confSessionId != null ||
+        _remoteUserId == null ||
+        _status != CallStatus.connected ||
+        _videoTransitionInFlight ||
+        (!announceMode && !_isVideo)) {
+      return;
+    }
+    if (announceMode && !isAudioToVideoAvailable) return;
+
+    final transitionId =
+        '${DateTime.now().microsecondsSinceEpoch}-${_remoteUserId}';
+    final completer = Completer<RTCSessionDescription>();
+    _videoTransitionInFlight = true;
+    _videoTransitionId = transitionId;
+    _videoUpgradeAnswer = completer;
+    notify();
+
+    try {
+      await _webrtc.addLocalVideoTrack();
+      final offer = await _webrtc.createOffer();
+      final sent = _apiClient.sendSocketEvent(
+        SocketEvents.callVideoUpgradeOffer,
+        {
+          'targetUserId': _remoteUserId.toString(),
+          'callId': _currentCallId,
+          'transitionId': transitionId,
+          'offer': {'sdp': offer.sdp, 'type': offer.type},
+        },
+      );
+      if (!sent) throw StateError('Socket indisponible pour la vidéo');
+
+      final answer = await completer.future.timeout(
+        const Duration(seconds: 15),
+      );
+      await _webrtc.handleAnswer(answer);
+      final committed = _apiClient
+          .sendSocketEvent(SocketEvents.callVideoUpgradeCommit, {
+            'targetUserId': _remoteUserId.toString(),
+            'callId': _currentCallId,
+            'transitionId': transitionId,
+          });
+      if (!committed) throw StateError('Commit vidéo impossible');
+      _isVideo = true;
+      _isVideoOn = true;
+      await CallSessionGuard.instance.updateMode(SessionMode.video);
+      await _bindSessionRenderers();
+      _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
+        'toUserId': _remoteUserId,
+        'isVideoOn': true,
+      });
+      notify();
+    } catch (error) {
+      await _webrtc.rollbackNegotiation();
+      await _webrtc.discardLocalVideoTrack();
+      _showTransientMessage(LocaleController.instance.l10n.callFailed);
+      debugPrint('[CallService] ** transition audio → vidéo échouée: $error');
+    } finally {
+      if (identical(_videoUpgradeAnswer, completer)) {
+        _videoUpgradeAnswer = null;
+        _videoTransitionId = null;
+        _videoTransitionInFlight = false;
+        notify();
+      }
+    }
   }
 
   Future<void> switchCamera() async {
@@ -163,10 +240,12 @@ extension CallControls on CallService {
         final lue = await audio.AudioHelper.readAppliedRoute(_callKitCallId);
         if (lue != null) {
           _adopterSortiesOffertes(lue.supportedMask);
-          _retenirRoute(resolveAppliedRoute(
-            requested: _audioRoute,
-            reportedName: lue.routeName,
-          ));
+          _retenirRoute(
+            resolveAppliedRoute(
+              requested: _audioRoute,
+              reportedName: lue.routeName,
+            ),
+          );
         }
         notify();
       }

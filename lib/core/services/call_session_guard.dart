@@ -81,10 +81,12 @@ class CallSessionGuard with WidgetsBindingObserver {
   CallSessionGuard._();
   static final CallSessionGuard instance = CallSessionGuard._();
 
-  static const _callMediaChannel =
-      MethodChannel('com.alanya237.alanya/call_media');
-  static const _proximityChannel =
-      MethodChannel('com.alanya237.alanya/proximity');
+  static const _callMediaChannel = MethodChannel(
+    'com.alanya237.alanya/call_media',
+  );
+  static const _proximityChannel = MethodChannel(
+    'com.alanya237.alanya/proximity',
+  );
 
   int _refCount = 0;
   SessionMode? _mode;
@@ -236,7 +238,7 @@ class CallSessionGuard with WidgetsBindingObserver {
     // caméra comme la relance du service se décident là-dessus.
     _appBackgrounded =
         WidgetsBinding.instance.lifecycleState != null &&
-            WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed;
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed;
 
     WidgetsBinding.instance.addObserver(this);
     _bindNative();
@@ -277,6 +279,21 @@ class CallSessionGuard with WidgetsBindingObserver {
       displayName: _displayName,
       startedAt: _startedAtMs,
     );
+  }
+
+  /// Change le mode de la session existante sans réacquérir CallKit ni perdre
+  /// la route audio choisie par l'utilisateur.
+  Future<void> updateMode(SessionMode mode) async {
+    if (kIsWeb || _refCount == 0 || _callId == null) return;
+    if (_mode == mode) return;
+    _mode = mode;
+    await AudioHelper.configureCallAudio(isVideo: mode == SessionMode.video);
+    await _startMediaForegroundService(
+      isVideo: mode == SessionMode.video,
+      displayName: _displayName,
+      startedAt: _startedAtMs,
+    );
+    await _applyScreenPolicy();
   }
 
   /// Ouvre l'oreille du pont natif, une fois pour toutes.

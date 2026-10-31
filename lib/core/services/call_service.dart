@@ -44,14 +44,14 @@ import '../../widgets/calls/voicemail_recorder_sheet.dart';
 import '../utils/contact_aliases.dart';
 
 // Endpoints répartis par domaine (mêmes librairie/membres privés) :
-part 'call/call_incoming.dart';   // entrées push / CallKit
-part 'call/call_signaling.dart';  // listeners socket.io
+part 'call/call_incoming.dart'; // entrées push / CallKit
+part 'call/call_signaling.dart'; // listeners socket.io
 part 'call/call_one_to_one.dart'; // appels 1-à-1
-part 'call/call_group.dart';      // appels de groupe
+part 'call/call_group.dart'; // appels de groupe
 part 'call/call_conference.dart'; // « Ajouter à l'appel » (transfert assisté, 3 max)
-part 'call/call_controls.dart';   // contrôles médias + timer
-part 'call/call_session.dart';    // session audio / foreground en veille
-part 'call/call_ui.dart';         // bannière / minimiser l'écran d'appel
+part 'call/call_controls.dart'; // contrôles médias + timer
+part 'call/call_session.dart'; // session audio / foreground en veille
+part 'call/call_ui.dart'; // bannière / minimiser l'écran d'appel
 part 'call/call_outgoing_restore.dart'; // restauration appel sortant après kill
 part 'call/call_reconnect.dart'; // reconnexion mid-call 1-à-1 / ICE restart
 
@@ -61,7 +61,21 @@ const bool _kAndroidNativeCallNotifications = bool.fromEnvironment(
   defaultValue: true,
 );
 
-enum CallStatus { idle, outgoing, joining, incoming, connecting, connected, reconnecting, ended }
+const bool kCallAudioToVideoEnabled = bool.fromEnvironment(
+  'CALL_AUDIO_TO_VIDEO',
+  defaultValue: false,
+);
+
+enum CallStatus {
+  idle,
+  outgoing,
+  joining,
+  incoming,
+  connecting,
+  connected,
+  reconnecting,
+  ended,
+}
 
 /// État UI informatif du transfert (le backend reste autoritaire).
 enum CallTransferStatus {
@@ -127,7 +141,7 @@ class CallService extends ChangeNotifier {
   int _remoteVerificationStatus = 0;
   bool _isVideo = false;
   Map<String, dynamic>? _pendingOffer; // offer reçu avant réponse
-  String? _currentCallId;   // callId backend, utilisé pour synchroniser CallKit
+  String? _currentCallId; // callId backend, utilisé pour synchroniser CallKit
 
   /// Identifiant sous lequel CallKit et `CallSessionGuard` ont été démarrés.
   ///
@@ -168,6 +182,7 @@ class CallService extends ChangeNotifier {
 
   // Contrôles médias
   bool _isMuted = false;
+
   /// Sortie audio courante et sorties proposables. Le bouton de la barre de
   /// contrôle ne connaissait que « haut-parleur allumé / éteint » : avec un
   /// casque Bluetooth appairé, l'utilisateur ne savait pas où sortait le son.
@@ -180,6 +195,10 @@ class CallService extends ChangeNotifier {
 
   bool _isSpeakerOn = false;
   bool _isVideoOn = true;
+  bool _videoTransitionInFlight = false;
+  String? _videoTransitionId;
+  Completer<RTCSessionDescription>? _videoUpgradeAnswer;
+  String? _pendingRemoteVideoCommitId;
 
   // État mute du distant (appel 1-à-1)
   bool _isRemoteMuted = false;
@@ -338,17 +357,20 @@ class CallService extends ChangeNotifier {
   bool _socketRebuiltForReconnect = false;
   Timer? _iceRestartRetryTimer;
   DateTime? _lastRestartOfferAt;
+
   /// Chaîne d'exécution des offres de reprise : elles se traitent une à une.
   Future<void> _rejoinOfferChain = Future<void>.value();
 
   /// Candidats ICE déjà émis pour l'appel sortant en cours, avec leur
   /// génération. Ils sont rejoués au décrochage : voir `_replayOutgoingIce`.
-  final List<({int generation, Map<String, dynamic> payload})> _outgoingIceOutbox = [];
+  final List<({int generation, Map<String, dynamic> payload})>
+  _outgoingIceOutbox = [];
   bool _isIceRestarting = false;
   int _iceRestartCount = 0;
   static const Duration _reconnectGraceDuration = Duration(seconds: 4);
   static const Duration _globalReconnectTimeout = Duration(seconds: 45);
   static const int _maxIceRestarts = 3;
+
   /// Cadence de vérification pendant une reconnexion.
   /// Une offre peut se perdre sans que personne ne le sache : socket local à
   /// terre, ou appareil du pair absent. Le verdict reste au timeout global.
@@ -395,6 +417,13 @@ class CallService extends ChangeNotifier {
   String? get remoteUserName => _remoteUserName;
   String? get remoteUserPhoto => _remoteUserPhoto;
   bool get isVideo => _isVideo;
+  bool get isAudioToVideoAvailable =>
+      kCallAudioToVideoEnabled &&
+      _groupRoomId == null &&
+      _confSessionId == null &&
+      _remoteUserId != null &&
+      _status == CallStatus.connected;
+  bool get isVideoTransitionInFlight => _videoTransitionInFlight;
   bool get isMuted => _isMuted;
   bool get isSpeakerOn => _isSpeakerOn;
 
@@ -464,7 +493,11 @@ class CallService extends ChangeNotifier {
   }
 
   /// Renseigne l'identité locale (appelée par AuthProvider à chaque changement).
-  void setLocalIdentity({required int id, required String name, String? photo}) {
+  void setLocalIdentity({
+    required int id,
+    required String name,
+    String? photo,
+  }) {
     _localUserId = id;
     _localUserName = name;
     _localUserPhoto = photo;
@@ -490,13 +523,13 @@ class CallService extends ChangeNotifier {
   /// demander pourquoi, et « l'appel est déjà à trois » n'a aucune action de
   /// rattrapage à proposer. La règle vit dans [canAddToCall].
   bool get canAddParticipant => canAddToCall(
-        callStatusName: _status.name,
-        hasConfSession: _confSessionId != null,
-        showsGroupRoom: _groupRoomId != null,
-        hasPendingInvitee: _confPendingInvitee != null,
-        hasRemoteUser: _remoteUserId != null,
-        meetingActive: _isMeetingActive(),
-      );
+    callStatusName: _status.name,
+    hasConfSession: _confSessionId != null,
+    showsGroupRoom: _groupRoomId != null,
+    hasPendingInvitee: _confPendingInvitee != null,
+    hasRemoteUser: _remoteUserId != null,
+    meetingActive: _isMeetingActive(),
+  );
 
   // Locuteur actif : Set des userId (groupe) ou {SpeakingDetector.localKey}
   // pour moi-même. Voir `speaking_detector.dart`.
@@ -586,9 +619,7 @@ class CallService extends ChangeNotifier {
 
   /// Android V2 : CallKit entrant affiché côté natif en arrière-plan.
   bool get _nativeAndroidHandlesIncomingCallUi =>
-      !kIsWeb &&
-      Platform.isAndroid &&
-      _kAndroidNativeCallNotifications;
+      !kIsWeb && Platform.isAndroid && _kAndroidNativeCallNotifications;
 
   /// Retire l'UI CallKit sans refuser l'appel (migration premier plan).
   ///
@@ -637,20 +668,18 @@ class CallService extends ChangeNotifier {
       _incomingPresentation.owner;
 
   /// callId utilisé pour l'ownership UI (1-1 = callId, groupe/conf = room/session).
-  String? get _activeIncomingPresentationCallId => incomingPresentationId(
-        callId: _currentCallId,
-        groupRoomId: _groupRoomId,
-      );
+  String? get _activeIncomingPresentationCallId =>
+      incomingPresentationId(callId: _currentCallId, groupRoomId: _groupRoomId);
 
   /// HomeScreen : ouvrir IncomingCallScreen seulement si Flutter est owner.
   bool get shouldShowFlutterIncomingUi => evaluateShouldShowFlutterIncomingUi(
-        statusIsIncoming: _status == CallStatus.incoming,
-        isAutoAnsweringFromPush: _isAutoAnsweringFromPush,
-        appForeground: _isAppForeground,
-        owner: _incomingPresentation.owner,
-        ownerCallId: _incomingPresentation.callId,
-        currentCallId: _activeIncomingPresentationCallId,
-      );
+    statusIsIncoming: _status == CallStatus.incoming,
+    isAutoAnsweringFromPush: _isAutoAnsweringFromPush,
+    appForeground: _isAppForeground,
+    owner: _incomingPresentation.owner,
+    ownerCallId: _incomingPresentation.callId,
+    currentCallId: _activeIncomingPresentationCallId,
+  );
 
   bool _claimIncomingPresentation(
     String? callId,
@@ -763,8 +792,8 @@ class CallService extends ChangeNotifier {
               : ListRingtonePreferences.resolveCall(_remoteUserId!),
         )
         .catchError((Object e) {
-      debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
-    });
+          debugPrint('[CallService] ** Erreur sonnerie (non-bloquante): $e');
+        });
   }
 
   void _clearIncomingPresentation({String? callId}) {
@@ -787,22 +816,24 @@ class CallService extends ChangeNotifier {
   /// eux ne connaissent que celui qui a ouvert la session, alors que le serveur
   /// et l'isolate FCM parlent du sien.
   bool _matchesCurrentCallId(String? id) => matchesCallIdentity(
-        candidate: id,
-        currentCallId: _currentCallId,
-        callKitCallId: _callKitCallId,
-      );
+    candidate: id,
+    currentCallId: _currentCallId,
+    callKitCallId: _callKitCallId,
+  );
 
   bool matchesActiveOutgoingSession(String callId) => matchesActiveOutgoingCall(
-        candidate: callId,
-        callStatusName: _status.name,
-        currentCallId: _currentCallId,
-        callKitCallId: _callKitCallId,
-      );
+    candidate: callId,
+    callStatusName: _status.name,
+    currentCallId: _currentCallId,
+    callKitCallId: _callKitCallId,
+  );
 
   bool _alreadyHandledIncomingCallId(String? callId) {
     if (callId == null || callId.isEmpty) return false;
     final now = DateTime.now();
-    _recentIncomingCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 90);
+    _recentIncomingCallIds.removeWhere(
+      (_, ts) => now.difference(ts).inSeconds > 90,
+    );
     if (_recentIncomingCallIds.containsKey(callId)) return true;
     _recentIncomingCallIds[callId] = now;
     return false;
@@ -824,7 +855,9 @@ class CallService extends ChangeNotifier {
   void _markOneTerminalCallId(String? callId) {
     if (callId == null || callId.isEmpty) return;
     final now = DateTime.now();
-    _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);
+    _handledTerminalCallIds.removeWhere(
+      (_, ts) => now.difference(ts).inSeconds > 120,
+    );
     _handledTerminalCallIds[callId] = now;
     _clearIncomingPresentation(callId: callId);
     // Persisté pour l'isolate FCM background (course call vs call_ended).
@@ -834,7 +867,9 @@ class CallService extends ChangeNotifier {
   bool _isTerminalCallId(String? callId) {
     if (callId == null || callId.isEmpty) return false;
     final now = DateTime.now();
-    _handledTerminalCallIds.removeWhere((_, ts) => now.difference(ts).inSeconds > 120);
+    _handledTerminalCallIds.removeWhere(
+      (_, ts) => now.difference(ts).inSeconds > 120,
+    );
     return _handledTerminalCallIds.containsKey(callId);
   }
 
@@ -871,7 +906,9 @@ class CallService extends ChangeNotifier {
     _cancelIncomingRingSafety();
     _incomingRingSafetyTimer = Timer(_incomingRingSafety, () async {
       if (_status != CallStatus.incoming) return;
-      debugPrint('[CallService] ⏰ Sonnerie entrante sans réponse → arrêt de sécurité');
+      debugPrint(
+        '[CallService] ⏰ Sonnerie entrante sans réponse → arrêt de sécurité',
+      );
       await _ringtone.stop();
       // `_currentCallId` est nul pour une invitation de groupe : le filet se
       // déclenchait alors sans rien débloquer. `_activeIncomingPresentationCallId`
@@ -901,7 +938,9 @@ class CallService extends ChangeNotifier {
           intent: IncomingPresentationIntent.handoffToNative,
         ) !=
         IncomingPresentationAction.handoffToNative) {
-      debugPrint('[CallService] 🛡 bascule vers CallKit refusée: $presentationId');
+      debugPrint(
+        '[CallService] 🛡 bascule vers CallKit refusée: $presentationId',
+      );
       return;
     }
 
@@ -915,7 +954,8 @@ class CallService extends ChangeNotifier {
           .showIncoming(
             callId: presentationId,
             callerId: callerId,
-            callerName: _remoteUserName ??
+            callerName:
+                _remoteUserName ??
                 (isGroup ? resolveL10n().groupCall : resolveL10n().callNoun),
             callerPhoto: _remoteUserPhoto,
             isVideo: _isVideo,
@@ -924,8 +964,8 @@ class CallService extends ChangeNotifier {
             mode: _confSessionId != null ? _confMode : null,
           )
           .catchError((Object e) {
-        debugPrint('[CallService] handoff CallKit (background) échoué: $e');
-      }),
+            debugPrint('[CallService] handoff CallKit (background) échoué: $e');
+          }),
     );
   }
 
@@ -942,7 +982,9 @@ class CallService extends ChangeNotifier {
           intent: IncomingPresentationIntent.handoffToFlutter,
         ) !=
         IncomingPresentationAction.handoffToFlutter) {
-      debugPrint('[CallService] 🛡 bascule vers Flutter refusée: $presentationId');
+      debugPrint(
+        '[CallService] 🛡 bascule vers Flutter refusée: $presentationId',
+      );
       return;
     }
 
@@ -956,8 +998,10 @@ class CallService extends ChangeNotifier {
                   : ListRingtonePreferences.resolveCall(_remoteUserId!),
             )
             .catchError((Object e) {
-          debugPrint('[CallService] reprise sonnerie (foreground) échouée: $e');
-        }),
+              debugPrint(
+                '[CallService] reprise sonnerie (foreground) échouée: $e',
+              );
+            }),
       );
       _armIncomingRingSafety();
     }
@@ -978,11 +1022,13 @@ class CallService extends ChangeNotifier {
       final stillWaiting =
           _status == CallStatus.incoming && _pendingOffer == null;
       if (!stillWaiting) return;
-      final wasAnswering = _isAutoAnsweringFromPush || _autoAnswerOnNextIncoming;
+      final wasAnswering =
+          _isAutoAnsweringFromPush || _autoAnswerOnNextIncoming;
       debugPrint(
         '[CallService] ⏰ Offre entrante jamais reçue → teardown (answering=$wasAnswering)',
       );
-      if (wasAnswering) _errorMessage = LocaleController.instance.l10n.callFailed;
+      if (wasAnswering)
+        _errorMessage = LocaleController.instance.l10n.callFailed;
       await _terminateCall();
       if (wasAnswering) {
         _showTransientMessage(LocaleController.instance.l10n.callFailed);
@@ -997,22 +1043,27 @@ class CallService extends ChangeNotifier {
     final id = _remoteUserId;
     if (id == null) return;
     if (_remoteUserName != null && _remoteUserName!.trim().isNotEmpty) return;
-    _apiClient.getUserById(id).then((u) {
-      if (_remoteUserId != id) return; // l'appel a changé entre-temps
-      final nom = (u['nom'] as String?)?.trim() ?? '';
-      final pseudo = (u['pseudo'] as String?)?.trim() ?? '';
-      final resolved = nom.isNotEmpty ? nom : pseudo;
-      if (resolved.isEmpty) return;
-      _remoteUserName = resolved;
-      _remoteUserPhoto ??= normalizeBackendUrl(u['avatar_url'] as String?);
-      _remoteTypeCompte = (u['type_compte'] as num?)?.toInt() ?? 0;
-      _remoteAccountType = (u['account_type'] as num?)?.toInt() ?? 0;
-      _remoteVerificationStatus =
-          (u['verification_status'] as num?)?.toInt() ?? 0;
-      notify();
-    }).catchError((Object e) {
-      debugPrint('[CallService] _ensureRemoteIdentityResolved($id) échec: $e');
-    });
+    _apiClient
+        .getUserById(id)
+        .then((u) {
+          if (_remoteUserId != id) return; // l'appel a changé entre-temps
+          final nom = (u['nom'] as String?)?.trim() ?? '';
+          final pseudo = (u['pseudo'] as String?)?.trim() ?? '';
+          final resolved = nom.isNotEmpty ? nom : pseudo;
+          if (resolved.isEmpty) return;
+          _remoteUserName = resolved;
+          _remoteUserPhoto ??= normalizeBackendUrl(u['avatar_url'] as String?);
+          _remoteTypeCompte = (u['type_compte'] as num?)?.toInt() ?? 0;
+          _remoteAccountType = (u['account_type'] as num?)?.toInt() ?? 0;
+          _remoteVerificationStatus =
+              (u['verification_status'] as num?)?.toInt() ?? 0;
+          notify();
+        })
+        .catchError((Object e) {
+          debugPrint(
+            '[CallService] _ensureRemoteIdentityResolved($id) échec: $e',
+          );
+        });
   }
 
   /// Affiche un message transitoire (occupé / pas de réponse / échec) via le
@@ -1025,11 +1076,13 @@ class CallService extends ChangeNotifier {
     }
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-      ));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
   }
 
   /// Vérifie réseau OS + socket avant un appel sortant.

@@ -3112,6 +3112,18 @@ abstract class AppLocalizations {
   /// **'Appel vidéo'**
   String get videoCall;
 
+  /// No description provided for @switchToVideoCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer à un appel vidéo ?'**
+  String get switchToVideoCall;
+
+  /// No description provided for @switchToVideoCallBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre caméra sera activée. L\'appel audio reste inchangé si la transition échoue.'**
+  String get switchToVideoCallBody;
+
   /// No description provided for @unpin.
   ///
   /// In fr, this message translates to:

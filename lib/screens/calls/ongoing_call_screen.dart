@@ -68,9 +68,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.96, end: 1.04).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 0.96,
+      end: 1.04,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         Provider.of<CallService>(context, listen: false).markCallUiVisible();
@@ -192,9 +193,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
       cs.addParticipant(
         chosen.alanyaID,
-        myName: me == null
-            ? null
-            : (me.nom.isNotEmpty ? me.nom : me.pseudo),
+        myName: me == null ? null : (me.nom.isNotEmpty ? me.nom : me.pseudo),
         myPhoto: me?.avatarUrl,
         transfer: transfer,
       );
@@ -267,11 +266,13 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       // Si le focus pointe un participant parti, le fermer.
       final focused = _focusedParticipantId;
       if (focused != null) {
-        final localId = (cs.localUserId ??
-                Provider.of<AuthProvider>(context, listen: false)
-                    .currentUser
-                    ?.alanyaID)
-            ?.toString();
+        final localId =
+            (cs.localUserId ??
+                    Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    ).currentUser?.alanyaID)
+                ?.toString();
         final stillThere =
             focused == localId || cs.groupRemoteStreams.containsKey(focused);
         if (!stillThere) _focusedParticipantId = null;
@@ -284,7 +285,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   }
 
   void _syncCountdownTicker(CallService cs) {
-    final need = cs.isTransferInitiator &&
+    final need =
+        cs.isTransferInitiator &&
         cs.transferStatus == CallTransferStatus.countdown;
     if (need && _countdownTicker == null) {
       _countdownTicker = Timer.periodic(const Duration(milliseconds: 200), (_) {
@@ -351,6 +353,33 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     setState(() => _controlsVisible = !_controlsVisible);
   }
 
+  Future<void> _onCameraPressed() async {
+    final cs = Provider.of<CallService>(context, listen: false);
+    if (!cs.isVideo) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(context.l10n.switchToVideoCall),
+          content: Text(context.l10n.switchToVideoCallBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(context.l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(context.l10n.videoCall),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await cs.upgradeAudioToVideo();
+      return;
+    }
+    await cs.toggleCamera();
+  }
+
   void _toggleSwap() {
     setState(() => _localIsMainView = !_localIsMainView);
   }
@@ -375,6 +404,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       void refresh() {
         if (mounted) setState(() {});
       }
+
       track.onMute = refresh;
       track.onUnMute = refresh;
     }
@@ -403,7 +433,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
   }
 
   bool _isConnecting(CallService cs) {
-    if (cs.status == CallStatus.outgoing || cs.status == CallStatus.connecting) {
+    if (cs.status == CallStatus.outgoing ||
+        cs.status == CallStatus.connecting) {
       return true;
     }
     // Cold-start : accepté depuis CallKit, en attente de l'offre SDP.
@@ -456,8 +487,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
         roster: cs.groupRoster,
         activeSpeakers: cs.activeSpeakers,
         pendingInvitee: cs.confPendingInvitee,
-        onCancelPending:
-            cs.confInviteIsMine ? () => cs.cancelAddParticipant() : null,
+        onCancelPending: cs.confInviteIsMine
+            ? () => cs.cancelAddParticipant()
+            : null,
         localUserId: localUserId,
         localStream: cs.localStream,
         localName: localName,
@@ -587,7 +619,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
           final localUser = context.watch<AuthProvider>().currentUser;
           final localName = localUser?.nom ?? context.l10n.meLabel;
           final localPhoto = localUser?.avatarUrl;
-          final localUserId = (cs.localUserId ?? localUser?.alanyaID)?.toString() ?? '';
+          final localUserId =
+              (cs.localUserId ?? localUser?.alanyaID)?.toString() ?? '';
           final statusLabel = _statusLabel(cs);
           // « En cours » ferait doublon avec le chrono, mais « Reconnexion… »
           // et les libellés de transfert portent une information que la durée
@@ -611,8 +644,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
               : groupCountLabel;
           final displayName = isGroup
               ? (cs.isConference
-                  ? context.l10n.confCallOfThree
-                  : context.l10n.groupCall)
+                    ? context.l10n.confCallOfThree
+                    : context.l10n.groupCall)
               : (cs.remoteUserName ?? context.l10n.callNoun);
           // PiP 1-à-1 uniquement — en conf la tuile locale est dans la grille.
           final pipChild = isGroup
@@ -624,18 +657,23 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                   localPhoto: localPhoto,
                 );
           final countdownSecs = cs.transferCountdownRemainingSeconds;
-          final showCountdown = cs.isTransferInitiator &&
+          final showCountdown =
+              cs.isTransferInitiator &&
               cs.transferStatus == CallTransferStatus.countdown &&
               countdownSecs != null;
 
           CallUiScope.applyOverlayStyle(context, isVideo: isVideo);
 
           return Scaffold(
-            backgroundColor: useVideoChrome ? AppColors.black : callUi.backgroundSolid,
+            backgroundColor: useVideoChrome
+                ? AppColors.black
+                : callUi.backgroundSolid,
             body: LayoutBuilder(
               builder: (context, constraints) {
-                final screenSize =
-                    Size(constraints.maxWidth, constraints.maxHeight);
+                final screenSize = Size(
+                  constraints.maxWidth,
+                  constraints.maxHeight,
+                );
                 final safeArea = MediaQuery.paddingOf(context);
                 final pipBounds = computePipBounds(
                   screenSize: screenSize,
@@ -661,7 +699,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                     userId: focusedId,
                     name: isLocal
                         ? localName
-                        : (rosterInfo?.name ?? context.l10n.participantFallback),
+                        : (rosterInfo?.name ??
+                              context.l10n.participantFallback),
                     stream: isLocal
                         ? cs.localStream
                         : cs.groupRemoteStreams[focusedId],
@@ -734,7 +773,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                       child: IgnorePointer(
                         ignoring: !_controlsVisible,
                         child: AnimatedSlide(
-                          offset: _controlsVisible ? Offset.zero : const Offset(0, -0.5),
+                          offset: _controlsVisible
+                              ? Offset.zero
+                              : const Offset(0, -0.5),
                           duration: AppDurations.normal,
                           curve: Curves.easeOutCubic,
                           child: AnimatedOpacity(
@@ -743,7 +784,8 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                             child: CallTopBar(
                               name: displayName,
                               status: topBarStatus,
-                              duration: (cs.status == CallStatus.connected ||
+                              duration:
+                                  (cs.status == CallStatus.connected ||
                                       cs.status == CallStatus.reconnecting)
                                   ? cs.formattedDuration
                                   : null,
@@ -762,7 +804,9 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                       child: IgnorePointer(
                         ignoring: !_controlsVisible,
                         child: AnimatedSlide(
-                          offset: _controlsVisible ? Offset.zero : const Offset(0, 0.5),
+                          offset: _controlsVisible
+                              ? Offset.zero
+                              : const Offset(0, 0.5),
                           duration: AppDurations.normal,
                           curve: Curves.easeOutCubic,
                           child: AnimatedOpacity(
@@ -776,13 +820,17 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                               audioRoute: cs.audioRoute,
                               audioRoutes: cs.availableAudioRoutes,
                               useVideoChrome: useVideoChrome,
+                              showCameraInAudio:
+                                  cs.isAudioToVideoAvailable ||
+                                  cs.isVideoTransitionInFlight,
                               onMute: () => cs.toggleMute(),
                               onSpeaker: () => cs.toggleSpeaker(),
-                              onCamera: () => cs.toggleCamera(),
+                              onCamera: () => unawaited(_onCameraPressed()),
                               onSwitchCam: () => cs.switchCamera(),
                               onHangUp: _hangUp,
                               canAddParticipant: cs.canAddParticipant,
-                              onAddParticipant: () => _openAddSheet(transfer: false),
+                              onAddParticipant: () =>
+                                  _openAddSheet(transfer: false),
                               onTransferParticipant: cs.canAddParticipant
                                   ? () => _openAddSheet(transfer: true)
                                   : null,
