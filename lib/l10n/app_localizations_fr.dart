@@ -9072,8 +9072,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get safeboxBackupSpaceFull =>
-      'Espace plein : la sauvegarde est arrêtée';
+  String safeboxBackupSpaceFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Espace plein : $count fichiers attendent de la place',
+      one: 'Espace plein : 1 fichier attend de la place',
+      zero: 'Espace plein',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get safeboxBackupNoAccess => 'Accès aux photos refusé';
@@ -9178,7 +9186,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String safeboxBackupOverflows(String size) {
-    return 'Dépasse de $size : la sauvegarde s\'arrêtera quand l\'espace sera plein.';
+    return 'Dépasse de $size : les fichiers les plus récents partent d\'abord, les plus anciens attendront de la place.';
   }
 
   @override

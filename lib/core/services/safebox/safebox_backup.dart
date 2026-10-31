@@ -499,6 +499,7 @@ class SafeboxBackupReport {
     this.skipped = 0,
     this.queued = 0,
     this.waitingCharge = 0,
+    this.noRoom = 0,
     this.stop = SafeboxBackupStop.none,
   });
 
@@ -512,6 +513,9 @@ class SafeboxBackupReport {
 
   /// À compresser, en attente de la charge.
   final int waitingCharge;
+
+  /// Trop gros pour la place qui restait : revus quand de la place se libère.
+  final int noRoom;
   final SafeboxBackupStop stop;
 }
 
@@ -593,20 +597,40 @@ class SafeboxBackupEngine {
       }
       final faits = await _store.load();
       final items = await selection(s);
-      final neufs = [for (final it in items) if (!(faits[it.key]?.matches(it) ?? false)) it];
-      var dejaLa = 0, sautes = 0, partis = 0, attenteCharge = 0;
+      // Du plus récent au plus ancien, toutes sources confondues : quand la
+      // place manque, ce sont les plus anciens qui attendent.
+      final neufs = [for (final it in items) if (!(faits[it.key]?.matches(it) ?? false)) it]
+        ..sort((a, b) => b.modified.compareTo(a.modified));
+      var dejaLa = 0, sautes = 0, partis = 0, attenteCharge = 0, sansPlace = 0;
       var libre = await freeSpace();
       final enCharge = await charging();
       for (var i = 0; i < neufs.length; i += batchSize) {
         final lot = neufs.sublist(i, i + batchSize > neufs.length ? neufs.length : i + batchSize);
-        // Les empreintes du lot, puis une seule question au serveur.
-        final ouverts = <({SafeboxDeviceItem item, File file, String fp})>[];
+        // Les empreintes du lot, puis une seule question au serveur. La place
+        // de chacun est retenue à l'ouverture et rendue s'il ne part pas.
+        final ouverts = <({SafeboxDeviceItem item, File file, String fp, SafeboxQuality q, int poids})>[];
         for (final it in lot) {
           try {
             final f = await device.open(it);
             if (f == null) continue;
             final mesure = it.size >= 0 ? it : it.withSize(await f.length());
-            ouverts.add((item: mesure, file: f, fp: await safeboxSourceFingerprint(f.path)));
+            final q = safeboxBackupQualityFor(mesure, s.qualityOf(mesure.family), maxFileBytes());
+            final poids = switch (mesure.family) {
+              SafeboxFamily.photos => safeboxEstimatePhotoBytes(mesure.facts, q),
+              SafeboxFamily.videos => safeboxEstimateVideoBytes(mesure.facts, q, hevc: true),
+              SafeboxFamily.audios => safeboxEstimateAudioBytes(mesure.facts, q),
+              SafeboxFamily.documents => mesure.size,
+            };
+            // Trop gros pour la place qui reste : les suivants, plus petits,
+            // peuvent encore tenir. Pas lu (pas d'empreinte) : il sera revu
+            // quand de la place se libère.
+            if (libre != null && poids > libre) {
+              sansPlace += 1;
+              _jeter(f, mesure);
+              continue;
+            }
+            ouverts.add((item: mesure, file: f, fp: await safeboxSourceFingerprint(f.path), q: q, poids: poids));
+            if (libre != null) libre -= poids;
           } catch (e) {
             debugPrint('[Sauvegarde] ${it.name} illisible : $e');
           }
@@ -623,6 +647,7 @@ class SafeboxBackupEngine {
                 quality: q,
                 jobId: job,
               );
+          var parti = false;
           switch (etats[o.fp] ?? SafeboxBackupCheck.unknown) {
             case SafeboxBackupCheck.saved || SafeboxBackupCheck.elsewhere:
               faits[it.key] = note(SafeboxBackupState.saved);
@@ -636,36 +661,18 @@ class SafeboxBackupEngine {
               // Un autre appareil l'envoie : revu au prochain passage.
               _jeter(o.file, it);
             case SafeboxBackupCheck.unknown:
-              final q = safeboxBackupQualityFor(it, s.qualityOf(it.family), maxFileBytes());
-              if (q != SafeboxQuality.original && s.chargingOnly && !enCharge) {
+              if (o.q != SafeboxQuality.original && s.chargingOnly && !enCharge) {
                 attenteCharge += 1;
                 _jeter(o.file, it);
-                continue;
+                break;
               }
-              final poids = switch (it.family) {
-                SafeboxFamily.photos => safeboxEstimatePhotoBytes(it.facts, q),
-                SafeboxFamily.videos => safeboxEstimateVideoBytes(it.facts, q, hevc: true),
-                SafeboxFamily.audios => safeboxEstimateAudioBytes(it.facts, q),
-                SafeboxFamily.documents => it.size,
-              };
-              if (libre != null && poids > libre) {
-                _jeter(o.file, it);
-                await _store.save(faits);
-                return SafeboxBackupReport(
-                  seen: items.length,
-                  alreadySaved: dejaLa,
-                  skipped: sautes,
-                  queued: partis,
-                  waitingCharge: attenteCharge,
-                  stop: SafeboxBackupStop.spaceFull,
-                );
-              }
-              final job = await enqueue(SafeboxBackupUpload(item: it, file: o.file, quality: q, fp: o.fp));
-              if (job == null) continue;
-              faits[it.key] = note(SafeboxBackupState.queued, q: q, job: job);
+              final job = await enqueue(SafeboxBackupUpload(item: it, file: o.file, quality: o.q, fp: o.fp));
+              if (job == null) break;
+              faits[it.key] = note(SafeboxBackupState.queued, q: o.q, job: job);
               partis += 1;
-              if (libre != null) libre -= poids;
+              parti = true;
           }
+          if (!parti && libre != null) libre += o.poids;
         }
         await _store.save(faits);
       }
@@ -675,6 +682,10 @@ class SafeboxBackupEngine {
         skipped: sautes,
         queued: partis,
         waitingCharge: attenteCharge,
+        noRoom: sansPlace,
+        // « Espace plein » seulement pour ce qui ne tient vraiment pas : tout
+        // ce qui tenait est parti.
+        stop: sansPlace > 0 ? SafeboxBackupStop.spaceFull : SafeboxBackupStop.none,
       );
     } finally {
       _enCours = false;

@@ -373,7 +373,7 @@ class _LigneSauvegarde extends StatelessWidget {
             ? (Icons.block, context.colors.error, l10n.safeboxBackupNoAccess,
                 (l10n.safeboxBackupAllow, () => showSafeboxBackupSetup(context)))
             : dernier?.stop == SafeboxBackupStop.spaceFull
-                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull,
+                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom),
                     (l10n.safeboxGoPlus, () => showPaywall(context, null)))
                 : wifi > 0
                     ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),

@@ -267,8 +267,18 @@ class SafeboxMediaPrep {
         case SafeboxFamily.videos:
           return await VideoThumbnailService.forFile(path);
         case SafeboxFamily.audios:
+          // La pochette dans le fichier fait souvent 1 000 à 3 000 px (PNG
+          // jusqu'à 2 Mo) : réduite comme une photo, elle tient sous la limite
+          // des aperçus au lieu d'être écartée.
           final b64 = await MusicMetadataService.coverBase64(path);
-          return b64 == null ? null : base64Decode(b64);
+          if (b64 == null) return null;
+          return await FlutterImageCompress.compressWithList(
+            base64Decode(b64),
+            minWidth: kSafeboxPreviewSide,
+            minHeight: kSafeboxPreviewSide,
+            quality: 70,
+            format: CompressFormat.jpeg,
+          );
         case SafeboxFamily.documents:
           if (safeboxExtensionOf(name) != 'pdf') return null;
           final b64 = await PdfThumbnailService.base64ForFile(path, maxWidth: kSafeboxPreviewSide.toDouble());

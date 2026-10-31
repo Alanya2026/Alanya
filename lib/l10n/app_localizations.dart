@@ -15307,8 +15307,8 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupSpaceFull.
   ///
   /// In fr, this message translates to:
-  /// **'Espace plein : la sauvegarde est arrêtée'**
-  String get safeboxBackupSpaceFull;
+  /// **'{count, plural, =0{Espace plein} =1{Espace plein : 1 fichier attend de la place} other{Espace plein : {count} fichiers attendent de la place}}'**
+  String safeboxBackupSpaceFull(int count);
 
   /// No description provided for @safeboxBackupNoAccess.
   ///
@@ -15481,7 +15481,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupOverflows.
   ///
   /// In fr, this message translates to:
-  /// **'Dépasse de {size} : la sauvegarde s\'arrêtera quand l\'espace sera plein.'**
+  /// **'Dépasse de {size} : les fichiers les plus récents partent d\'abord, les plus anciens attendront de la place.'**
   String safeboxBackupOverflows(String size);
 
   /// No description provided for @safeboxBackupHdPreselected.

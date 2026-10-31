@@ -8534,7 +8534,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get safeboxBackupSpaceFull => '空间已满：备份已停止';
+  String safeboxBackupSpaceFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '空间已满：$count 个文件等待空间',
+      zero: '空间已满',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get safeboxBackupNoAccess => '照片访问被拒绝';
@@ -8637,7 +8645,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String safeboxBackupOverflows(String size) {
-    return '超出 $size：空间满时备份将停止。';
+    return '超出 $size：最新的文件先备份，最旧的文件将等待空间。';
   }
 
   @override
