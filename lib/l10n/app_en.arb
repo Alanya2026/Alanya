@@ -3765,6 +3765,7 @@
   "safeboxSelectedCount": "{count, plural, =1{1 selected} other{{count} selected}}",
   "safeboxSelectAll": "Select all",
   "safeboxFilterAll": "All",
+  "safeboxFilterWithNote": "With a comment",
   "safeboxDownload": "Download",
   "safeboxDownloadWhat": "What?",
   "safeboxDownloadWhere": "Where?",

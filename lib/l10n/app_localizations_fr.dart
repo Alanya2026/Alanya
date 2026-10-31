@@ -8934,6 +8934,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxFilterAll => 'Tout';
 
   @override
+  String get safeboxFilterWithNote => 'Avec commentaire';
+
+  @override
   String get safeboxDownload => 'Télécharger';
 
   @override

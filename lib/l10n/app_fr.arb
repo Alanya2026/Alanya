@@ -4700,6 +4700,7 @@
   "@safeboxSelectedCount": {"placeholders": {"count": {"type": "int"}}},
   "safeboxSelectAll": "Tout sélectionner",
   "safeboxFilterAll": "Tout",
+  "safeboxFilterWithNote": "Avec commentaire",
   "safeboxDownload": "Télécharger",
   "safeboxDownloadWhat": "Quoi ?",
   "safeboxDownloadWhere": "Où ?",

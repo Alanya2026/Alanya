@@ -129,10 +129,15 @@ class SafeboxNoteResult {
   final SafeboxNote? note;
 }
 
+/// La feuille remonte au-dessus du clavier et défile : on voit toujours ce
+/// qu'on écrit.
 Future<SafeboxNoteResult?> showSafeboxNoteEditor(BuildContext context, SafeboxFile file) =>
     showAppBottomSheet<SafeboxNoteResult>(
       context: context,
-      builder: (_) => _EditeurCommentaire(file: file),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+        child: SingleChildScrollView(child: _EditeurCommentaire(file: file)),
+      ),
     );
 
 class _EditeurCommentaire extends StatefulWidget {
@@ -179,6 +184,8 @@ class _EditeurCommentaireState extends State<_EditeurCommentaire> {
   }
 
   Future<void> _demarrer() async {
+    // Le clavier se range : la feuille redescend sur l'enregistrement.
+    FocusScope.of(context).unfocus();
     if (!await _enregistreur.hasPermission()) {
       if (mounted) safeboxSnack(context, context.l10n.microphonePermissionDenied2, error: true);
       return;
@@ -267,8 +274,27 @@ class _EditeurCommentaireState extends State<_EditeurCommentaire> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.file.note == null ? l10n.safeboxNoteAdd : l10n.safeboxNoteEdit, style: context.text.titleMedium),
-          AppSpacing.vGapXs,
+          // La photo commentée : on sait où va le commentaire, même clavier ouvert.
+          Row(
+            children: [
+              SafeboxFileThumb(file: widget.file, size: 48),
+              AppSpacing.hGapMd,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(widget.file.note == null ? l10n.safeboxNoteAdd : l10n.safeboxNoteEdit,
+                        style: context.text.titleMedium),
+                    Text(widget.file.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          AppSpacing.vGapSm,
           Text(l10n.safeboxNotePrivate, style: context.text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
           AppSpacing.vGapMd,
           TextField(

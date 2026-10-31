@@ -2684,6 +2684,7 @@
   "safeboxSelectedCount": "{count, plural, other{已选 {count} 项}}",
   "safeboxSelectAll": "全选",
   "safeboxFilterAll": "全部",
+  "safeboxFilterWithNote": "有评论",
   "safeboxDownload": "下载",
   "safeboxDownloadWhat": "下载什么？",
   "safeboxDownloadWhere": "保存到哪里？",

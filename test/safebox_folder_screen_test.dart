@@ -21,7 +21,8 @@ void main() {
   setUpAll(LocaleController.new);
   final fr = lookupAppLocalizations(const Locale('fr'));
 
-  Map<String, dynamic> fichier(int id, String name, String family, String quand, {Map<String, dynamic>? meta}) => {
+  Map<String, dynamic> fichier(int id, String name, String family, String quand,
+          {Map<String, dynamic>? meta, Map<String, dynamic>? note}) => {
         'id': id,
         'folderId': 30,
         'name': name,
@@ -35,6 +36,7 @@ void main() {
         'createdAt': quand,
         'alsoIn': [],
         'meta': ?meta,
+        'note': ?note,
       };
 
   final album = [
@@ -45,8 +47,21 @@ void main() {
   ];
 
   /// Avec [suite], une deuxième page (curseur 999) : le dossier se charge par pages.
-  http.Client serveur(String root, List<Map<String, dynamic>> files, {List<Map<String, dynamic>>? suite}) =>
+  /// [sousDossiers] : les sous-dossiers du dossier 30 ; le 32 est vide, les autres contiennent [album].
+  http.Client serveur(String root, List<Map<String, dynamic>> files,
+          {List<Map<String, dynamic>>? suite, List<Map<String, dynamic>> sousDossiers = const []}) =>
       MockClient((req) async {
+        final sous = RegExp(r'/folders/(\d+)$').firstMatch(req.url.path);
+        if (sous != null && sous.group(1) != '30') {
+          final corps = {
+            'folder': {'id': int.parse(sous.group(1)!), 'parentId': 30, 'root': root, 'name': 'Plage', 'depth': 2},
+            'breadcrumbs': [],
+            'folders': [],
+            'files': sous.group(1) == '32' ? [] : album,
+            'nextCursor': null,
+          };
+          return http.Response(jsonEncode(corps), 200, headers: {'content-type': 'application/json; charset=utf-8'});
+        }
         final corps = req.url.path.endsWith('/safebox')
             ? {
                 'quota': {'quotaBytes': 1 << 30, 'usedBytes': 0, 'pendingBytes': 0, 'trashBytes': 0, 'byRoot': {}},
@@ -59,7 +74,7 @@ void main() {
             : {
                 'folder': {'id': 30, 'parentId': 15, 'root': root, 'name': 'Kribi 2026', 'depth': 1},
                 'breadcrumbs': [],
-                'folders': [],
+                'folders': req.url.queryParameters['cursor'] == null ? sousDossiers : [],
                 'files': req.url.queryParameters['cursor'] == null ? files : (suite ?? const []),
                 'nextCursor': suite != null && req.url.queryParameters['cursor'] == null ? 999 : null,
               };
@@ -67,12 +82,13 @@ void main() {
       });
 
   Future<void> monter(WidgetTester tester, SafeboxRoot root, List<Map<String, dynamic>> files,
-      {List<Map<String, dynamic>>? suite}) async {
+      {List<Map<String, dynamic>>? suite, List<Map<String, dynamic>> sousDossiers = const []}) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
     addTearDown(tester.view.reset);
-    final c = SafeboxController(api: TalkyApiClient(client: serveur(root.name, files, suite: suite)));
+    final c = SafeboxController(
+        api: TalkyApiClient(client: serveur(root.name, files, suite: suite, sousDossiers: sousDossiers)));
     await c.refreshOverview();
     await tester.pumpWidget(ChangeNotifierProvider<SafeboxController>.value(
       value: c,
@@ -132,6 +148,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxSendAlbum), findsOneWidget);
     expect(find.text(fr.safeboxDownloadFolderAction), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('appui long sur un sous-dossier : son menu, « Envoyer l\'album » en tête', (tester) async {
+    await monter(tester, SafeboxRoot.albums, const [], sousDossiers: [
+      {'id': 32, 'parentId': 30, 'root': 'albums', 'name': 'Vide', 'depth': 2},
+    ]);
+    await tester.longPress(find.text('Vide'));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxSendAlbum), findsOneWidget);
+    expect(find.text(fr.safeboxRename), findsOneWidget);
+    await tester.tap(find.text(fr.safeboxSendAlbum));
+    await tester.pumpAndSettle();
+    // Son contenu a été chargé : vide, il le dit au lieu de ne rien faire.
+    expect(find.text(fr.safeboxFolderEmpty), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('« Avec commentaire » : une bulle sur la vignette, et le filtre', (tester) async {
+    await monter(tester, SafeboxRoot.albums, [
+      fichier(1, 'Plage.jpg', 'photos', '2025-03-03T10:00:00Z', note: {'text': 'Avant la pluie'}),
+      ...album.skip(1),
+    ]);
+    expect(find.byIcon(Icons.chat_bubble), findsOneWidget, reason: 'un texte : une bulle, pas un micro');
+    expect(find.byType(SafeboxGridTile), findsNWidgets(4));
+    await tester.tap(find.widgetWithText(FilterChip, fr.safeboxFilterWithNote));
+    await tester.pumpAndSettle();
+    expect(find.byType(SafeboxGridTile), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilterChip, fr.safeboxFilterWithNote));
+    await tester.pumpAndSettle();
+    expect(find.byType(SafeboxGridTile), findsNWidgets(4));
     expect(tester.takeException(), isNull);
   });
 

@@ -8425,6 +8425,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxFilterAll => '全部';
 
   @override
+  String get safeboxFilterWithNote => '有评论';
+
+  @override
   String get safeboxDownload => '下载';
 
   @override

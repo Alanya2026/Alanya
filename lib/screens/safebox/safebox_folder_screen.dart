@@ -71,6 +71,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   /// Filtre par dossier d'origine du téléphone, dans Photos et Vidéos (lot
   /// 10) ; null : tout.
   String? _filtreSource;
+
+  /// « Avec commentaire » : seulement les photos commentées.
+  bool _commentees = false;
   bool _choixOuvert = false;
 
   /// Racine Partager : « Mes envois » et « Reçus » (lot 9).
@@ -85,7 +88,10 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
 
   bool get _selection => _choisis.isNotEmpty;
   List<SafeboxFile> get _visibles => _fichiers
-      .where((f) => (_filtre == null || f.family == _filtre) && (_filtreSource == null || f.meta?.source == _filtreSource))
+      .where((f) =>
+          (_filtre == null || f.family == _filtre) &&
+          (_filtreSource == null || f.meta?.source == _filtreSource) &&
+          (!_commentees || f.note != null))
       .toList();
   List<SafeboxFile> get _selectionnes => _fichiers.where((f) => _choisis.contains(f.id)).toList();
 
@@ -142,6 +148,18 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   }
 
   /// Tout le dossier (ses fichiers, pas ses sous-dossiers), pages comprises.
+  /// Tous les fichiers d'un sous-dossier, pages comprises (sans ses propres sous-dossiers).
+  Future<List<SafeboxFile>> _fichiersDe(int folderId) async {
+    final tous = <SafeboxFile>[];
+    int? suite;
+    do {
+      final p = await _c.api.fetchSafeboxFolder(folderId, cursor: suite);
+      tous.addAll(p.files);
+      suite = p.nextCursor;
+    } while (suite != null);
+    return tous;
+  }
+
   Future<List<SafeboxFile>> _toutLeDossier() async {
     final tous = [..._fichiers];
     var suite = _suite;
@@ -514,23 +532,27 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   Future<void> _envoyerLeDossier() async {
     try {
       final tous = await _toutLeDossier();
-      if (mounted) await _envoyer(tous, dossierEntier: true);
+      if (mounted) await _envoyer(tous, dossierEntier: _page?.folder);
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
     }
   }
 
-  /// Une sélection, ou tout le dossier, part en un seul message (lot 9), au
-  /// nom du dossier ; 500 fichiers au plus.
-  Future<void> _envoyer(List<SafeboxFile> fichiers, {bool dossierEntier = false}) async {
+  /// Une sélection, ou tout un dossier ([dossierEntier] : celui-ci ou un
+  /// sous-dossier), part en un seul message (lot 9), au nom du dossier ;
+  /// 500 fichiers au plus.
+  Future<void> _envoyer(List<SafeboxFile> fichiers, {SafeboxFolder? dossierEntier}) async {
     final l10n = context.l10n;
-    if (fichiers.isEmpty) return;
+    if (fichiers.isEmpty) {
+      safeboxSnack(context, l10n.safeboxFolderEmpty);
+      return;
+    }
     if (fichiers.length > kSafeboxShareMaxItems) {
       safeboxSnack(context, l10n.safeboxShareTooMany(kSafeboxShareMaxItems), error: true);
       return;
     }
-    final titre = _titreDossier(l10n);
-    final dossier = _page?.folder;
+    final dossier = dossierEntier;
+    final titre = dossier == null ? _titreDossier(l10n) : SafeboxController.folderLabel(dossier, l10n);
     final n = await sendSafeboxToConversations(
       context,
       file: fichiers.first,
@@ -544,7 +566,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
         }
         if (retenus.isEmpty) return null;
         // Tout l'album, sans rien d'écarté : partagé comme album par le serveur.
-        final commeAlbum = dossierEntier && dossier != null && retenus.length == fichiers.length;
+        final commeAlbum = dossier != null && retenus.length == fichiers.length;
         return _c.sendToConversations(retenus, ids, title: titre, album: commeAlbum ? dossier : null);
       },
     );
@@ -647,6 +669,12 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Tout le dossier en une seule carte, comme « Envoyer l'album » du menu ⋮.
+            ListTile(
+              leading: const Icon(Icons.send_outlined),
+              title: Text(widget.root == SafeboxRoot.albums ? l10n.safeboxSendAlbum : l10n.safeboxSendFolder),
+              onTap: () => Navigator.pop(ctx, 'envoyer'),
+            ),
             ListTile(leading: const Icon(Icons.edit_outlined), title: Text(l10n.safeboxRename), onTap: () => Navigator.pop(ctx, 'renommer')),
             ListTile(leading: const Icon(Icons.drive_file_move_outlined), title: Text(l10n.safeboxMove), onTap: () => Navigator.pop(ctx, 'deplacer')),
             ListTile(
@@ -661,6 +689,10 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     if (!mounted || action == null) return;
     try {
       switch (action) {
+        case 'envoyer':
+          final tous = await _fichiersDe(d.id);
+          if (mounted) await _envoyer(tous, dossierEntier: d);
+          return;
         case 'renommer':
           final nom = await safeboxAskName(
             context,
@@ -801,16 +833,60 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     ];
   }
 
+  /// « Avec commentaire », quand une photo du dossier en a un. Choisi, il
+  /// charge d'abord tout le dossier : le filtre ne manque aucune photo.
+  Widget? _puceCommentees(AppLocalizations l10n) {
+    if (!_commentees && !_fichiers.any((f) => f.note != null)) return null;
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: FilterChip(
+        avatar: const Icon(Icons.chat_bubble_outline, size: 16),
+        label: Text(l10n.safeboxFilterWithNote),
+        selected: _commentees,
+        onSelected: (oui) async {
+          if (oui && _suite != null) {
+            try {
+              final tous = await _toutLeDossier();
+              if (!mounted) return;
+              setState(() {
+                _fichiers
+                  ..clear()
+                  ..addAll(tous);
+                _suite = null;
+              });
+            } catch (e) {
+              if (mounted) safeboxShowError(context, e);
+              return;
+            }
+          }
+          if (mounted) setState(() => _commentees = oui);
+        },
+      ),
+    );
+  }
+
+  Widget _barreFiltres(List<Widget> puces) => SizedBox(
+        height: 48,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
+          children: puces,
+        ),
+      );
+
   /// Filtre par dossier d'origine, quand Photos ou Vidéos en mélange
   /// plusieurs (« Appareil photo · 912 », « WhatsApp · 328 »).
   Widget? _filtresSource(AppLocalizations l10n) {
     if (!_parJour) return null;
+    final commentees = _puceCommentees(l10n);
     final parSource = <String, int>{};
     for (final f in _fichiers) {
       final src = f.meta?.source;
       if (src != null) parSource[src] = (parSource[src] ?? 0) + 1;
     }
-    if (parSource.isEmpty || (parSource.length < 2 && parSource.values.first == _fichiers.length)) return null;
+    if (parSource.isEmpty || (parSource.length < 2 && parSource.values.first == _fichiers.length)) {
+      return commentees == null ? null : _barreFiltres([commentees]);
+    }
     final sources = parSource.keys.toList()..sort((a, b) => parSource[b]!.compareTo(parSource[a]!));
     Widget puce(String? src, String label) => Padding(
           padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -820,25 +896,20 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
             onSelected: (_) => setState(() => _filtreSource = src),
           ),
         );
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-        children: [
-          puce(null, l10n.safeboxFilterAll),
-          for (final src in sources) puce(src, '${safeboxPhoneFolderLabel(l10n, src)} · ${parSource[src]}'),
-        ],
-      ),
-    );
+    return _barreFiltres([
+      ?commentees,
+      puce(null, l10n.safeboxFilterAll),
+      for (final src in sources) puce(src, '${safeboxPhoneFolderLabel(l10n, src)} · ${parSource[src]}'),
+    ]);
   }
 
   /// Filtre par type, quand le dossier en mélange plusieurs (Albums, Partager).
   Widget? _filtres(AppLocalizations l10n) {
     if (_parJour) return _filtresSource(l10n);
     if (widget.root != SafeboxRoot.albums && widget.root != SafeboxRoot.partager) return null;
+    final commentees = widget.root == SafeboxRoot.albums ? _puceCommentees(l10n) : null;
     final familles = _fichiers.map((f) => f.family).toSet();
-    if (familles.length < 2) return null;
+    if (familles.length < 2) return commentees == null ? null : _barreFiltres([commentees]);
     Widget puce(SafeboxFamily? f, String label) => Padding(
           padding: const EdgeInsets.only(right: AppSpacing.sm),
           child: ChoiceChip(
@@ -847,18 +918,12 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
             onSelected: (_) => setState(() => _filtre = f),
           ),
         );
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-        children: [
-          puce(null, l10n.safeboxFilterAll),
-          for (final f in SafeboxFamily.values)
-            if (familles.contains(f)) puce(f, SafeboxController.rootLabel(f.root, l10n)),
-        ],
-      ),
-    );
+    return _barreFiltres([
+      ?commentees,
+      puce(null, l10n.safeboxFilterAll),
+      for (final f in SafeboxFamily.values)
+        if (familles.contains(f)) puce(f, SafeboxController.rootLabel(f.root, l10n)),
+    ]);
   }
 
   @override
@@ -1068,6 +1133,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                             leading: Icon(Icons.folder_outlined, color: context.colors.primary),
                             title: Text(d.name ?? ''),
                             trailing: IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuDossier(d)),
+                            onLongPress: () => _menuDossier(d),
                             onTap: () async {
                               await Navigator.push(
                                 context,

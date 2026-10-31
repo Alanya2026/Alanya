@@ -8833,6 +8833,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxFilterAll => 'All';
 
   @override
+  String get safeboxFilterWithNote => 'With a comment';
+
+  @override
   String get safeboxDownload => 'Download';
 
   @override

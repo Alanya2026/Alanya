@@ -15130,6 +15130,12 @@ abstract class AppLocalizations {
   /// **'Tout'**
   String get safeboxFilterAll;
 
+  /// No description provided for @safeboxFilterWithNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec commentaire'**
+  String get safeboxFilterWithNote;
+
   /// No description provided for @safeboxDownload.
   ///
   /// In fr, this message translates to:
