@@ -8491,13 +8491,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxSendFolder => '发送文件夹';
 
   @override
-  String safeboxShareTooMany(int max) {
-    return '每次最多发送 $max 个文件：请少选一些。';
+  String safeboxFilesCount(int count) {
+    return '$count 个文件';
   }
 
   @override
-  String safeboxFilesCount(int count) {
-    return '$count 个文件';
+  String safeboxFoldersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文件夹',
+    );
+    return '$_temp0';
   }
 
   @override

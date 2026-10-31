@@ -39,6 +39,10 @@ void main() {
         'note': ?note,
       };
 
+  /// Les demandes reçues par le faux serveur : « DELETE /folders/31 »…
+  final demandes = <String>[];
+  setUp(demandes.clear);
+
   final album = [
     fichier(1, 'Plage.jpg', 'photos', '2025-03-03T10:00:00Z'),
     fichier(2, 'Coucher.jpg', 'photos', '2025-03-03T09:00:00Z'),
@@ -51,6 +55,10 @@ void main() {
   http.Client serveur(String root, List<Map<String, dynamic>> files,
           {List<Map<String, dynamic>>? suite, List<Map<String, dynamic>> sousDossiers = const []}) =>
       MockClient((req) async {
+        demandes.add('${req.method} ${req.url.path.replaceFirst(RegExp(r'^.*/safebox'), '')}');
+        if (req.method == 'DELETE') {
+          return http.Response(jsonEncode({'ok': true, 'trashed': 1}), 200, headers: {'content-type': 'application/json'});
+        }
         final sous = RegExp(r'/folders/(\d+)$').firstMatch(req.url.path);
         if (sous != null && sous.group(1) != '30') {
           final corps = {
@@ -151,11 +159,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('appui long sur un sous-dossier : son menu, « Envoyer l\'album » en tête', (tester) async {
+  testWidgets('⋮ d\'un sous-dossier : son menu, « Envoyer l\'album » en tête', (tester) async {
     await monter(tester, SafeboxRoot.albums, const [], sousDossiers: [
       {'id': 32, 'parentId': 30, 'root': 'albums', 'name': 'Vide', 'depth': 2},
     ]);
-    await tester.longPress(find.text('Vide'));
+    await tester.tap(find.descendant(of: find.widgetWithText(ListTile, 'Vide'), matching: find.byIcon(Icons.more_vert)));
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxSendAlbum), findsOneWidget);
     expect(find.text(fr.safeboxRename), findsOneWidget);
@@ -163,6 +171,37 @@ void main() {
     await tester.pumpAndSettle();
     // Son contenu a été chargé : vide, il le dit au lieu de ne rien faire.
     expect(find.text(fr.safeboxFolderEmpty), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('plusieurs dossiers sélectionnés : envoyer, déplacer, supprimer ensemble', (tester) async {
+    await monter(tester, SafeboxRoot.albums, album, sousDossiers: [
+      {'id': 31, 'parentId': 30, 'root': 'albums', 'name': 'Plage', 'depth': 2},
+      {'id': 32, 'parentId': 30, 'root': 'albums', 'name': 'Vide', 'depth': 2},
+    ]);
+    await tester.longPress(find.text('Plage'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Vide'));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxSelectedCount(2)), findsOneWidget);
+    expect(find.text(fr.safeboxFoldersCount(2)), findsOneWidget);
+    // Avec des dossiers : ni « Télécharger », ni « Album ».
+    expect(find.text(fr.safeboxDownload), findsNothing);
+    expect(find.text(fr.safeboxAddToAlbum), findsNothing);
+    expect(find.text(fr.safeboxSendToChat), findsOneWidget);
+    expect(find.text(fr.safeboxMove), findsOneWidget);
+    // Un fichier en plus dans la même sélection.
+    await tester.tap(find.byType(SafeboxGridTile).first);
+    await tester.pumpAndSettle();
+    expect(find.text('${fr.safeboxFoldersCount(2)} · ${fr.safeboxFilesCount(1)}'), findsOneWidget);
+    // Les deux dossiers à la corbeille d'un coup (le fichier retiré : sa
+    // suppression touche au disque du téléphone, absent ici).
+    await tester.tap(find.byType(SafeboxGridTile).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(fr.safeboxDelete));
+    await tester.pumpAndSettle();
+    expect(demandes, containsAll(['DELETE /folders/31', 'DELETE /folders/32']));
+    expect(find.text(fr.safeboxSelectedCount(2)), findsNothing, reason: 'la sélection est quittée');
     expect(tester.takeException(), isNull);
   });
 

@@ -8901,17 +8901,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxSendFolder => 'Send folder';
 
   @override
-  String safeboxShareTooMany(int max) {
-    return '$max files at most per send: select fewer.';
-  }
-
-  @override
   String safeboxFilesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: '$count files',
       one: '1 file',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxFoldersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count folders',
+      one: '1 folder',
     );
     return '$_temp0';
   }

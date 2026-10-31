@@ -65,6 +65,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   /// Fichiers sélectionnés (appui long) : la barre d'actions remplace le bouton « + ».
   final Set<int> _choisis = {};
 
+  /// Sous-dossiers sélectionnés, avec ou sans fichiers (31/10/2026).
+  final Set<int> _dossiersChoisis = {};
+
   /// Filtre par type, dans Albums et Partager ; null : tout.
   SafeboxFamily? _filtre;
 
@@ -86,7 +89,9 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   /// Photos et vidéos se parcourent par jour.
   bool get _parJour => widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos;
 
-  bool get _selection => _choisis.isNotEmpty;
+  bool get _selection => _choisis.isNotEmpty || _dossiersChoisis.isNotEmpty;
+  List<SafeboxFolder> get _dossiersSelectionnes =>
+      [for (final d in _page?.folders ?? const <SafeboxFolder>[]) if (_dossiersChoisis.contains(d.id)) d];
   List<SafeboxFile> get _visibles => _fichiers
       .where((f) =>
           (_filtre == null || f.family == _filtre) &&
@@ -135,6 +140,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
         _suite = p.nextCursor;
         _erreur = null;
         _choisis.removeWhere((id) => !_fichiers.any((f) => f.id == id));
+        _dossiersChoisis.removeWhere((id) => !p.folders.any((d) => d.id == id));
       });
       if (widget.openPickerOnStart && !_choixOuvert) {
         _choixOuvert = true;
@@ -147,19 +153,25 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     }
   }
 
-  /// Tout le dossier (ses fichiers, pas ses sous-dossiers), pages comprises.
-  /// Tous les fichiers d'un sous-dossier, pages comprises (sans ses propres sous-dossiers).
+  /// Tous les fichiers d'un dossier, pages et sous-dossiers compris : un
+  /// dossier envoyé part avec tout ce qu'il contient.
   Future<List<SafeboxFile>> _fichiersDe(int folderId) async {
     final tous = <SafeboxFile>[];
+    final sousDossiers = <int>[];
     int? suite;
     do {
       final p = await _c.api.fetchSafeboxFolder(folderId, cursor: suite);
       tous.addAll(p.files);
+      if (suite == null) sousDossiers.addAll(p.folders.map((d) => d.id));
       suite = p.nextCursor;
     } while (suite != null);
+    for (final id in sousDossiers) {
+      tous.addAll(await _fichiersDe(id));
+    }
     return tous;
   }
 
+  /// Tout le dossier affiché (ses fichiers, pas ses sous-dossiers), pages comprises.
   Future<List<SafeboxFile>> _toutLeDossier() async {
     final tous = [..._fichiers];
     var suite = _suite;
@@ -320,17 +332,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   }
 
   /// Le fichier part dans les discussions choisies.
-  Future<void> _envoyerDansDiscussion(SafeboxFile f) async {
-    final n = await sendSafeboxToConversations(
-      context,
-      file: f,
-      send: (ctx, ids) async {
-        if (!await confirmSafeboxHevcSend(ctx, f, ids)) return null;
-        return _c.sendToConversations([f], ids);
-      },
-    );
-    if (n != null && mounted) await _charger(); // le badge « envoyé » apparaît
-  }
+  Future<void> _envoyerDansDiscussion(SafeboxFile f) => _envoyerCartes(fichiers: [f]);
 
   Future<void> _renommerFichier(SafeboxFile f) async {
     final l10n = context.l10n;
@@ -499,7 +501,14 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
         if (!_choisis.remove(f.id)) _choisis.add(f.id);
       });
 
-  void _quitterSelection() => setState(_choisis.clear);
+  void _basculerDossier(SafeboxFolder d) => setState(() {
+        if (!_dossiersChoisis.remove(d.id)) _dossiersChoisis.add(d.id);
+      });
+
+  void _quitterSelection() => setState(() {
+        _choisis.clear();
+        _dossiersChoisis.clear();
+      });
 
   String _titreDossier(AppLocalizations l10n) {
     final page = _page;
@@ -526,48 +535,67 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     }
   }
 
-  Future<void> _envoyerSelection() => _envoyer(_selectionnes);
+  Future<void> _envoyerSelection() => _envoyerCartes(dossiers: _dossiersSelectionnes, fichiers: _selectionnes);
 
-  /// « Envoyer l'album » : tout le dossier en une seule carte, pages comprises.
+  /// « Envoyer l'album » du menu ⋮ : ce dossier, avec ses sous-dossiers.
   Future<void> _envoyerLeDossier() async {
-    try {
-      final tous = await _toutLeDossier();
-      if (mounted) await _envoyer(tous, dossierEntier: _page?.folder);
-    } catch (e) {
-      if (mounted) safeboxShowError(context, e);
-    }
+    final dossier = _page?.folder;
+    if (dossier != null) await _envoyerCartes(dossiers: [dossier]);
   }
 
-  /// Une sélection, ou tout un dossier ([dossierEntier] : celui-ci ou un
-  /// sous-dossier), part en un seul message (lot 9), au nom du dossier ;
-  /// 500 fichiers au plus.
-  Future<void> _envoyer(List<SafeboxFile> fichiers, {SafeboxFolder? dossierEntier}) async {
+  /// Envoie des dossiers (tout leur contenu, sous-dossiers compris) et des
+  /// fichiers choisis à part, dans les mêmes discussions : une carte par
+  /// dossier, au nom du dossier, une pour les fichiers ; au-delà de 500
+  /// fichiers, la carte se découpe (« Kribi · 1/3 »). Une coupure au milieu
+  /// laisse l'écran du choix ouvert : réessayer n'envoie que ce qui manque.
+  Future<void> _envoyerCartes({List<SafeboxFolder> dossiers = const [], List<SafeboxFile> fichiers = const []}) async {
     final l10n = context.l10n;
-    if (fichiers.isEmpty) {
+    final List<(String?, List<SafeboxFile>)> cartes;
+    try {
+      cartes = [
+        for (final d in dossiers) (SafeboxController.folderLabel(d, l10n), await _fichiersDe(d.id)),
+        if (fichiers.isNotEmpty) (fichiers.length > 1 ? _titreDossier(l10n) : null, fichiers),
+      ];
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+      return;
+    }
+    if (!mounted) return;
+    final morceaux = safeboxShareParts(cartes);
+    if (morceaux.isEmpty) {
       safeboxSnack(context, l10n.safeboxFolderEmpty);
       return;
     }
-    if (fichiers.length > kSafeboxShareMaxItems) {
-      safeboxSnack(context, l10n.safeboxShareTooMany(kSafeboxShareMaxItems), error: true);
-      return;
-    }
-    final dossier = dossierEntier;
-    final titre = dossier == null ? _titreDossier(l10n) : SafeboxController.folderLabel(dossier, l10n);
+    final tous = [for (final (_, lot) in morceaux) ...lot];
+    // Ce qui est déjà parti : « morceau:discussion ». Gardé d'un essai à l'autre.
+    final partis = <String>{};
+    final retenusDe = <int, List<SafeboxFile>>{};
     final n = await sendSafeboxToConversations(
       context,
-      file: fichiers.first,
-      others: fichiers.length - 1,
+      file: tous.first,
+      others: tous.length - 1,
       send: (ctx, ids) async {
-        // Une vidéo H.265 qu'un membre ne lirait pas : demandée une par une.
-        final retenus = <SafeboxFile>[];
-        for (final f in fichiers) {
-          if (!ctx.mounted) return null;
-          if (await confirmSafeboxHevcSend(ctx, f, ids)) retenus.add(f);
+        // Une vidéo H.265 qu'un membre ne lirait pas : demandée une par une,
+        // une seule fois.
+        for (final (i, (_, lot)) in morceaux.indexed) {
+          if (retenusDe.containsKey(i)) continue;
+          final retenus = <SafeboxFile>[];
+          for (final f in lot) {
+            if (!ctx.mounted) return null;
+            if (await confirmSafeboxHevcSend(ctx, f, ids)) retenus.add(f);
+          }
+          retenusDe[i] = retenus;
         }
-        if (retenus.isEmpty) return null;
-        // Tout l'album, sans rien d'écarté : partagé comme album par le serveur.
-        final commeAlbum = dossier != null && retenus.length == fichiers.length;
-        return _c.sendToConversations(retenus, ids, title: titre, album: commeAlbum ? dossier : null);
+        final envoye = await safeboxSendParts(
+          parts: morceaux.length,
+          conversationIds: ids,
+          done: partis,
+          send: (i, conv) async {
+            final retenus = retenusDe[i]!;
+            if (retenus.isNotEmpty) await _c.sendToConversations(retenus, [conv], title: morceaux[i].$1);
+          },
+        );
+        return envoye && retenusDe.values.any((r) => r.isNotEmpty) ? ids.length : null;
       },
     );
     if (n == null || !mounted) return;
@@ -587,6 +615,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
           ..addAll(tous);
         _suite = null;
         _choisis.addAll(_visibles.map((f) => f.id));
+        _dossiersChoisis.addAll(_page?.folders.map((d) => d.id) ?? const <int>[]);
       });
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
@@ -617,14 +646,29 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
 
   Future<void> _deplacerSelection() async {
     final fichiers = _selectionnes;
+    final dossiers = _dossiersSelectionnes;
     final familles = fichiers.map((f) => f.family).toSet();
-    final cible = await pickSafeboxFileDestination(
-      context,
-      family: familles.length == 1 ? familles.first : null,
-      currentParentId: widget.folderId,
-    );
+    final racine = _c.overview?.rootIds[widget.root];
+    // Avec des dossiers : un dossier du même dossier racine, hors de ceux qui partent.
+    final cible = dossiers.isEmpty
+        ? await pickSafeboxFileDestination(
+            context,
+            family: familles.length == 1 ? familles.first : null,
+            currentParentId: widget.folderId,
+          )
+        : racine == null
+            ? null
+            : await pickSafeboxDestination(
+                context,
+                startFolderId: racine,
+                currentParentId: widget.folderId,
+                movingFolderIds: {for (final d in dossiers) d.id},
+              );
     if (cible == null || !mounted) return;
     try {
+      for (final d in dossiers) {
+        await _c.api.updateSafeboxFolder(d.id, parentId: cible);
+      }
       for (final f in fichiers) {
         await _c.api.updateSafeboxFile(f.id, folderId: cible);
       }
@@ -638,7 +682,8 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
 
   Future<void> _supprimerSelection() async {
     final fichiers = _selectionnes;
-    if (fichiers.isEmpty) return;
+    final dossiers = _dossiersSelectionnes;
+    if (fichiers.isEmpty && dossiers.isEmpty) return;
     var partout = false;
     final ailleurs = fichiers.where((f) => f.alsoIn.isNotEmpty).toList();
     if (ailleurs.isNotEmpty) {
@@ -647,9 +692,13 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
       partout = choix;
     }
     try {
+      for (final d in dossiers) {
+        await _c.api.trashSafeboxFolder(d.id);
+      }
       for (final f in fichiers) {
         await _c.trashFile(f, everywhere: partout);
       }
+      if (dossiers.isNotEmpty) unawaited(_c.refreshOverview());
       if (mounted) safeboxSnack(context, context.l10n.safeboxMovedToTrash);
       _quitterSelection();
       await _charger();
@@ -690,8 +739,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     try {
       switch (action) {
         case 'envoyer':
-          final tous = await _fichiersDe(d.id);
-          if (mounted) await _envoyer(tous, dossierEntier: d);
+          await _envoyerCartes(dossiers: [d]);
           return;
         case 'renommer':
           final nom = await safeboxAskName(
@@ -711,7 +759,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
             context,
             startFolderId: racine,
             currentParentId: widget.folderId,
-            movingFolderId: d.id,
+            movingFolderIds: {d.id},
           );
           if (cible == null) return;
           await _c.api.updateSafeboxFolder(d.id, parentId: cible);
@@ -949,7 +997,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                   icon: const Icon(Icons.close),
                   onPressed: _quitterSelection,
                 ),
-                title: Text(l10n.safeboxSelectedCount(_choisis.length)),
+                title: Text(l10n.safeboxSelectedCount(_choisis.length + _dossiersChoisis.length)),
                 actions: [
                   TextButton(
                     onPressed: _toutSelectionner,
@@ -1126,23 +1174,30 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
                     if (filtres != null) SliverToBoxAdapter(child: filtres),
                     if (envois.isNotEmpty)
                       SliverList.list(children: [for (final j in envois) _LigneEnvoiDossier(job: j)]),
-                    if (!_selection)
-                      SliverList.list(children: [
-                        for (final d in page.folders)
-                          ListTile(
-                            leading: Icon(Icons.folder_outlined, color: context.colors.primary),
-                            title: Text(d.name ?? ''),
-                            trailing: IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuDossier(d)),
-                            onLongPress: () => _menuDossier(d),
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => SafeboxFolderScreen(folderId: d.id, root: widget.root)),
-                              );
-                              if (mounted) await _charger();
-                            },
-                          ),
-                      ]),
+                    // Les sous-dossiers se sélectionnent comme les fichiers : appui
+                    // long, puis toucher pour en ajouter ; leur menu reste au ⋮.
+                    SliverList.list(children: [
+                      for (final d in page.folders)
+                        ListTile(
+                          leading: Icon(Icons.folder_outlined, color: context.colors.primary),
+                          title: Text(d.name ?? ''),
+                          selected: _dossiersChoisis.contains(d.id),
+                          trailing: _selection
+                              ? Checkbox(value: _dossiersChoisis.contains(d.id), onChanged: (_) => _basculerDossier(d))
+                              : IconButton(icon: const Icon(Icons.more_vert), onPressed: () => _menuDossier(d)),
+                          onLongPress: () => _basculerDossier(d),
+                          onTap: _selection
+                              ? () => _basculerDossier(d)
+                              : () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => SafeboxFolderScreen(folderId: d.id, root: widget.root)),
+                                  );
+                                  if (mounted) await _charger();
+                                },
+                        ),
+                    ]),
                     if (page.folders.isEmpty && _fichiers.isEmpty && envois.isEmpty)
                       SliverFillRemaining(hasScrollBody: false, child: _Vide(l10n: l10n))
                     else
@@ -1157,6 +1212,7 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
   /// seul fichier : renommer, commenter, ouvrir avec…).
   Widget _barreSelection(AppLocalizations l10n) {
     final selection = _selectionnes;
+    final avecDossiers = _dossiersChoisis.isNotEmpty;
     final taille = selection.fold<int>(0, (s, f) => s + f.plainBytes);
     Widget action(IconData icone, String label, VoidCallback? onTap, {Color? couleur}) => Expanded(
           child: InkWell(
@@ -1189,17 +1245,25 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${l10n.safeboxSelectedCount(selection.length)} · ${formatBytes(taille, l10n)}',
+                avecDossiers
+                    ? [
+                        l10n.safeboxFoldersCount(_dossiersChoisis.length),
+                        if (selection.isNotEmpty) l10n.safeboxFilesCount(selection.length),
+                      ].join(' · ')
+                    : '${l10n.safeboxSelectedCount(selection.length)} · ${formatBytes(taille, l10n)}',
                 style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
               ),
+              // Avec des dossiers : envoyer, déplacer, supprimer.
               Row(
                 children: [
-                  action(Icons.download_outlined, l10n.safeboxDownload, () => _versLeTelephone(selection: selection)),
+                  if (!avecDossiers)
+                    action(Icons.download_outlined, l10n.safeboxDownload, () => _versLeTelephone(selection: selection)),
                   action(Icons.send_outlined, l10n.safeboxSendToChat, _envoyerSelection),
-                  action(Icons.collections_bookmark_outlined, l10n.safeboxAddToAlbum, _ajouterSelectionAUnAlbum),
+                  if (!avecDossiers)
+                    action(Icons.collections_bookmark_outlined, l10n.safeboxAddToAlbum, _ajouterSelectionAUnAlbum),
                   action(Icons.drive_file_move_outlined, l10n.safeboxMove, _deplacerSelection),
                   action(Icons.delete_outline, l10n.safeboxDelete, _supprimerSelection, couleur: context.colors.error),
-                  if (selection.length == 1)
+                  if (!avecDossiers && selection.length == 1)
                     action(Icons.more_horiz, MaterialLocalizations.of(context).moreButtonTooltip, () {
                       final f = selection.single;
                       _quitterSelection();

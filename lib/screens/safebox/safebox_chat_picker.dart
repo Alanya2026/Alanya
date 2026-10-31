@@ -50,6 +50,47 @@ Future<int?> sendSafeboxToConversations(
 
 typedef SafeboxConversationsSend = Future<int?> Function(BuildContext context, List<int> conversationIds);
 
+/// Les cartes d'un envoi, découpées par [max] fichiers : « Kribi · 1/3 »,
+/// « Kribi · 2/3 »… Une carte vide disparaît.
+List<(String?, List<T>)> safeboxShareParts<T>(List<(String?, List<T>)> cartes, {int max = kSafeboxShareMaxItems}) => [
+      for (final (nom, lot) in cartes)
+        for (var i = 0, n = (lot.length + max - 1) ~/ max; i < n; i += 1)
+          (
+            n > 1 && nom != null ? '$nom · ${i + 1}/$n' : nom,
+            lot.sublist(i * max, (i + 1) * max > lot.length ? lot.length : (i + 1) * max),
+          ),
+    ];
+
+/// Envoie chaque morceau dans chaque discussion, sauf ce que [done] marque
+/// déjà parti (« morceau:discussion »), qu'il complète. Tente tout, puis lève
+/// la première erreur : un nouvel essai n'envoie que ce qui manque. Rend vrai
+/// si quelque chose est (ou était déjà) parti.
+Future<bool> safeboxSendParts({
+  required int parts,
+  required List<int> conversationIds,
+  required Set<String> done,
+  required Future<void> Function(int part, int conversationId) send,
+}) async {
+  Object? erreur;
+  var parti = false;
+  for (var i = 0; i < parts; i += 1) {
+    for (final conv in conversationIds) {
+      if (!done.contains('$i:$conv')) {
+        try {
+          await send(i, conv);
+          done.add('$i:$conv');
+        } catch (e) {
+          erreur ??= e;
+          continue;
+        }
+      }
+      parti = true;
+    }
+  }
+  if (erreur != null) throw erreur;
+  return parti;
+}
+
 class SafeboxChatPickerScreen extends StatefulWidget {
   const SafeboxChatPickerScreen({super.key, required this.file, this.others = 0, required this.send});
   final SafeboxFile file;

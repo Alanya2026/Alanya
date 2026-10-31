@@ -15238,17 +15238,17 @@ abstract class AppLocalizations {
   /// **'Envoyer le dossier'**
   String get safeboxSendFolder;
 
-  /// No description provided for @safeboxShareTooMany.
-  ///
-  /// In fr, this message translates to:
-  /// **'{max} fichiers au plus par envoi : sélectionnez-en moins.'**
-  String safeboxShareTooMany(int max);
-
   /// No description provided for @safeboxFilesCount.
   ///
   /// In fr, this message translates to:
   /// **'{count, plural, =1{1 fichier} other{{count} fichiers}}'**
   String safeboxFilesCount(int count);
+
+  /// No description provided for @safeboxFoldersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 dossier} other{{count} dossiers}}'**
+  String safeboxFoldersCount(int count);
 
   /// No description provided for @safeboxUploadWaitingWifi.
   ///
