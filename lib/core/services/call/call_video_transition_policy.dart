@@ -16,3 +16,17 @@ bool isCurrentVideoUpgradeSession({
     activeCallId == operationCallId &&
     activeRemoteUserId == operationRemoteUserId &&
     activeTransitionId == operationTransitionId;
+
+bool isActiveVideoUpgradeSession({
+  required bool isConnectedOrReconnecting,
+  required String? activeCallId,
+  required String? operationCallId,
+  required int? activeRemoteUserId,
+  required int? operationRemoteUserId,
+  required String? activeTransitionId,
+  required String operationTransitionId,
+}) =>
+    isConnectedOrReconnecting &&
+    activeCallId == operationCallId &&
+    activeRemoteUserId == operationRemoteUserId &&
+    activeTransitionId == operationTransitionId;

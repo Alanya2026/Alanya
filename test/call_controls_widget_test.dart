@@ -260,4 +260,19 @@ void main() {
       isFalse,
     );
   });
+
+  test('une transition reste réconciliable pendant une reconnexion', () {
+    expect(
+      isActiveVideoUpgradeSession(
+        isConnectedOrReconnecting: true,
+        activeCallId: 'call-1',
+        operationCallId: 'call-1',
+        activeRemoteUserId: 20,
+        operationRemoteUserId: 20,
+        activeTransitionId: 'transition-1',
+        operationTransitionId: 'transition-1',
+      ),
+      isTrue,
+    );
+  });
 }

@@ -74,13 +74,16 @@ extension CallControls on CallService {
     notify();
 
     try {
-      await _webrtc.addLocalVideoTrack();
+      final localVideoTrack = await _webrtc.addLocalVideoTrack();
       if (!_isCurrentVideoUpgrade(
         completer,
         callId: operationCallId,
         remoteUserId: operationRemoteUserId,
         transitionId: transitionId,
       )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
         return;
       }
       final offer = await _webrtc.createOffer();
@@ -90,6 +93,9 @@ extension CallControls on CallService {
         remoteUserId: operationRemoteUserId,
         transitionId: transitionId,
       )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
         return;
       }
       final sent = _apiClient.sendSocketEvent(
@@ -112,6 +118,9 @@ extension CallControls on CallService {
         remoteUserId: operationRemoteUserId,
         transitionId: transitionId,
       )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
         return;
       }
       await _webrtc.handleAnswer(answer);
@@ -121,6 +130,9 @@ extension CallControls on CallService {
         remoteUserId: operationRemoteUserId,
         transitionId: transitionId,
       )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
         return;
       }
       final commitAck = Completer<void>();
@@ -242,12 +254,18 @@ extension CallControls on CallService {
     required int? remoteUserId,
     required String transitionId,
   }) {
-    if (!_isCurrentVideoUpgrade(
-      completer,
-      callId: callId,
-      remoteUserId: remoteUserId,
-      transitionId: transitionId,
-    )) {
+    if (!isActiveVideoUpgradeSession(
+          isConnectedOrReconnecting:
+              _status == CallStatus.connected ||
+              _status == CallStatus.reconnecting,
+          activeCallId: _currentCallId,
+          operationCallId: callId,
+          activeRemoteUserId: _remoteUserId,
+          operationRemoteUserId: remoteUserId,
+          activeTransitionId: _videoTransitionId,
+          operationTransitionId: transitionId,
+        ) ||
+        !identical(_videoUpgradeAnswer, completer)) {
       return;
     }
     _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeAckRequest, {

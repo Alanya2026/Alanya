@@ -185,13 +185,13 @@ class WebRTCService {
 
   /// Acquiert et attache uniquement une piste vidéo à une session audio
   /// existante. Le flux audio et la PeerConnection restent en place.
-  Future<void> addLocalVideoTrack() async {
+  Future<MediaStreamTrack?> addLocalVideoTrack() async {
     final stream = _localStream;
     final pc = _peerConnection;
     if (stream == null || pc == null) {
       throw StateError('Impossible d’ajouter la vidéo sans session WebRTC');
     }
-    if (hasLocalVideoTrack) return;
+    if (hasLocalVideoTrack) return null;
 
     MediaStream? videoOnlyStream;
     try {
@@ -207,6 +207,7 @@ class WebRTCService {
       await stream.addTrack(track);
       await pc.addTrack(track, stream);
       onLocalStream?.call(stream);
+      return track;
     } catch (error) {
       for (final track
           in videoOnlyStream?.getTracks() ?? const <MediaStreamTrack>[]) {
@@ -228,17 +229,22 @@ class WebRTCService {
   }
 
   /// Retire la piste vidéo ajoutée par une renégociation échouée.
-  Future<bool> discardLocalVideoTrack() async {
+  Future<bool> discardLocalVideoTrack({MediaStreamTrack? onlyTrack}) async {
     final stream = _localStream;
     final pc = _peerConnection;
     if (stream == null) return true;
     var succeeded = true;
-    final tracks = List<MediaStreamTrack>.from(stream.getVideoTracks());
+    final tracks = List<MediaStreamTrack>.from(
+      onlyTrack == null
+          ? stream.getVideoTracks()
+          : stream.getVideoTracks().where((track) => track == onlyTrack),
+    );
     if (pc != null) {
       try {
         final senders = await pc.getSenders();
         for (final sender in senders) {
-          if (sender.track?.kind == 'video') {
+          if (sender.track == onlyTrack ||
+              (onlyTrack == null && sender.track?.kind == 'video')) {
             try {
               await sender.replaceTrack(null);
             } catch (error) {
