@@ -145,6 +145,14 @@ extension CallControls on CallService {
         return;
       }
       final rolledBack = await _webrtc.rollbackNegotiation();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       final discarded = await _webrtc.discardLocalVideoTrack();
       if (!rolledBack || !discarded) {
         debugPrint(

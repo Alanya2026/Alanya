@@ -1374,9 +1374,12 @@ extension CallSignaling on CallService {
 
   Future<void> _commitRemoteVideoUpgrade() async {
     final transitionId = _pendingRemoteVideoCommitId;
+    final operationCallId = _currentCallId;
+    final operationRemoteUserId = _remoteUserId;
     if (transitionId == null ||
+        operationCallId == null ||
         _status != CallStatus.connected ||
-        _remoteUserId == null) {
+        operationRemoteUserId == null) {
       return;
     }
     _pendingRemoteVideoCommitId = null;
@@ -1390,22 +1393,46 @@ extension CallSignaling on CallService {
     }
     _isRemoteVideoOn = true;
     await CallSessionGuard.instance.updateMode(SessionMode.video);
+    if (!_isCurrentRemoteVideoUpgrade(
+      callId: operationCallId,
+      remoteUserId: operationRemoteUserId,
+      transitionId: transitionId,
+    )) {
+      return;
+    }
     await _bindSessionRenderers();
+    if (!_isCurrentRemoteVideoUpgrade(
+      callId: operationCallId,
+      remoteUserId: operationRemoteUserId,
+      transitionId: transitionId,
+    )) {
+      return;
+    }
     if (shouldTurnLocalCameraOffForRemoteUpgrade(
       alreadyInVideoMode: wasAlreadyVideo,
     )) {
       _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
-        'toUserId': _remoteUserId,
+        'toUserId': operationRemoteUserId,
         'isVideoOn': false,
       });
     }
     _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCommitAck, {
-      'targetUserId': _remoteUserId,
-      'callId': _currentCallId,
+      'targetUserId': operationRemoteUserId,
+      'callId': operationCallId,
       'transitionId': transitionId,
     });
     notify();
   }
+
+  bool _isCurrentRemoteVideoUpgrade({
+    required String callId,
+    required int remoteUserId,
+    required String transitionId,
+  }) =>
+      _status == CallStatus.connected &&
+      _currentCallId == callId &&
+      _remoteUserId == remoteUserId &&
+      _lastCommittedRemoteVideoTransitionId == transitionId;
 
   /// Applique à [userId] les états micro/caméra reçus, s'il est au roster.
   ///
