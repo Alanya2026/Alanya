@@ -3,9 +3,12 @@ package com.alanya237.alanya
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.content.ContentUris
 import android.os.Environment
 import android.os.StatFs
 import android.provider.DocumentsContract
+import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,7 +33,13 @@ import java.util.concurrent.Executors
  *  - list { uri, sinceMs } → [{ uri, name, size, modified, mime }] (sous-dossiers compris) ;
  *  - copy { uri, path } → true : copie le document pour l'envoyer ;
  *  - release { uri } : l'inscrit retire le dossier ;
- *  - storage → { free, total } : la mémoire du téléphone (« Libérer la mémoire »).
+ *  - storage → { free, total } : la mémoire du téléphone (« Libérer la mémoire ») ;
+ *  - pickFiles { mimeTypes } → [{ uri, name, size, path? }] : des fichiers à
+ *    ajouter au coffre (31/10/2026). `path` : l'original, lisible tel quel
+ *    (photo, vidéo ou audio autorisés par la galerie) — rien n'est copié ;
+ *    sans lui, l'application le copie par `copy`. Le sélecteur de
+ *    file_picker recopiait tout fichier choisi (568 Mo : 12 s d'attente, et
+ *    la copie restait dans le cache).
  *
  * Les listes et copies tournent hors du fil principal.
  */
@@ -44,10 +53,13 @@ class SafeboxDocumentFolders(private val activity: FragmentActivity) {
 
     private val travail = Executors.newSingleThreadExecutor()
     private var enAttente: MethodChannel.Result? = null
+    private var fichiersEnAttente: MethodChannel.Result? = null
 
-    // Enregistré dans onCreate : un lanceur doit l'être avant que l'activité démarre.
+    // Enregistrés dans onCreate : un lanceur doit l'être avant que l'activité démarre.
     private val choix: ActivityResultLauncher<Uri?> =
         activity.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri -> choisi(uri) }
+    private val choixFichiers: ActivityResultLauncher<Array<String>> =
+        activity.registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> fichiersChoisis(uris) }
 
     fun attach(messenger: BinaryMessenger) {
         MethodChannel(messenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -61,6 +73,20 @@ class SafeboxDocumentFolders(private val activity: FragmentActivity) {
                             choix.launch(null)
                         } catch (e: Exception) {
                             enAttente = null
+                            result.error("pick_failed", e.message, null)
+                        }
+                    }
+                }
+                "pickFiles" -> {
+                    if (fichiersEnAttente != null) {
+                        result.error("busy", "Un choix de fichiers est déjà ouvert", null)
+                    } else {
+                        val types = call.argument<List<String>>("mimeTypes")?.takeIf { it.isNotEmpty() } ?: listOf("*/*")
+                        fichiersEnAttente = result
+                        try {
+                            choixFichiers.launch(types.toTypedArray())
+                        } catch (e: Exception) {
+                            fichiersEnAttente = null
                             result.error("pick_failed", e.message, null)
                         }
                     }
@@ -135,6 +161,77 @@ class SafeboxDocumentFolders(private val activity: FragmentActivity) {
             result.error("permission_failed", e.message, null)
         }
     }
+
+    private fun fichiersChoisis(uris: List<Uri>) {
+        val result = fichiersEnAttente ?: return
+        fichiersEnAttente = null
+        if (uris.isEmpty()) {
+            result.success(emptyList<Map<String, Any?>>())
+            return
+        }
+        enFond(result) { uris.map { decrire(it) } }
+    }
+
+    /** Nom, taille et, s'il se lit tel quel, le chemin de l'original. */
+    private fun decrire(uri: Uri): Map<String, Any?> {
+        var nom = uri.lastPathSegment?.substringAfterLast('/') ?: "fichier"
+        var taille = -1L
+        activity.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)
+            ?.use { c ->
+                if (c.moveToFirst()) {
+                    if (!c.isNull(0)) nom = c.getString(0)
+                    if (!c.isNull(1)) taille = c.getLong(1)
+                }
+            }
+        val chemin = try { cheminLisible(uri, taille) } catch (e: Exception) {
+            Log.w(TAG, "chemin introuvable pour $uri : ${e.message}")
+            null
+        }
+        return mapOf("uri" to uri.toString(), "name" to nom, "size" to taille, "path" to chemin)
+    }
+
+    /**
+     * Le chemin du fichier sur le téléphone, s'il se lit directement (même
+     * taille que le document choisi) ; sinon null, et l'application copie.
+     */
+    private fun cheminLisible(uri: Uri, taille: Long): String? {
+        val candidat: String? = when (uri.authority) {
+            // « primary:Download/Telegram/film.mkv »
+            "com.android.externalstorage.documents" -> {
+                val id = DocumentsContract.getDocumentId(uri)
+                if (id.startsWith("primary:")) {
+                    File(Environment.getExternalStorageDirectory(), id.removePrefix("primary:")).path
+                } else {
+                    null
+                }
+            }
+            // « video:1234 », « image:… », « audio:… »
+            "com.android.providers.media.documents" -> {
+                val (genre, num) = DocumentsContract.getDocumentId(uri).split(':', limit = 2).let { it[0] to it.getOrNull(1) }
+                val base = when (genre) {
+                    "image" -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                    "video" -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                    "audio" -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                    else -> null
+                }
+                num?.toLongOrNull()?.let { n -> base?.let { cheminMedia(ContentUris.withAppendedId(it, n)) } }
+            }
+            // « raw:/storage/emulated/0/Download/x.mp4 »
+            "com.android.providers.downloads.documents" -> {
+                val id = DocumentsContract.getDocumentId(uri)
+                if (id.startsWith("raw:")) id.removePrefix("raw:") else null
+            }
+            MediaStore.AUTHORITY -> cheminMedia(uri)
+            else -> null
+        }
+        val f = candidat?.let { File(it) } ?: return null
+        return if (f.isFile && f.canRead() && (taille < 0 || f.length() == taille)) f.path else null
+    }
+
+    @Suppress("DEPRECATION") // DATA : le seul moyen d'obtenir le chemin d'un média.
+    private fun cheminMedia(uri: Uri): String? =
+        activity.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DATA), null, null, null)
+            ?.use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getString(0) else null }
 
     private fun nomDuDossier(context: Context, arbre: Uri): String {
         val doc = DocumentsContract.buildDocumentUriUsingTree(arbre, DocumentsContract.getTreeDocumentId(arbre))

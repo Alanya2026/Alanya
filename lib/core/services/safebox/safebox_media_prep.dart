@@ -123,8 +123,10 @@ class SafeboxMediaPrep {
 
   /// Compresse dans le format [quality], ou rend null pour garder l'original
   /// (Original, rien à gagner, ou échec). [hevc] : la vidéo peut partir en H.265.
+  /// [onFailure] : la compression a échoué (l'original part) — à dire à
+  /// l'inscrit, qui avait choisi un format plus léger.
   Future<SafeboxCompressed?> compress(String path, String name, SafeboxFamily family, SafeboxQuality quality,
-      {required bool hevc}) async {
+      {required bool hevc, void Function(Object error)? onFailure}) async {
     if (quality == SafeboxQuality.original || !canCompress(family, name)) return null;
     await workDir.create(recursive: true);
     try {
@@ -158,6 +160,7 @@ class SafeboxMediaPrep {
       return c;
     } catch (e) {
       debugPrint('[Coffre] compression abandonnée, original gardé : $e');
+      onFailure?.call(e);
       return null;
     }
   }

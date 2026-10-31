@@ -16504,6 +16504,18 @@ abstract class AppLocalizations {
   /// **'Préparation…'**
   String get safeboxPreparing;
 
+  /// No description provided for @safeboxPreparingFile.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Préparation du fichier…} other{Préparation des {count} fichiers…}}'**
+  String safeboxPreparingFile(int count);
+
+  /// No description provided for @safeboxCompressionFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Compression impossible pour « {name} » : il part en Original.} other{Compression impossible pour {count} fichiers : ils partent en Original.}}'**
+  String safeboxCompressionFailed(int count, String name);
+
   /// No description provided for @safeboxTransfers.
   ///
   /// In fr, this message translates to:

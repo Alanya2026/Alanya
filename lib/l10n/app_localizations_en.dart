@@ -9782,6 +9782,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxPreparing => 'Preparing…';
 
   @override
+  String safeboxPreparingFile(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Preparing $count files…',
+      one: 'Preparing the file…',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxCompressionFailed(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Couldn\'t compress $count files: they\'re being sent in Original.',
+      one: 'Couldn\'t compress “$name”: it\'s being sent in Original.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get safeboxTransfers => 'Uploads';
 
   @override
