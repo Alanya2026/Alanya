@@ -178,7 +178,9 @@ class SafeboxConversationName extends StatelessWidget {
   });
 
   final int? conversationId;
-  final Widget Function(BuildContext context, String? name) builder;
+
+  /// [isGroup] : null tant que la discussion n'est pas connue.
+  final Widget Function(BuildContext context, String? name, bool? isGroup) builder;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +191,7 @@ class SafeboxConversationName extends StatelessWidget {
     } on ProviderNotFoundException {
       chat = null;
     }
-    if (id == null || chat == null) return builder(context, null);
+    if (id == null || chat == null) return builder(context, null, null);
     int moi;
     try {
       moi = context.read<AuthProvider>().currentUser?.alanyaID ?? 0;
@@ -198,8 +200,10 @@ class SafeboxConversationName extends StatelessWidget {
     }
     return StreamBuilder<LocalConversation?>(
       stream: chat.repository.watchConversation(id),
-      builder: (context, snap) =>
-          builder(context, snap.data == null ? null : conversationDisplayName(snap.data!, moi)),
+      builder: (context, snap) => switch (snap.data) {
+        final conv? => builder(context, conversationDisplayName(conv, moi), conv.isGroup),
+        null => builder(context, null, null),
+      },
     );
   }
 }

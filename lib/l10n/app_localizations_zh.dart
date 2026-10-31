@@ -8445,12 +8445,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxHevcWarningSend => '仍然发送';
 
   @override
-  String get safeboxTabHome => '首页';
-
-  @override
-  String get safeboxTabFiles => '文件';
-
-  @override
   String get safeboxTabTransfers => '传输';
 
   @override
@@ -8511,16 +8505,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxStatusOpen => '查看传输';
 
   @override
-  String safeboxShareCardHint(int count, String max) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count 个文件 · 每个文件最多 $max',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get safeboxMyFolders => '我的文件夹';
 
   @override
@@ -8537,11 +8521,6 @@ class AppLocalizationsZh extends AppLocalizations {
       other: '$count 项',
     );
     return '$_temp0';
-  }
-
-  @override
-  String safeboxAlbumItemsMore(int count) {
-    return '超过 $count 项';
   }
 
   @override
@@ -8580,6 +8559,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String safeboxBytesOf(String done, String total) {
     return '$done / $total';
+  }
+
+  @override
+  String safeboxUploadSpeed(String size) {
+    return '$size/秒';
   }
 
   @override
@@ -8627,6 +8611,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxFilterAll => '全部';
+
+  @override
+  String get safeboxFilterWithNote => '有评论';
 
   @override
   String get safeboxDownload => '下载';
@@ -8677,7 +8664,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxDownloadStarted => '下载已开始：可在“传输”中查看。';
 
   @override
-  String get safeboxDownloadFolderAction => '下载此文件夹';
+  String get safeboxDownloadFolderAction => '保存到手机';
 
   @override
   String get safeboxToday => '今天';
@@ -8686,8 +8673,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxYesterday => '昨天';
 
   @override
+  String get safeboxSendAlbum => '发送相册';
+
+  @override
+  String get safeboxSendFolder => '发送文件夹';
+
+  @override
   String safeboxFilesCount(int count) {
     return '$count 个文件';
+  }
+
+  @override
+  String safeboxFoldersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个文件夹',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -8724,7 +8727,15 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get safeboxBackupSpaceFull => '空间已满：备份已停止';
+  String safeboxBackupSpaceFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '空间已满：$count 个文件等待空间',
+      zero: '空间已满',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get safeboxBackupNoAccess => '照片访问被拒绝';
@@ -8827,7 +8838,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String safeboxBackupOverflows(String size) {
-    return '超出 $size：空间满时备份将停止。';
+    return '超出 $size：最新的文件先备份，最旧的文件将等待空间。';
   }
 
   @override
@@ -9043,17 +9054,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxTrackingRevoked => '已取消共享';
 
   @override
-  String safeboxShareTabSent(int count) {
-    return '我的发送 · $count';
-  }
+  String get safeboxShareTabSent => '我的发送';
 
   @override
-  String safeboxShareTabReceived(int count) {
-    return '已接收 · $count';
-  }
-
-  @override
-  String get safeboxShareTabReceivedPlain => '已接收';
+  String get safeboxShareTabReceived => '已收到';
 
   @override
   String get safeboxShareSentInfo => '这些文件会一直保留，直到您将其删除。它们计入您的空间。';
@@ -9081,17 +9085,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String safeboxShareStatusAll(String name) {
-    return '$name · 所有人已下载';
+    return '已发送到 $name · 所有人都已下载';
   }
 
   @override
   String safeboxShareStatusNone(String name) {
-    return '$name · 还没有人下载';
+    return '已发送到 $name · 还没有人下载';
   }
 
   @override
   String safeboxShareStatusSome(String name, int count, int total) {
-    return '$name · $total 人中 $count 人已下载';
+    return '已发送到 $name · $count/$total 人已下载';
+  }
+
+  @override
+  String safeboxShareStatusPersonNone(String name) {
+    return '$name 尚未下载';
+  }
+
+  @override
+  String safeboxShareStatusPersonDone(String name) {
+    return '$name 已下载';
   }
 
   @override

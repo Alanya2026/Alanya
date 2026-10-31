@@ -15250,18 +15250,6 @@ abstract class AppLocalizations {
   /// **'Envoyer quand même'**
   String get safeboxHevcWarningSend;
 
-  /// No description provided for @safeboxTabHome.
-  ///
-  /// In fr, this message translates to:
-  /// **'Accueil'**
-  String get safeboxTabHome;
-
-  /// No description provided for @safeboxTabFiles.
-  ///
-  /// In fr, this message translates to:
-  /// **'Fichiers'**
-  String get safeboxTabFiles;
-
   /// No description provided for @safeboxTabTransfers.
   ///
   /// In fr, this message translates to:
@@ -15328,12 +15316,6 @@ abstract class AppLocalizations {
   /// **'Voir les transferts'**
   String get safeboxStatusOpen;
 
-  /// No description provided for @safeboxShareCardHint.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =0{Aucun fichier · jusqu\'à {max} par fichier} =1{1 fichier · jusqu\'à {max} par fichier} other{{count} fichiers · jusqu\'à {max} par fichier}}'**
-  String safeboxShareCardHint(int count, String max);
-
   /// No description provided for @safeboxMyFolders.
   ///
   /// In fr, this message translates to:
@@ -15357,12 +15339,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =0{Vide pour l\'instant} =1{1 élément} other{{count} éléments}}'**
   String safeboxAlbumItems(int count);
-
-  /// No description provided for @safeboxAlbumItemsMore.
-  ///
-  /// In fr, this message translates to:
-  /// **'Plus de {count} éléments'**
-  String safeboxAlbumItemsMore(int count);
 
   /// No description provided for @safeboxNewAlbum.
   ///
@@ -15436,6 +15412,12 @@ abstract class AppLocalizations {
   /// **'{done} sur {total}'**
   String safeboxBytesOf(String done, String total);
 
+  /// No description provided for @safeboxUploadSpeed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size}/s'**
+  String safeboxUploadSpeed(String size);
+
   /// No description provided for @safeboxNoDownloads.
   ///
   /// In fr, this message translates to:
@@ -15495,6 +15477,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Tout'**
   String get safeboxFilterAll;
+
+  /// No description provided for @safeboxFilterWithNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec commentaire'**
+  String get safeboxFilterWithNote;
 
   /// No description provided for @safeboxDownload.
   ///
@@ -15571,7 +15559,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxDownloadFolderAction.
   ///
   /// In fr, this message translates to:
-  /// **'Télécharger le dossier'**
+  /// **'Enregistrer sur le téléphone'**
   String get safeboxDownloadFolderAction;
 
   /// No description provided for @safeboxToday.
@@ -15586,11 +15574,29 @@ abstract class AppLocalizations {
   /// **'Hier'**
   String get safeboxYesterday;
 
+  /// No description provided for @safeboxSendAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer l\'album'**
+  String get safeboxSendAlbum;
+
+  /// No description provided for @safeboxSendFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le dossier'**
+  String get safeboxSendFolder;
+
   /// No description provided for @safeboxFilesCount.
   ///
   /// In fr, this message translates to:
   /// **'{count, plural, =1{1 fichier} other{{count} fichiers}}'**
   String safeboxFilesCount(int count);
+
+  /// No description provided for @safeboxFoldersCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 dossier} other{{count} dossiers}}'**
+  String safeboxFoldersCount(int count);
 
   /// No description provided for @safeboxUploadWaitingWifi.
   ///
@@ -15649,8 +15655,8 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupSpaceFull.
   ///
   /// In fr, this message translates to:
-  /// **'Espace plein : la sauvegarde est arrêtée'**
-  String get safeboxBackupSpaceFull;
+  /// **'{count, plural, =0{Espace plein} =1{Espace plein : 1 fichier attend de la place} other{Espace plein : {count} fichiers attendent de la place}}'**
+  String safeboxBackupSpaceFull(int count);
 
   /// No description provided for @safeboxBackupNoAccess.
   ///
@@ -15823,7 +15829,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupOverflows.
   ///
   /// In fr, this message translates to:
-  /// **'Dépasse de {size} : la sauvegarde s\'arrêtera quand l\'espace sera plein.'**
+  /// **'Dépasse de {size} : les fichiers les plus récents partent d\'abord, les plus anciens attendront de la place.'**
   String safeboxBackupOverflows(String size);
 
   /// No description provided for @safeboxBackupHdPreselected.
@@ -16165,20 +16171,14 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxShareTabSent.
   ///
   /// In fr, this message translates to:
-  /// **'Mes envois · {count}'**
-  String safeboxShareTabSent(int count);
+  /// **'Mes envois'**
+  String get safeboxShareTabSent;
 
   /// No description provided for @safeboxShareTabReceived.
   ///
   /// In fr, this message translates to:
-  /// **'Reçus · {count}'**
-  String safeboxShareTabReceived(int count);
-
-  /// No description provided for @safeboxShareTabReceivedPlain.
-  ///
-  /// In fr, this message translates to:
   /// **'Reçus'**
-  String get safeboxShareTabReceivedPlain;
+  String get safeboxShareTabReceived;
 
   /// No description provided for @safeboxShareSentInfo.
   ///
@@ -16219,20 +16219,32 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxShareStatusAll.
   ///
   /// In fr, this message translates to:
-  /// **'{name} · téléchargé par tous'**
+  /// **'Envoyé dans {name} · téléchargé par tous'**
   String safeboxShareStatusAll(String name);
 
   /// No description provided for @safeboxShareStatusNone.
   ///
   /// In fr, this message translates to:
-  /// **'{name} · personne n\'a encore téléchargé'**
+  /// **'Envoyé dans {name} · personne n\'a encore téléchargé'**
   String safeboxShareStatusNone(String name);
 
   /// No description provided for @safeboxShareStatusSome.
   ///
   /// In fr, this message translates to:
-  /// **'{name} · téléchargé par {count} sur {total}'**
+  /// **'Envoyé dans {name} · téléchargé par {count} sur {total}'**
   String safeboxShareStatusSome(String name, int count, int total);
+
+  /// No description provided for @safeboxShareStatusPersonNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas encore téléchargé'**
+  String safeboxShareStatusPersonNone(String name);
+
+  /// No description provided for @safeboxShareStatusPersonDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargé par {name}'**
+  String safeboxShareStatusPersonDone(String name);
 
   /// No description provided for @safeboxShareConvFallback.
   ///

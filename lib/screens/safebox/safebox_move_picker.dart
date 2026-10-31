@@ -57,7 +57,7 @@ Future<int?> pickSafeboxDestination(
   BuildContext context, {
   required int startFolderId,
   required int currentParentId,
-  int? movingFolderId,
+  Set<int> movingFolderIds = const {},
   String? actionLabel,
 }) =>
     Navigator.push<int>(
@@ -66,17 +66,23 @@ Future<int?> pickSafeboxDestination(
         builder: (_) => _ChoixDossier(
           folderId: startFolderId,
           currentParentId: currentParentId,
-          movingFolderId: movingFolderId,
+          movingFolderIds: movingFolderIds,
           actionLabel: actionLabel,
         ),
       ),
     );
 
 class _ChoixDossier extends StatefulWidget {
-  const _ChoixDossier({required this.folderId, required this.currentParentId, this.movingFolderId, this.actionLabel});
+  const _ChoixDossier({
+    required this.folderId,
+    required this.currentParentId,
+    this.movingFolderIds = const {},
+    this.actionLabel,
+  });
   final int folderId;
   final int currentParentId;
-  final int? movingFolderId;
+  /// Les dossiers déplacés : ni eux ni leur contenu ne peuvent les recevoir.
+  final Set<int> movingFolderIds;
   final String? actionLabel;
 
   @override
@@ -110,7 +116,7 @@ class _ChoixDossierState extends State<_ChoixDossier> {
           : ListView(
               children: [
                 for (final d in page.folders)
-                  if (d.id != widget.movingFolderId)
+                  if (!widget.movingFolderIds.contains(d.id))
                     ListTile(
                       leading: Icon(Icons.folder_outlined, color: context.colors.primary),
                       title: Text(d.name ?? ''),
@@ -120,7 +126,7 @@ class _ChoixDossierState extends State<_ChoixDossier> {
                           context,
                           startFolderId: d.id,
                           currentParentId: widget.currentParentId,
-                          movingFolderId: widget.movingFolderId,
+                          movingFolderIds: widget.movingFolderIds,
                           actionLabel: widget.actionLabel,
                         );
                         if (choisi != null && context.mounted) Navigator.pop(context, choisi);

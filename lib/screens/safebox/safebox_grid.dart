@@ -84,11 +84,15 @@ class SafeboxGridTile extends StatelessWidget {
               bottom: 4,
               child: _Pastille(child: Text(duree, style: const TextStyle(color: Colors.white, fontSize: 11))),
             ),
+          // Une bulle pour un commentaire écrit, un micro pour un audio seul.
           if (file.note != null)
-            const Positioned(
+            Positioned(
               right: 4,
               bottom: 4,
-              child: _Pastille(round: true, child: Icon(Icons.mic, size: 12, color: Colors.white)),
+              child: _Pastille(
+                round: true,
+                child: Icon(file.note!.text != null ? Icons.chat_bubble : Icons.mic, size: 12, color: Colors.white),
+              ),
             ),
           if (file.lost)
             Positioned(

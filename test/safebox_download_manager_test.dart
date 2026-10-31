@@ -141,4 +141,22 @@ void main() {
     mega.apercuChiffre = null;
     expect(await SafeboxPreviewCache(transport: mega, baseDir: () async => base).load(_fichier(previewUrl: 'apercu')), apercu);
   });
+
+  test('aperçus sur le téléphone : plafonnés, les moins récents partent ; effacés avec leur fichier', () async {
+    final dir = Directory('${base.path}/previews')..createSync(recursive: true);
+    // Cinq aperçus de 1 000 octets, du plus ancien (1) au plus récent (5).
+    for (var i = 1; i <= 5; i += 1) {
+      File('${dir.path}/$i.sbx')
+        ..writeAsBytesSync(Uint8List(1000))
+        ..setLastModifiedSync(DateTime(2026, 10, i));
+    }
+    final cache = SafeboxPreviewCache(transport: mega, baseDir: () async => base, maxDiskBytes: 4000);
+    await cache.prune();
+    // Ramenés aux trois quarts du plafond : il en reste trois, les plus récents.
+    expect(dir.listSync().map((e) => e.uri.pathSegments.last).toSet(), {'3.sbx', '4.sbx', '5.sbx'});
+    await cache.prune();
+    expect(dir.listSync(), hasLength(3), reason: 'sous le plafond : rien ne bouge');
+    await cache.forget([4, 77]);
+    expect(dir.listSync().map((e) => e.uri.pathSegments.last).toSet(), {'3.sbx', '5.sbx'});
+  });
 }

@@ -8960,12 +8960,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxHevcWarningSend => 'Envoyer quand même';
 
   @override
-  String get safeboxTabHome => 'Accueil';
-
-  @override
-  String get safeboxTabFiles => 'Fichiers';
-
-  @override
   String get safeboxTabTransfers => 'Transferts';
 
   @override
@@ -9029,18 +9023,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxStatusOpen => 'Voir les transferts';
 
   @override
-  String safeboxShareCardHint(int count, String max) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count fichiers · jusqu\'à $max par fichier',
-      one: '1 fichier · jusqu\'à $max par fichier',
-      zero: 'Aucun fichier · jusqu\'à $max par fichier',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get safeboxMyFolders => 'Mes dossiers';
 
   @override
@@ -9059,11 +9041,6 @@ class AppLocalizationsFr extends AppLocalizations {
       zero: 'Vide pour l\'instant',
     );
     return '$_temp0';
-  }
-
-  @override
-  String safeboxAlbumItemsMore(int count) {
-    return 'Plus de $count éléments';
   }
 
   @override
@@ -9102,6 +9079,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String safeboxBytesOf(String done, String total) {
     return '$done sur $total';
+  }
+
+  @override
+  String safeboxUploadSpeed(String size) {
+    return '$size/s';
   }
 
   @override
@@ -9151,6 +9133,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxFilterAll => 'Tout';
+
+  @override
+  String get safeboxFilterWithNote => 'Avec commentaire';
 
   @override
   String get safeboxDownload => 'Télécharger';
@@ -9205,7 +9190,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Téléchargement lancé : suivez-le dans Transferts.';
 
   @override
-  String get safeboxDownloadFolderAction => 'Télécharger le dossier';
+  String get safeboxDownloadFolderAction => 'Enregistrer sur le téléphone';
 
   @override
   String get safeboxToday => 'Aujourd\'hui';
@@ -9214,12 +9199,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxYesterday => 'Hier';
 
   @override
+  String get safeboxSendAlbum => 'Envoyer l\'album';
+
+  @override
+  String get safeboxSendFolder => 'Envoyer le dossier';
+
+  @override
   String safeboxFilesCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
       other: '$count fichiers',
       one: '1 fichier',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String safeboxFoldersCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dossiers',
+      one: '1 dossier',
     );
     return '$_temp0';
   }
@@ -9277,8 +9279,16 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get safeboxBackupSpaceFull =>
-      'Espace plein : la sauvegarde est arrêtée';
+  String safeboxBackupSpaceFull(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Espace plein : $count fichiers attendent de la place',
+      one: 'Espace plein : 1 fichier attend de la place',
+      zero: 'Espace plein',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get safeboxBackupNoAccess => 'Accès aux photos refusé';
@@ -9383,7 +9393,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String safeboxBackupOverflows(String size) {
-    return 'Dépasse de $size : la sauvegarde s\'arrêtera quand l\'espace sera plein.';
+    return 'Dépasse de $size : les fichiers les plus récents partent d\'abord, les plus anciens attendront de la place.';
   }
 
   @override
@@ -9650,17 +9660,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxTrackingRevoked => 'Partage retiré';
 
   @override
-  String safeboxShareTabSent(int count) {
-    return 'Mes envois · $count';
-  }
+  String get safeboxShareTabSent => 'Mes envois';
 
   @override
-  String safeboxShareTabReceived(int count) {
-    return 'Reçus · $count';
-  }
-
-  @override
-  String get safeboxShareTabReceivedPlain => 'Reçus';
+  String get safeboxShareTabReceived => 'Reçus';
 
   @override
   String get safeboxShareSentInfo =>
@@ -9703,17 +9706,27 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String safeboxShareStatusAll(String name) {
-    return '$name · téléchargé par tous';
+    return 'Envoyé dans $name · téléchargé par tous';
   }
 
   @override
   String safeboxShareStatusNone(String name) {
-    return '$name · personne n\'a encore téléchargé';
+    return 'Envoyé dans $name · personne n\'a encore téléchargé';
   }
 
   @override
   String safeboxShareStatusSome(String name, int count, int total) {
-    return '$name · téléchargé par $count sur $total';
+    return 'Envoyé dans $name · téléchargé par $count sur $total';
+  }
+
+  @override
+  String safeboxShareStatusPersonNone(String name) {
+    return '$name n\'a pas encore téléchargé';
+  }
+
+  @override
+  String safeboxShareStatusPersonDone(String name) {
+    return 'Téléchargé par $name';
   }
 
   @override

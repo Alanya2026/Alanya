@@ -53,19 +53,18 @@ Future<void> _ouvrirRacine(BuildContext context, SafeboxRoot r, {bool ajouter = 
   if (context.mounted) await c.refreshOverview();
 }
 
+/// Le coffre-fort, en un seul écran (30/10/2026) : l'espace, l'état des envois
+/// et de la sauvegarde, les six dossiers, les albums récents. Les transferts
+/// s'ouvrent depuis la carte d'état ou l'icône de la barre ; Partager, comme
+/// les autres dossiers.
 class SafeboxHomeScreen extends StatefulWidget {
-  const SafeboxHomeScreen({super.key, this.initialTab = 0});
-
-  /// 0 Accueil, 1 Fichiers, 2 Partager, 3 Transferts.
-  final int initialTab;
+  const SafeboxHomeScreen({super.key});
 
   @override
   State<SafeboxHomeScreen> createState() => _SafeboxHomeScreenState();
 }
 
 class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> {
-  late int _onglet = widget.initialTab;
-
   @override
   void initState() {
     super.initState();
@@ -75,58 +74,11 @@ class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final c = context.watch<SafeboxController>();
-    final partager = c.overview?.rootIds[SafeboxRoot.partager];
-    final actifs = c.uploads.jobs.where(safeboxUploadActive).length + c.exports.tasks.where((t) => !t.finished).length;
-    return Scaffold(
-      body: IndexedStack(
-        index: _onglet,
-        children: [
-          _Accueil(onTab: (i) => setState(() => _onglet = i)),
-          const _Fichiers(),
-          if (partager == null)
-            const Scaffold(body: Center(child: CircularProgressIndicator()))
-          else
-            SafeboxFolderScreen(key: ValueKey(partager), folderId: partager, root: SafeboxRoot.partager),
-          const SafeboxTransfersView(),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _onglet,
-        onDestinationSelected: (i) => setState(() => _onglet = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: l10n.safeboxTabHome,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.folder_outlined),
-            selectedIcon: const Icon(Icons.folder),
-            label: l10n.safeboxTabFiles,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.send_outlined),
-            selectedIcon: const Icon(Icons.send),
-            label: l10n.safeboxRootShare,
-          ),
-          NavigationDestination(
-            icon: Badge(isLabelVisible: actifs > 0, label: Text('$actifs'), child: const Icon(Icons.swap_vert)),
-            label: l10n.safeboxTabTransfers,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const _Accueil();
 }
 
-// ── Accueil ────────────────────────────────────────────────────────────────
-
 class _Accueil extends StatelessWidget {
-  const _Accueil({required this.onTab});
-  final void Function(int tab) onTab;
+  const _Accueil();
 
   Future<void> _ajouter(BuildContext context) async {
     final l10n = context.l10n;
@@ -159,8 +111,18 @@ class _Accueil extends StatelessWidget {
     final l10n = context.l10n;
     final c = context.watch<SafeboxController>();
     final vue = c.overview;
+    final actifs = c.uploads.jobs.where(safeboxUploadActive).length + c.exports.tasks.where((t) => !t.finished).length;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.safeboxTitle)),
+      appBar: AppBar(
+        title: Text(l10n.safeboxTitle),
+        actions: [
+          IconButton(
+            tooltip: l10n.safeboxTabTransfers,
+            icon: Badge(isLabelVisible: actifs > 0, label: Text('$actifs'), child: const Icon(Icons.swap_vert)),
+            onPressed: () => showSafeboxTransfers(context),
+          ),
+        ],
+      ),
       floatingActionButton: vue == null
           ? null
           : FloatingActionButton(
@@ -186,29 +148,10 @@ class _Accueil extends StatelessWidget {
               const Padding(padding: EdgeInsets.all(AppSpacing.xxxl), child: Center(child: CircularProgressIndicator()))
             else ...[
               _CarteEspace(quota: vue.quota),
-              _CarteEtat(onOpen: () => onTab(3)),
-              const _CarteSauvegarde(),
+              const _CarteEtat(),
               const _CarteMemoire(),
-              _Carte(
-                padding: EdgeInsets.zero,
-                child: ListTile(
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(color: AppColors.safeboxShareContainer, borderRadius: AppRadius.brSm),
-                    child: const Icon(Icons.send_outlined, color: AppColors.safeboxShare),
-                  ),
-                  title: Text(l10n.safeboxRootShare, style: context.text.titleSmall),
-                  subtitle: Text(l10n.safeboxShareCardHint(
-                    vue.quota.byRoot[SafeboxRoot.partager]?.files ?? 0,
-                    formatBytes(vue.limits.maxFileBytes, l10n),
-                  )),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => onTab(2),
-                ),
-              ),
               _Titre(l10n.safeboxMyFolders),
-              _GrilleRacines(roots: [for (final f in SafeboxFamily.values) f.root]),
+              const _GrilleRacines(roots: SafeboxRoot.values),
               _AlbumsRecents(albumsId: vue.rootIds[SafeboxRoot.albums]),
               const _LignesBas(),
             ],
@@ -271,6 +214,9 @@ class _CarteEspace extends StatelessWidget {
             child: SizedBox(
               height: 10,
               child: Row(
+                // Sans enfant, une ColoredBox prend la hauteur minimale : étirée,
+                // elle remplit les 10 px de la barre.
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < parts.length; i += 1) ...[
                     if (i > 0) const SizedBox(width: 2),
@@ -324,9 +270,36 @@ class _CarteEspace extends StatelessWidget {
 
 /// L'état des envois : en échec, en attente du réseau, en cours, en pause, ou
 /// tout est en sécurité. Un appui ouvre les transferts.
+/// L'état du coffre en une carte : les envois (qui ouvrent les transferts),
+/// puis la sauvegarde automatique.
 class _CarteEtat extends StatelessWidget {
-  const _CarteEtat({required this.onOpen});
-  final VoidCallback onOpen;
+  const _CarteEtat();
+
+  @override
+  Widget build(BuildContext context) {
+    // Rien en route : la ligne des envois n'apprend rien (« Tous vos fichiers
+    // sont en sécurité ») ; les transferts restent à l'icône du haut. L'attente
+    // du Wi-Fi est dite par la ligne de la sauvegarde.
+    final calme = context.select<SafeboxController, bool>((c) => c.uploads.jobs.every(
+        (j) => j.state == SafeboxUploadState.completed || j.state == SafeboxUploadState.waitingWifi));
+    return _Carte(
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!calme) ...[
+            const _LigneEnvois(),
+            Divider(height: 1, indent: AppSpacing.md, endIndent: AppSpacing.md, color: context.colors.outlineVariant),
+          ],
+          const _LigneSauvegarde(),
+        ],
+      ),
+    );
+  }
+}
+
+class _LigneEnvois extends StatelessWidget {
+  const _LigneEnvois();
 
   @override
   Widget build(BuildContext context) {
@@ -353,15 +326,12 @@ class _CarteEtat extends StatelessWidget {
                         l10n.safeboxStatusOpen)
                     : (Icons.check, context.semantic.success, context.semantic.successContainer,
                         l10n.safeboxStatusSafe, l10n.safeboxStatusSafeHint);
-    return _Carte(
-      padding: EdgeInsets.zero,
-      child: ListTile(
-        leading: CircleAvatar(backgroundColor: fond, child: Icon(icone, color: couleur)),
-        title: Text(titre, style: context.text.titleSmall),
-        subtitle: Text(detail),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onOpen,
-      ),
+    return ListTile(
+      leading: CircleAvatar(backgroundColor: fond, child: Icon(icone, color: couleur)),
+      title: Text(titre, style: context.text.titleSmall),
+      subtitle: Text(detail),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => showSafeboxTransfers(context),
     );
   }
 }
@@ -369,8 +339,8 @@ class _CarteEtat extends StatelessWidget {
 /// La sauvegarde automatique (lot 10) : « Activer », ou son état — à jour,
 /// fichiers en route, en attente de Wi-Fi (« Envoyer avec les données
 /// mobiles »), de la charge, espace plein, accès refusé.
-class _CarteSauvegarde extends StatelessWidget {
-  const _CarteSauvegarde();
+class _LigneSauvegarde extends StatelessWidget {
+  const _LigneSauvegarde();
 
   @override
   Widget build(BuildContext context) {
@@ -383,18 +353,15 @@ class _CarteSauvegarde extends StatelessWidget {
           child: Text(label),
         );
     if (!r.enabled) {
-      return _Carte(
-        padding: EdgeInsets.zero,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: context.semantic.brandContainer,
-            child: Icon(Icons.cloud_sync_outlined, color: context.colors.primary),
-          ),
-          title: Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
-          subtitle: Text(l10n.safeboxBackupPitch),
-          trailing: petitBouton(l10n.safeboxBackupActivate, () => showSafeboxBackupSetup(context)),
-          onTap: () => showSafeboxBackupSetup(context),
+      return ListTile(
+        leading: CircleAvatar(
+          backgroundColor: context.semantic.brandContainer,
+          child: Icon(Icons.cloud_sync_outlined, color: context.colors.primary),
         ),
+        title: Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
+        subtitle: Text(l10n.safeboxBackupPitch),
+        trailing: petitBouton(l10n.safeboxBackupActivate, () => showSafeboxBackupSetup(context)),
+        onTap: () => showSafeboxBackupSetup(context),
       );
     }
     final dernier = c.lastBackup;
@@ -406,7 +373,7 @@ class _CarteSauvegarde extends StatelessWidget {
             ? (Icons.block, context.colors.error, l10n.safeboxBackupNoAccess,
                 (l10n.safeboxBackupAllow, () => showSafeboxBackupSetup(context)))
             : dernier?.stop == SafeboxBackupStop.spaceFull
-                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull,
+                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom),
                     (l10n.safeboxGoPlus, () => showPaywall(context, null)))
                 : wifi > 0
                     ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
@@ -421,27 +388,12 @@ class _CarteSauvegarde extends StatelessWidget {
                                 ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
                                     (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
                                 : (Icons.check, context.semantic.success, l10n.safeboxBackupUpToDate, null);
-    return _Carte(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
-      child: InkWell(
-        onTap: () => showSafeboxBackupSetup(context),
-        child: Row(
-          children: [
-            Icon(icone, color: couleur),
-            AppSpacing.hGapMd,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
-                  Text(detail, style: context.text.bodySmall?.copyWith(color: couleur)),
-                ],
-              ),
-            ),
-            if (action != null) petitBouton(action.$1, action.$2) else const Icon(Icons.chevron_right),
-          ],
-        ),
-      ),
+    return ListTile(
+      leading: CircleAvatar(backgroundColor: couleur.withValues(alpha: 0.12), child: Icon(icone, color: couleur)),
+      title: Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
+      subtitle: Text(detail, style: TextStyle(color: couleur)),
+      trailing: action != null ? petitBouton(action.$1, action.$2) : const Icon(Icons.chevron_right),
+      onTap: () => showSafeboxBackupSetup(context),
     );
   }
 }
@@ -548,7 +500,7 @@ class _GrilleRacines extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         mainAxisSpacing: AppSpacing.sm,
         crossAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 2.3,
+        childAspectRatio: 2.0,
         children: [
           for (final r in roots)
             Material(
@@ -575,12 +527,15 @@ class _GrilleRacines extends StatelessWidget {
                           children: [
                             Text(SafeboxController.rootLabel(r, l10n),
                                 maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
+                            // Le nombre et la taille sur deux lignes : sur une seule, la taille
+                            // était coupée dans une demi-largeur d'écran.
                             Text(
-                              l10n.safeboxRootSummary(
-                                vue.quota.byRoot[r]?.files ?? 0,
-                                formatBytes(vue.quota.byRoot[r]?.bytes ?? 0, l10n),
-                              ),
-                              maxLines: 1,
+                              switch (vue.quota.byRoot[r]) {
+                                final u? when u.files > 0 =>
+                                  '${l10n.safeboxFilesCount(u.files)}\n${formatBytes(u.bytes, l10n)}',
+                                _ => l10n.safeboxRootSummary(0, ''),
+                              },
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
                             ),
@@ -598,7 +553,9 @@ class _GrilleRacines extends StatelessWidget {
   }
 }
 
-/// Les albums récents, chacun en mosaïque de ses quatre premiers aperçus.
+/// Les trois derniers albums remplis, chacun en mosaïque de quatre aperçus
+/// (photos et vidéos d'abord), en une seule demande au serveur ; les autres
+/// sont derrière « Tout voir ».
 class _AlbumsRecents extends StatefulWidget {
   const _AlbumsRecents({required this.albumsId});
   final int? albumsId;
@@ -608,7 +565,8 @@ class _AlbumsRecents extends StatefulWidget {
 }
 
 class _AlbumsRecentsState extends State<_AlbumsRecents> {
-  List<SafeboxFolder>? _albums;
+  static const _nombre = 3;
+  List<SafeboxRecentAlbum>? _albums;
 
   @override
   void initState() {
@@ -617,12 +575,9 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
   }
 
   Future<void> _charger() async {
-    final id = widget.albumsId;
-    if (id == null) return;
     try {
-      final p = await context.read<SafeboxController>().api.fetchSafeboxFolder(id);
-      final tries = [...p.folders]..sort((a, b) => (b.updatedAt ?? DateTime(0)).compareTo(a.updatedAt ?? DateTime(0)));
-      if (mounted) setState(() => _albums = tries.take(8).toList());
+      final albums = await context.read<SafeboxController>().api.fetchSafeboxRecentAlbums(limit: _nombre);
+      if (mounted) setState(() => _albums = albums);
     } catch (_) {
       if (mounted) setState(() => _albums = const []);
     }
@@ -667,6 +622,11 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
           child: Row(
             children: [
               Expanded(child: Text(l10n.safeboxRecentAlbums, style: context.text.titleMedium)),
+              IconButton(
+                tooltip: l10n.safeboxNewAlbum,
+                icon: Icon(Icons.add, color: context.colors.primary),
+                onPressed: widget.albumsId == null ? null : _nouvelAlbum,
+              ),
               TextButton(
                 onPressed: () => _ouvrirRacine(context, SafeboxRoot.albums).then((_) => _charger()),
                 child: Text(l10n.safeboxSeeAll),
@@ -674,16 +634,24 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
             ],
           ),
         ),
-        SizedBox(
-          height: 204,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: albums == null
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              ? const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()))
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final a in albums) _CarteAlbum(album: a, onTap: () => _ouvrir(a)),
-                    _CarteNouvelAlbum(onTap: _nouvelAlbum),
+                    for (var i = 0; i < _nombre; i += 1) ...[
+                      if (i > 0) AppSpacing.hGapSm,
+                      Expanded(
+                        child: i < albums.length
+                            ? _CarteAlbum(key: ValueKey(albums[i].folder.id), album: albums[i], onTap: () => _ouvrir(albums[i].folder))
+                            // La première place libre invite à créer un album.
+                            : i == albums.length && widget.albumsId != null
+                                ? _CarteNouvelAlbum(onTap: _nouvelAlbum)
+                                : const SizedBox.shrink(),
+                      ),
+                    ],
                   ],
                 ),
         ),
@@ -692,72 +660,48 @@ class _AlbumsRecentsState extends State<_AlbumsRecents> {
   }
 }
 
-class _CarteAlbum extends StatefulWidget {
-  const _CarteAlbum({required this.album, required this.onTap});
-  final SafeboxFolder album;
+class _CarteAlbum extends StatelessWidget {
+  const _CarteAlbum({super.key, required this.album, required this.onTap});
+  final SafeboxRecentAlbum album;
   final VoidCallback onTap;
 
   @override
-  State<_CarteAlbum> createState() => _CarteAlbumState();
-}
-
-class _CarteAlbumState extends State<_CarteAlbum> {
-  SafeboxFolderPage? _page;
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<SafeboxController>().api.fetchSafeboxFolder(widget.album.id).then((p) {
-      if (mounted) setState(() => _page = p);
-    }).catchError((Object _) {});
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final page = _page;
-    final fichiers = page?.files ?? const <SafeboxFile>[];
-    final n = fichiers.length;
-    return Padding(
-      padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: InkWell(
-        borderRadius: AppRadius.brMd,
-        onTap: widget.onTap,
-        child: SizedBox(
-          width: 132,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: AppRadius.brMd,
-                child: SizedBox(
-                  width: 132,
-                  height: 132,
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 2,
-                    crossAxisSpacing: 2,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    children: [
-                      for (var i = 0; i < 4; i += 1)
-                        i < n
-                            ? SafeboxFileThumb(file: fichiers[i], fill: true)
-                            : ColoredBox(color: context.semantic.brandContainer),
-                    ],
-                  ),
-                ),
+    final couverture = album.cover;
+    return InkWell(
+      borderRadius: AppRadius.brMd,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: AppRadius.brMd,
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: GridView.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                children: [
+                  for (var i = 0; i < 4; i += 1)
+                    i < couverture.length
+                        ? SafeboxFileThumb(file: couverture[i], fill: true)
+                        : ColoredBox(color: context.semantic.brandContainer),
+                ],
               ),
-              AppSpacing.vGapXs,
-              Text(widget.album.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
-              if (page != null)
-                Text(
-                  page.nextCursor != null ? l10n.safeboxAlbumItemsMore(n) : l10n.safeboxAlbumItems(n + page.folders.length),
-                  style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
-                ),
-            ],
+            ),
           ),
-        ),
+          AppSpacing.vGapXs,
+          Text(album.folder.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
+          Text(
+            context.l10n.safeboxAlbumItems(album.fileCount),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
@@ -771,24 +715,22 @@ class _CarteNouvelAlbum extends StatelessWidget {
   Widget build(BuildContext context) => InkWell(
         borderRadius: AppRadius.brMd,
         onTap: onTap,
-        child: SizedBox(
-          width: 132,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 132,
-                height: 132,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: Container(
                 decoration: BoxDecoration(
                   borderRadius: AppRadius.brMd,
                   border: Border.all(color: context.colors.outlineVariant),
                 ),
                 child: Icon(Icons.add, color: context.colors.primary, size: AppIconSize.lg),
               ),
-              AppSpacing.vGapXs,
-              Text(context.l10n.safeboxNewAlbum, style: context.text.titleSmall),
-            ],
-          ),
+            ),
+            AppSpacing.vGapXs,
+            Text(context.l10n.safeboxNewAlbum, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.text.titleSmall),
+          ],
         ),
       );
 }
@@ -833,36 +775,6 @@ class _LignesBas extends StatelessWidget {
 }
 
 // ── Fichiers ───────────────────────────────────────────────────────────────
-
-class _Fichiers extends StatelessWidget {
-  const _Fichiers();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final c = context.watch<SafeboxController>();
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.safeboxTabFiles)),
-      body: RefreshIndicator(
-        onRefresh: c.refreshOverview,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-          children: [
-            if (c.overview == null)
-              const Padding(padding: EdgeInsets.all(AppSpacing.xxxl), child: Center(child: CircularProgressIndicator()))
-            else ...[
-              const _GrilleRacines(roots: SafeboxRoot.values),
-              AppSpacing.vGapSm,
-              const _LignesBas(),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Petits morceaux ────────────────────────────────────────────────────────
 
 class _Titre extends StatelessWidget {
   const _Titre(this.texte);

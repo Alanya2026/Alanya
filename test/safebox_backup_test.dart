@@ -142,10 +142,11 @@ void main() {
       galleryFolders: {'camera'},
     );
 
-    Future<SafeboxDeviceItem> ajouter(String id, String nom, SafeboxFamily f, int taille, {String dossierPhone = 'camera', int graine = 1}) async {
+    Future<SafeboxDeviceItem> ajouter(String id, String nom, SafeboxFamily f, int taille,
+        {String dossierPhone = 'camera', int graine = 1, DateTime? modifie}) async {
       final file = await fichier(nom, taille, graine: graine);
       final it = SafeboxDeviceItem(
-        key: 'g:$id', name: nom, family: f, size: -1, modified: DateTime(2026, 10, 1), folder: dossierPhone,
+        key: 'g:$id', name: nom, family: f, size: -1, modified: modifie ?? DateTime(2026, 10, 1), folder: dossierPhone,
         width: 4000, height: 3000,
       );
       tel.ajouter(it, file, dossierPhone);
@@ -204,6 +205,39 @@ void main() {
       final plein = await moteur().run(reglages);
       expect(plein.stop, SafeboxBackupStop.spaceFull);
       expect(envoyes, hasLength(1), reason: 'rien de plus');
+    });
+
+    test('place qui manque : les plus récents d\'abord, un fichier trop gros ne bloque pas les petits', () async {
+      // Ajoutés dans le désordre, et dans deux dossiers du téléphone.
+      await ajouter('1', 'ancienne.jpg', SafeboxFamily.photos, 1000, graine: 1, modifie: DateTime(2026, 10, 1));
+      await ajouter('2', 'grosse-recente.jpg', SafeboxFamily.photos, 5000, graine: 2, modifie: DateTime(2026, 10, 9));
+      await ajouter('3', 'moyenne.jpg', SafeboxFamily.photos, 1000,
+          graine: 3, modifie: DateTime(2026, 10, 5), dossierPhone: 'whatsapp');
+      final deuxDossiers = reglages.copyWith(galleryFolders: {'camera', 'whatsapp'});
+
+      // De quoi loger une seule petite : la plus récente des deux.
+      libre = 1500;
+      final r = await moteur().run(deuxDossiers);
+      expect(envoyes.map((u) => u.item.name), ['moyenne.jpg']);
+      expect(r.noRoom, 2);
+      expect(r.stop, SafeboxBackupStop.spaceFull);
+
+      // De la place pour les deux petites, pas pour la grosse : les petites partent.
+      envoyes.clear();
+      await store.save({});
+      libre = 2500;
+      final r2 = await moteur().run(deuxDossiers);
+      expect(envoyes.map((u) => u.item.name), ['moyenne.jpg', 'ancienne.jpg']);
+      expect(r2.noRoom, 1);
+      expect(r2.stop, SafeboxBackupStop.spaceFull, reason: 'la grosse ne tient toujours pas');
+
+      // Tout tient : plus d'« espace plein ».
+      envoyes.clear();
+      await store.save({});
+      libre = 1 << 20;
+      final r3 = await moteur().run(deuxDossiers);
+      expect(envoyes.map((u) => u.item.name), ['grosse-recente.jpg', 'moyenne.jpg', 'ancienne.jpg']);
+      expect(r3.stop, SafeboxBackupStop.none);
     });
 
     test('désactivée, ou sans accès à la galerie : rien', () async {

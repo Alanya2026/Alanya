@@ -58,6 +58,14 @@ void main() {
         'limits': {'maxFileBytes': go, 'blockBytes': 8 << 20, 'maxPreviewBytes': 262144, 'extensions': {}},
       });
     }
+    if (chemin.endsWith('/safebox/albums/recent')) {
+      expect(req.url.queryParameters['limit'], '3');
+      return json({
+        'albums': [
+          {'id': 30, 'parentId': 15, 'root': 'albums', 'name': 'Kribi 2026', 'depth': 1, 'fileCount': 12, 'cover': []},
+        ],
+      });
+    }
     if (chemin.endsWith('/safebox/folders/15')) {
       return json(dossier(15, 'albums', folders: [
         {'id': 30, 'parentId': 15, 'root': 'albums', 'name': 'Kribi 2026', 'depth': 1},
@@ -95,30 +103,44 @@ void main() {
     return c;
   }
 
-  testWidgets('accueil : espace, état des envois, sauvegarde, Partager, dossiers, albums récents', (tester) async {
+  testWidgets('un seul écran : espace, une carte d\'état, six dossiers, albums récents, pas d\'onglets', (tester) async {
     final c = await monter(tester);
+    expect(find.byType(NavigationBar), findsNothing);
     expect(find.text(fr.safeboxSpaceTitle), findsOneWidget);
-    expect(find.text(fr.safeboxStatusSafe), findsOneWidget);
+    // Rien en route : la carte d'état ne montre que la sauvegarde automatique.
+    expect(find.text(fr.safeboxStatusSafe), findsNothing);
     expect(find.text(fr.safeboxBackupTitle), findsOneWidget);
     expect(find.text(fr.safeboxBackupActivate), findsOneWidget);
-    await tester.scrollUntilVisible(find.text(fr.safeboxNewAlbum), 300);
+    await tester.scrollUntilVisible(find.text(fr.safeboxNewAlbum), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text(fr.safeboxMyFolders.toUpperCase()), findsOneWidget);
+    for (final r in [fr.safeboxRootPhotos, fr.safeboxRootVideos, fr.safeboxRootAudios, fr.safeboxRootDocuments, fr.safeboxRootAlbums, fr.safeboxRootShare]) {
+      expect(find.text(r), findsWidgets, reason: r);
+    }
+    // Trois places : un album, puis l'invitation à en créer un ; le « + » du titre aussi.
     expect(find.text('Kribi 2026'), findsOneWidget);
+    expect(find.text(fr.safeboxAlbumItems(12)), findsOneWidget);
+    expect(find.text(fr.safeboxNewAlbum), findsOneWidget);
+    expect(find.byTooltip(fr.safeboxNewAlbum), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is ListView && w.scrollDirection == Axis.horizontal), findsNothing,
+        reason: 'plus de liste qui défile de côté');
     expect(tester.takeException(), isNull);
     await demonter(tester, c);
   });
 
-  testWidgets('onglets Fichiers, Partager et Transferts', (tester) async {
+  testWidgets('les transferts par l\'icône de la barre, Partager comme un dossier', (tester) async {
     final c = await monter(tester);
-    await tester.tap(find.text(fr.safeboxTabFiles));
-    await tester.pumpAndSettle();
-    expect(find.text(fr.safeboxRootAlbums), findsWidgets);
-    expect(find.text(fr.safeboxRootShare), findsWidgets);
-    await tester.tap(find.text(fr.safeboxTabTransfers).last);
+    await tester.tap(find.byTooltip(fr.safeboxTabTransfers));
     await tester.pumpAndSettle();
     expect(find.text(fr.safeboxNoTransfers), findsOneWidget);
-    await tester.tap(find.text(fr.safeboxRootShare).last);
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
     await tester.pumpAndSettle();
+    final tuile = find.descendant(of: find.byType(GridView), matching: find.text(fr.safeboxRootShare));
+    await tester.scrollUntilVisible(tuile, 200, scrollable: find.byType(Scrollable).first);
+    await tester.ensureVisible(tuile);
+    await tester.pumpAndSettle();
+    await tester.tap(tuile);
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxShareTabSent), findsOneWidget, reason: 'Mes envois et Reçus');
     expect(find.text(fr.safeboxFolderEmpty), findsOneWidget);
     expect(tester.takeException(), isNull);
     await demonter(tester, c);
