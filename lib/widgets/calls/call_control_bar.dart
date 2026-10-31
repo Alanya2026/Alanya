@@ -94,6 +94,7 @@ class CallControlBar extends StatelessWidget {
 
   bool get _hasOverflow =>
       isVideo ||
+      showCameraInAudio ||
       (canAddParticipant &&
           (onAddParticipant != null || onTransferParticipant != null));
 
@@ -127,7 +128,7 @@ class CallControlBar extends StatelessWidget {
                     borderRadius: AppRadius.brPill,
                   ),
                 ),
-                if (isVideo)
+                if (isVideo || showCameraInAudio)
                   ListTile(
                     leading: Icon(
                       CupertinoIcons.switch_camera,
@@ -146,7 +147,7 @@ class CallControlBar extends StatelessWidget {
                 // En vidéo, le bouton de la barre est la caméra : sans cette
                 // entrée, la sortie audio — haut-parleur à l'init vidéo — ne
                 // pouvait plus jamais être changée pendant l'appel.
-                if (isVideo)
+                if (isVideo || showCameraInAudio)
                   ListTile(
                     leading: Icon(_routeIcon, color: callUi.onControlSurface),
                     title: Text(

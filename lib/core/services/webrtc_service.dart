@@ -228,24 +228,43 @@ class WebRTCService {
   }
 
   /// Retire la piste vidéo ajoutée par une renégociation échouée.
-  Future<void> discardLocalVideoTrack() async {
+  Future<bool> discardLocalVideoTrack() async {
     final stream = _localStream;
     final pc = _peerConnection;
-    if (stream == null) return;
+    if (stream == null) return true;
+    var succeeded = true;
     final tracks = List<MediaStreamTrack>.from(stream.getVideoTracks());
     if (pc != null) {
       final senders = await pc.getSenders();
       for (final sender in senders) {
         if (sender.track?.kind == 'video') {
-          await sender.replaceTrack(null);
+          try {
+            await sender.replaceTrack(null);
+          } catch (error) {
+            succeeded = false;
+            debugPrint(
+              '[WebRTC] ** Erreur retrait piste vidéo du sender: $error',
+            );
+          }
         }
       }
     }
     for (final track in tracks) {
-      await stream.removeTrack(track);
-      await track.stop();
+      try {
+        await stream.removeTrack(track);
+      } catch (error) {
+        succeeded = false;
+        debugPrint('[WebRTC] ** Erreur retrait piste vidéo du flux: $error');
+      }
+      try {
+        await track.stop();
+      } catch (error) {
+        succeeded = false;
+        debugPrint('[WebRTC] ** Erreur arrêt piste vidéo: $error');
+      }
     }
     onLocalStream?.call(stream);
+    return succeeded;
   }
 
   /// Construit la `PeerConnection` et y attache le flux déjà acquis.
@@ -580,13 +599,15 @@ class WebRTCService {
     }
   }
 
-  Future<void> rollbackNegotiation() async {
+  Future<bool> rollbackNegotiation() async {
     final pc = _peerConnection;
-    if (pc == null) return;
+    if (pc == null) return true;
     try {
       await pc.setLocalDescription(RTCSessionDescription('', 'rollback'));
+      return true;
     } catch (error) {
       debugPrint('[WebRTC] ** Rollback renégociation impossible: $error');
+      return false;
     }
   }
 

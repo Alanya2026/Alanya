@@ -1328,15 +1328,24 @@ extension CallSignaling on CallService {
       return;
     }
     _pendingRemoteVideoCommitId = null;
+    final wasAlreadyVideo = _isVideo;
     _isVideo = true;
-    _isVideoOn = false;
+    if (shouldTurnLocalCameraOffForRemoteUpgrade(
+      alreadyInVideoMode: wasAlreadyVideo,
+    )) {
+      _isVideoOn = false;
+    }
     _isRemoteVideoOn = true;
     await CallSessionGuard.instance.updateMode(SessionMode.video);
     await _bindSessionRenderers();
-    _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
-      'toUserId': _remoteUserId,
-      'isVideoOn': false,
-    });
+    if (shouldTurnLocalCameraOffForRemoteUpgrade(
+      alreadyInVideoMode: wasAlreadyVideo,
+    )) {
+      _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
+        'toUserId': _remoteUserId,
+        'isVideoOn': false,
+      });
+    }
     notify();
   }
 

@@ -32,6 +32,7 @@ import 'call/pending_call_reject_store.dart';
 import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
 import 'call/call_audio_routes.dart';
+import 'call/call_video_transition_policy.dart';
 import 'call/call_restart_policy.dart';
 import 'call/call_restart_roles.dart';
 import 'call/call_terminal_guards.dart';

@@ -87,8 +87,8 @@ extension CallControls on CallService {
         const Duration(seconds: 15),
       );
       await _webrtc.handleAnswer(answer);
-      final committed = _apiClient
-          .sendSocketEvent(SocketEvents.callVideoUpgradeCommit, {
+      final committed = await _apiClient
+          .sendSocketEventAcked(SocketEvents.callVideoUpgradeCommit, {
             'targetUserId': _remoteUserId.toString(),
             'callId': _currentCallId,
             'transitionId': transitionId,
@@ -104,8 +104,14 @@ extension CallControls on CallService {
       });
       notify();
     } catch (error) {
-      await _webrtc.rollbackNegotiation();
-      await _webrtc.discardLocalVideoTrack();
+      final rolledBack = await _webrtc.rollbackNegotiation();
+      final discarded = await _webrtc.discardLocalVideoTrack();
+      if (!rolledBack || !discarded) {
+        debugPrint(
+          '[CallService] ** nettoyage vidéo incomplet après échec '
+          '(rollback=$rolledBack, piste=$discarded)',
+        );
+      }
       _showTransientMessage(LocaleController.instance.l10n.callFailed);
       debugPrint('[CallService] ** transition audio → vidéo échouée: $error');
     } finally {
