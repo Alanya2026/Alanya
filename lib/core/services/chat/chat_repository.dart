@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../db/app_database.dart';
 import '../../db/chat_dao.dart';
+import '../documents_sensibles/descripteur_sensible.dart';
 import '../../utils/forward_message.dart';
 import '../../utils/conversation_display.dart';
 import '../../utils/backend_url.dart';
@@ -796,6 +798,7 @@ class ChatRepository {
     String? content,
     bool isForwarded = false,
     bool isViewOnce = false,
+    DescripteurSensible? sensible,
   }) =>
       _sender.sendMedia(
         conversationID: conversationID,
@@ -810,6 +813,7 @@ class ChatRepository {
         content: content,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
+        sensible: sensible,
       );
 
   Future<void> sendMediaFile({
@@ -824,6 +828,7 @@ class ChatRepository {
     int isStatusReply = 0,
     bool isForwarded = false,
     bool isViewOnce = false,
+    DescripteurSensible? sensible,
   }) =>
       _sender.sendMediaFile(
         conversationID: conversationID,
@@ -837,16 +842,19 @@ class ChatRepository {
         isStatusReply: isStatusReply,
         isForwarded: isForwarded,
         isViewOnce: isViewOnce,
+        sensible: sensible,
       );
 
   /// Un message par fichier — documents et morceaux, sans regroupement album.
   Future<void> sendMediaFiles({
     required int conversationID,
     required List<AlbumSendItem> items,
+    String? content,
   }) =>
       _sender.sendMediaFiles(
         conversationID: conversationID,
         items: items,
+        content: content,
       );
 
   Future<void> sendMediaAlbum({
@@ -1728,6 +1736,9 @@ class ChatRepository {
     if (!MediaDownloadPreferences.isAutoDownloadEnabled) return;
     final isViewOnce = json['isViewOnce'] == 1 || json['isViewOnce'] == true;
     if (isViewOnce) return;
+    // Un document sensible ne se télécharge qu'à l'ouverture, dans la
+    // visionneuse protégée : jamais d'export vers la galerie.
+    if (json['isSensitive'] == 1 || json['isSensitive'] == true) return;
     final senderID = _toInt(json['senderID']);
     if (senderID != 0 && senderID == _myId) return;
 
@@ -1911,6 +1922,7 @@ class ChatRepository {
     String? existingLocalPath,
     int? maxBytes,
     void Function(double? progress)? onProgress,
+    bool isSensitive = false,
   }) async {
     if (isViewOnce) return null;
 
@@ -1936,6 +1948,9 @@ class ChatRepository {
       }
     }
 
+    // Document sensible : le fichier reste dans le cache de l'application,
+    // jamais copié dans le stockage visible (seule une copie signée sort).
+    if (isSensitive) return path;
     await AlanyaMediaExportService.instance.exportIfNeeded(
       msgID: msgID,
       type: type,
@@ -2295,6 +2310,15 @@ class ChatRepository {
       isForwarded: Value(j['isForwarded'] == 1 || j['isForwarded'] == true),
       isPinned: Value(j['isPinned'] == 1 || j['isPinned'] == true),
       isViewOnce: Value(j['isViewOnce'] == 1 || j['isViewOnce'] == true),
+      // Document sensible (migration serveur 110). Champ absent = serveur non
+      // migré : la valeur locale est préservée. `mediaProtection` arrive en
+      // objet (colonne JSON) et se range en chaîne, comme `mentions`.
+      isSensitive: j.containsKey('isSensitive')
+          ? Value(j['isSensitive'] == 1 || j['isSensitive'] == true)
+          : const Value.absent(),
+      mediaProtection: j.containsKey('mediaProtection')
+          ? Value(_protectionFromJson(j['mediaProtection']))
+          : const Value.absent(),
       // On ne pose viewedAt QUE si le serveur confirme la vue. Sinon on laisse
       // la colonne intacte (Value.absent) : un média déjà ouvert localement le
       // reste, même si une resync arrive avant que le serveur ait persisté /view.
@@ -2320,6 +2344,11 @@ class ChatRepository {
     );
   }
 
+
+  static String? _protectionFromJson(Object? v) {
+    if (v == null) return null;
+    return v is String ? v : jsonEncode(v);
+  }
 
   static String? _clientIdFromJson(Map<String, dynamic> j) {
     final v = j['clientId'] ?? j['clientID'];

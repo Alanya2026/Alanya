@@ -49,6 +49,7 @@ part 'api/backup_api.dart';
 part 'api/billing_api.dart';
 part 'api/alanya_phone_api.dart';
 part 'api/safebox_api.dart';
+part 'api/documents_sensibles_api.dart';
 
 class TalkyApiClient {
   // ** Remplace par ton IP/domaine de production

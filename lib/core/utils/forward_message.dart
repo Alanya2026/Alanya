@@ -31,6 +31,9 @@ bool canForwardMessage(LocalMessage message) {
   if (message.isDeleted) return false;
   // Un média à vue unique ne peut jamais être transféré.
   if (message.isViewOnce) return false;
+  // Un document sensible non plus, ni partagé : seule une copie signée sort,
+  // par « Enregistrer ». Le serveur refuse aussi (`SENSITIVE_NO_FORWARD`).
+  if (message.isSensitive) return false;
 
   if (message.type == 0) {
     return message.content != null && message.content!.trim().isNotEmpty;

@@ -170,7 +170,7 @@ void main() {
 
     for (final b in Brightness.values) {
       for (final (lang, mention) in [('fr', 'Animé'), ('en', 'Animated'), ('zh', '动态')]) {
-        testUi('fiche d\'un sticker animé $lang / ${b.name} : mention + image fixe',
+        testUi('fiche d\'un sticker animé $lang / ${b.name} : mention + boucle',
             (t) async {
           t.view.physicalSize = const Size(800, 1800);
           t.view.devicePixelRatio = 1.0;
@@ -185,7 +185,8 @@ void main() {
           expect(find.text(mention), findsOneWidget);
           final anim = t.widget<NonLoopingAnimatedSticker>(
               find.byType(NonLoopingAnimatedSticker));
-          expect(anim.animate, isFalse, reason: 'la fiche ne boucle jamais');
+          expect(anim.loop, isTrue, reason: 'la fiche tourne en boucle');
+          expect(anim.interactive, isFalse);
           expect(anim.playKey, isNull);
           expect(t.takeException(), isNull);
         });
@@ -215,7 +216,7 @@ void main() {
       expect(find.byKey(const ValueKey('sticker-badge-animated')), findsOneWidget);
     });
 
-    testUi('plateau : un sticker animé s\'affiche en image fixe (vignette)', (t) async {
+    testUi('plateau : un sticker animé tourne en boucle, le tap envoie', (t) async {
       await db.into(db.localStickerPacks).insert(LocalStickerPacksCompanion.insert(
           packId: const Value(900),
           code: 'u_7_ab12cd34',
@@ -237,16 +238,16 @@ void main() {
       await settle(t);
       await t.tap(find.bySemanticsLabel('Pack'));
       await settle(t);
-      // Aucun lecteur animé dans la grille ; l'animé passe par la vignette
-      // déduite (pas de `thumbUrl` en base), le fixe par la sienne.
-      expect(find.byType(NonLoopingAnimatedSticker), findsNothing);
-      final urls = t
-          .widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage))
-          .map((w) => w.imageUrl)
-          .toList();
-      expect(urls, contains(_thumb));
-      expect(urls, isNot(contains(_full)));
+      // L'animé passe par le lecteur en boucle (sans geste propre) ; le fixe
+      // reste une image.
+      final anim = t.widget<NonLoopingAnimatedSticker>(
+          find.byType(NonLoopingAnimatedSticker));
+      expect(anim.url, _full);
+      expect(anim.loop, isTrue);
+      expect(anim.interactive, isFalse);
       expect(sent, isNull);
+      await t.tap(find.byType(NonLoopingAnimatedSticker));
+      expect(sent?.sticker.stickerId, 504, reason: 'le tap reste l\'envoi');
     });
   });
 }

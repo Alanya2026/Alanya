@@ -26,6 +26,7 @@ LocalMessage _msg({
     isDeleted: isDeleted,
     isPinned: false,
     isViewOnce: isViewOnce,
+    isSensitive: false,
     viewedAt: viewedAt,
     isStatusReply: 0,
     isForwarded: false,

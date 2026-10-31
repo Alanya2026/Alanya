@@ -14,6 +14,7 @@ LocalMessage _msg({
   String? pendingUploadPath,
   String? localMediaPath,
   bool isDeleted = false,
+  bool isSensitive = false,
 }) {
   return LocalMessage(
     clientId: 'test',
@@ -32,6 +33,7 @@ LocalMessage _msg({
     isDeleted: isDeleted,
     isPinned: false,
     isViewOnce: false,
+    isSensitive: isSensitive,
     isStatusReply: 0,
     isForwarded: false,
     syncPending: false,
@@ -50,6 +52,18 @@ void main() {
 
     test('texte vide refusé', () {
       expect(canForwardMessage(_msg(content: '   ')), isFalse);
+    });
+
+    test('document sensible refusé, même avec son fichier', () {
+      expect(
+        canForwardMessage(_msg(
+          type: 4,
+          mediaUrl: 'https://x/uploads/a.pdf',
+          mediaName: 'a.pdf',
+          isSensitive: true,
+        )),
+        isFalse,
+      );
     });
 
     test('supprimé refusé', () {

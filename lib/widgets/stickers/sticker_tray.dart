@@ -646,14 +646,25 @@ class _Grid extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              StickerImage(
-                url: s.thumbUrl ?? s.url,
-                emoji: s.emoji,
-                size: 76,
-                showRemovedLabel: false,
-                // Plateau : image fixe, jamais de boucle dans une grille.
-                staticFrame: s.animated,
-              ),
+              // Plateau : un sticker animé tourne en boucle tant qu'il est
+              // visible ; le tap reste celui de l'envoi.
+              if (s.animated)
+                NonLoopingAnimatedSticker(
+                  url: s.url,
+                  thumbUrl: s.thumbUrl,
+                  emoji: s.emoji,
+                  size: 76,
+                  loop: true,
+                  interactive: false,
+                  showRemovedLabel: false,
+                )
+              else
+                StickerImage(
+                  url: s.thumbUrl ?? s.url,
+                  emoji: s.emoji,
+                  size: 76,
+                  showRemovedLabel: false,
+                ),
               if (entry.locked)
                 Icon(Icons.lock, size: 20, color: context.colors.onSurface),
             ],
@@ -674,14 +685,15 @@ class _Grid extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: Text(ctx.l10n.stickerPreviewTitle),
-          // Un sticker animé s'aperçoit en image fixe (première image).
+          // Un sticker animé s'aperçoit en boucle.
           content: s.animated
               ? NonLoopingAnimatedSticker(
                   url: s.url,
                   thumbUrl: s.thumbUrl,
                   emoji: s.emoji,
                   size: 200,
-                  animate: false,
+                  loop: true,
+                  interactive: false,
                   semanticLabel: ctx.l10n.stickerAnimatedSemantics(s.emoji),
                 )
               : StickerImage(

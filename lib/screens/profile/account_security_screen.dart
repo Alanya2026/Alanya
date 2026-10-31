@@ -16,6 +16,7 @@ import 'change_alanya_phone_screen.dart';
 import 'change_email_screen.dart';
 import 'change_password_screen.dart';
 import 'connected_devices_screen.dart';
+import 'empreinte_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'recovery_code_screen.dart';
 import '../../core/errors/app_error.dart';
@@ -294,6 +295,20 @@ class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
                   onTap: () => _logoutAllDevices(context),
                 ),
               ],
+            ),
+          ),
+          AppSpacing.vGapXxl,
+          // Documents sensibles : qui a fait sortir une copie signée.
+          SettingsGroup(
+            title: l10n.fingerprintCheckTitle,
+            child: SettingsNavTile(
+              icon: Icons.fingerprint,
+              title: l10n.fingerprintCheckTitle,
+              subtitle: l10n.fingerprintCheckSubtitle,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EmpreinteScreen()),
+              ),
             ),
           ),
           AppSpacing.vGapXxl,

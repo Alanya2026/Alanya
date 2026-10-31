@@ -98,12 +98,14 @@ void main() {
     bool animate = true,
     VoidCallback? onOpen,
     bool interactive = true,
+    bool loop = false,
     Future<Uint8List> Function(String)? loader,
   }) => NonLoopingAnimatedSticker(
     url: _url,
     emoji: '😀',
     size: 100,
     playKey: key,
+    loop: loop,
     animate: animate,
     interactive: interactive,
     onOpenSheet: onOpen,
@@ -294,19 +296,18 @@ void main() {
     expect(t.takeException(), isNull);
   });
 
-  testWidgets('plafond : jamais plus de 3 lectures simultanées, toutes finissent',
+  testWidgets('plafond : jamais plus de maxConcurrent lectures simultanées, toutes finissent',
       (t) async {
-    await t.pumpWidget(_host(Column(
-      mainAxisSize: MainAxisSize.min,
+    await t.pumpWidget(_host(Wrap(
       children: [
         for (var i = 0; i < 6; i++)
           SizedBox(
-            height: 60,
-            width: 60,
+            height: 120,
+            width: 120,
             child: NonLoopingAnimatedSticker(
               url: _url,
               emoji: '😀',
-              size: 60,
+              size: 120,
               playKey: 'bulle-$i',
               loadBytes: (_) async => _anime,
             ),
@@ -325,6 +326,96 @@ void main() {
     expect(StickerPlayback.activeSlots, 0);
     expect(StickerPlayback.waitingSlots, 0);
     expect(StickerPlayback.liveCodecs, 0);
+  });
+
+  testWidgets('loop : tourne sans tap, plusieurs tours, un seul chargement',
+      (t) async {
+    final loads = <int>[];
+    await t.pumpWidget(_host(sticker(counter: loads, loop: true)));
+    final probe = await _advance(t, rounds: 60);
+    final firstLoop = probe.seen.indexOf(4);
+    expect(firstLoop, greaterThanOrEqualTo(0));
+    expect(probe.seen.sublist(firstLoop + 1), contains(0),
+        reason: 'après la dernière image, la lecture repart au début');
+    final st = t.state<NonLoopingAnimatedStickerState>(
+        find.byType(NonLoopingAnimatedSticker));
+    expect(st.isPlaying, isTrue);
+    expect(loads.length, 1);
+    // Démontage : décodeur et place libérés.
+    await t.pumpWidget(const SizedBox());
+    await _advance(t, rounds: 10, track: false);
+    expect(StickerPlayback.liveCodecs, 0);
+    expect(StickerPlayback.activeSlots, 0);
+  });
+
+  testWidgets('loop au-delà du plafond : les places tournent, chacun joue',
+      (t) async {
+    const n = StickerPlayback.maxConcurrent + 2;
+    await t.pumpWidget(_host(Wrap(
+      children: [
+        for (var i = 0; i < n; i++)
+          SizedBox(
+            height: 120,
+            width: 120,
+            child: NonLoopingAnimatedSticker(
+              url: _url,
+              emoji: '😀',
+              size: 120,
+              loop: true,
+              loadBytes: (_) async => _anime,
+            ),
+          ),
+      ],
+    )));
+    final everPlayed = List.filled(n, false);
+    var maxActive = 0;
+    for (var r = 0; r < 120; r++) {
+      await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 12)));
+      await t.pump(const Duration(milliseconds: 30));
+      if (StickerPlayback.activeSlots > maxActive) {
+        maxActive = StickerPlayback.activeSlots;
+      }
+      final states = t.stateList<NonLoopingAnimatedStickerState>(
+          find.byType(NonLoopingAnimatedSticker)).toList();
+      for (var i = 0; i < n; i++) {
+        if (states[i].isPlaying) everPlayed[i] = true;
+      }
+    }
+    expect(maxActive, lessThanOrEqualTo(StickerPlayback.maxConcurrent));
+    expect(everPlayed, everyElement(isTrue));
+    await t.pumpWidget(const SizedBox());
+    await _advance(t, rounds: 10, track: false);
+    expect(StickerPlayback.liveCodecs, 0);
+    expect(StickerPlayback.activeSlots, 0);
+    expect(StickerPlayback.waitingSlots, 0);
+  });
+
+  testWidgets('vignettes de grille : leur propre plafond, plus large',
+      (t) async {
+    const n = StickerPlayback.maxConcurrent + 4;
+    await t.pumpWidget(_host(Wrap(
+      children: [
+        for (var i = 0; i < n; i++)
+          SizedBox(
+            height: 76,
+            width: 76,
+            child: NonLoopingAnimatedSticker(
+              url: _url,
+              emoji: '😀',
+              size: 76,
+              loop: true,
+              interactive: false,
+              loadBytes: (_) async => _anime,
+            ),
+          ),
+      ],
+    )));
+    await _advance(t, rounds: 10, track: false);
+    expect(StickerPlayback.activeSlots, n, reason: 'toute la grille bouge');
+    await t.pumpWidget(const SizedBox());
+    await _advance(t, rounds: 10, track: false);
+    expect(StickerPlayback.liveCodecs, 0);
+    expect(StickerPlayback.activeSlots, 0);
   });
 
   testWidgets('décodage impossible : image fixe, pas « Sticker retiré »',

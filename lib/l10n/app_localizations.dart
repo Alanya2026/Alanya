@@ -3592,6 +3592,336 @@ abstract class AppLocalizations {
   /// **'Fichier'**
   String get file2;
 
+  /// No description provided for @sensitiveDocument.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sensible'**
+  String get sensitiveDocument;
+
+  /// No description provided for @sensitiveDocumentBadge.
+  ///
+  /// In fr, this message translates to:
+  /// **'Document sensible'**
+  String get sensitiveDocumentBadge;
+
+  /// No description provided for @sensitiveViewedBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Consulté par Alanya {numero} · {appareil} · {date}'**
+  String sensitiveViewedBy(String numero, String appareil, String date);
+
+  /// No description provided for @sensitiveCannotPreview.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce document ne s\'ouvre pas dans Alanya. Il reste protégé : seule une copie signée à votre nom peut en sortir.'**
+  String get sensitiveCannotPreview;
+
+  /// No description provided for @sensitiveSaveSigned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer une copie signée'**
+  String get sensitiveSaveSigned;
+
+  /// No description provided for @sensitiveSavedSigned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie signée enregistrée : elle porte votre empreinte numérique.'**
+  String get sensitiveSavedSigned;
+
+  /// No description provided for @sensitiveSavedUnsigned.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie enregistrée, mais ce format ne peut pas être signé. L\'enregistrement a été noté.'**
+  String get sensitiveSavedUnsigned;
+
+  /// No description provided for @sensitiveSaveFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impossible d\'enregistrer la copie.'**
+  String get sensitiveSaveFailed;
+
+  /// No description provided for @sensitiveAlreadySignedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie déjà signée'**
+  String get sensitiveAlreadySignedTitle;
+
+  /// No description provided for @sensitiveAlreadySignedBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces fichiers sont des copies signées de documents sensibles. Ils ne peuvent pas repartir en sensible : signés à nouveau, ils perdraient l\'empreinte de la personne qui les a fait sortir. Ils peuvent partir en documents ordinaires, qui la gardent :'**
+  String get sensitiveAlreadySignedBody;
+
+  /// No description provided for @sensitiveSendAsOrdinary.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer en ordinaire'**
+  String get sensitiveSendAsOrdinary;
+
+  /// No description provided for @fingerprintCheckTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier une empreinte'**
+  String get fingerprintCheckTitle;
+
+  /// No description provided for @fingerprintCheckSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qui a fait sortir une copie signée d\'un document sensible'**
+  String get fingerprintCheckSubtitle;
+
+  /// No description provided for @fingerprintCheckIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque copie d\'un document sensible enregistrée hors d\'Alanya porte une empreinte numérique : 32 caractères sur ses bords ou dans ses propriétés. Saisissez-la pour savoir qui l\'a fait sortir. Seules les personnes qui pouvaient voir le document obtiennent une réponse.'**
+  String get fingerprintCheckIntro;
+
+  /// No description provided for @fingerprintField.
+  ///
+  /// In fr, this message translates to:
+  /// **'Empreinte numérique'**
+  String get fingerprintField;
+
+  /// No description provided for @fingerprintPaste.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coller'**
+  String get fingerprintPaste;
+
+  /// No description provided for @fingerprintSearch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rechercher'**
+  String get fingerprintSearch;
+
+  /// No description provided for @fingerprintInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il faut 32 caractères, chiffres de 0 à 9 et lettres de A à F.'**
+  String get fingerprintInvalid;
+
+  /// No description provided for @fingerprintUnknown.
+  ///
+  /// In fr, this message translates to:
+  /// **'Empreinte inconnue, ou copie d\'un document que vous ne pouviez pas voir.'**
+  String get fingerprintUnknown;
+
+  /// No description provided for @fingerprintLookupFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La recherche n\'a pas abouti. Réessayez.'**
+  String get fingerprintLookupFailed;
+
+  /// No description provided for @fingerprintResult.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie identifiée'**
+  String get fingerprintResult;
+
+  /// No description provided for @fingerprintBy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie par'**
+  String get fingerprintBy;
+
+  /// No description provided for @fingerprintAction.
+  ///
+  /// In fr, this message translates to:
+  /// **'Geste'**
+  String get fingerprintAction;
+
+  /// No description provided for @fingerprintDate.
+  ///
+  /// In fr, this message translates to:
+  /// **'Date'**
+  String get fingerprintDate;
+
+  /// No description provided for @fingerprintDevice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil'**
+  String get fingerprintDevice;
+
+  /// No description provided for @fingerprintSender.
+  ///
+  /// In fr, this message translates to:
+  /// **'Expéditeur du document'**
+  String get fingerprintSender;
+
+  /// No description provided for @fingerprintDocument.
+  ///
+  /// In fr, this message translates to:
+  /// **'Document'**
+  String get fingerprintDocument;
+
+  /// No description provided for @fingerprintUnknownValue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inconnu'**
+  String get fingerprintUnknownValue;
+
+  /// No description provided for @fingerprintActionDownload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrement'**
+  String get fingerprintActionDownload;
+
+  /// No description provided for @fingerprintActionShare.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partage'**
+  String get fingerprintActionShare;
+
+  /// No description provided for @fingerprintActionForward.
+  ///
+  /// In fr, this message translates to:
+  /// **'Transfert'**
+  String get fingerprintActionForward;
+
+  /// No description provided for @pdfProtectionTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protéger la copie du PDF'**
+  String get pdfProtectionTitle;
+
+  /// No description provided for @pdfProtectionIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces réglages s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, le document reste lisible dans la visionneuse protégée.'**
+  String get pdfProtectionIntro;
+
+  /// No description provided for @pdfProtectionAllowPrint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Autoriser l\'impression'**
+  String get pdfProtectionAllowPrint;
+
+  /// No description provided for @pdfProtectionPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Protéger par mot de passe'**
+  String get pdfProtectionPassword;
+
+  /// No description provided for @pdfProtectionPasswordHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'La copie sera chiffrée ; il faudra le mot de passe d\'ouverture pour la lire.'**
+  String get pdfProtectionPasswordHelp;
+
+  /// No description provided for @pdfOpenPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe d\'ouverture'**
+  String get pdfOpenPassword;
+
+  /// No description provided for @pdfOpenPasswordHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Montré une seule fois au destinataire.'**
+  String get pdfOpenPasswordHelp;
+
+  /// No description provided for @pdfOwnerPassword.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe propriétaire'**
+  String get pdfOwnerPassword;
+
+  /// No description provided for @pdfOwnerPasswordHelp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lève les restrictions (l\'impression). Jamais montré au destinataire.'**
+  String get pdfOwnerPasswordHelp;
+
+  /// No description provided for @pdfPasswordTooShort.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n} caractères au moins.'**
+  String pdfPasswordTooShort(int n);
+
+  /// No description provided for @pdfProtectionSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get pdfProtectionSend;
+
+  /// No description provided for @pdfPrintForbidden.
+  ///
+  /// In fr, this message translates to:
+  /// **'Impression interdite'**
+  String get pdfPrintForbidden;
+
+  /// No description provided for @pdfPasswordShowOnce.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le mot de passe (une seule fois)'**
+  String get pdfPasswordShowOnce;
+
+  /// No description provided for @pdfPasswordAlreadySeen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe déjà affiché'**
+  String get pdfPasswordAlreadySeen;
+
+  /// No description provided for @pdfPasswordOnceNotice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Notez-le : il ne sera plus affiché. Il ouvre la copie enregistrée de ce PDF.'**
+  String get pdfPasswordOnceNotice;
+
+  /// No description provided for @pdfPasswordCopy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier'**
+  String get pdfPasswordCopy;
+
+  /// No description provided for @pdfPasswordDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'J\'ai noté'**
+  String get pdfPasswordDone;
+
+  /// No description provided for @pdfProtectionFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'La protection du PDF a échoué : aucune copie n\'est sortie.'**
+  String get pdfProtectionFailed;
+
+  /// No description provided for @sensitivePreviewTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Document sensible'**
+  String get sensitivePreviewTitle;
+
+  /// No description provided for @sensitivePreviewTitleMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n} documents sensibles'**
+  String sensitivePreviewTitleMany(int n);
+
+  /// No description provided for @sensitivePreviewRemove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer ce fichier'**
+  String get sensitivePreviewRemove;
+
+  /// No description provided for @sensitivePreviewBanner.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'ouvrira seulement dans la visionneuse protégée d\'Alanya. Ni transfert ni partage ; toute copie enregistrée sera signée.'**
+  String get sensitivePreviewBanner;
+
+  /// No description provided for @sensitivePreviewOrdinary.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copie déjà signée : elle partira en document ordinaire, avec son empreinte d\'origine.'**
+  String get sensitivePreviewOrdinary;
+
+  /// No description provided for @pdfProtectionIntroMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ces réglages valent pour les {n} PDF de cet envoi, et s\'appliquent à la copie que le destinataire enregistrera hors d\'Alanya. Dans Alanya, les documents restent lisibles dans la visionneuse protégée.'**
+  String pdfProtectionIntroMany(int n);
+
   /// No description provided for @comingSoon.
   ///
   /// In fr, this message translates to:
