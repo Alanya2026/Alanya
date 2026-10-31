@@ -75,11 +75,27 @@ extension CallControls on CallService {
 
     try {
       await _webrtc.addLocalVideoTrack();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       final offer = await _webrtc.createOffer();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       final sent = _apiClient.sendSocketEvent(
         SocketEvents.callVideoUpgradeOffer,
         {
-          'targetUserId': _remoteUserId.toString(),
+          'targetUserId': operationRemoteUserId.toString(),
           'callId': operationCallId,
           'transitionId': transitionId,
           'offer': {'sdp': offer.sdp, 'type': offer.type},
@@ -90,6 +106,14 @@ extension CallControls on CallService {
       final answer = await completer.future.timeout(
         const Duration(seconds: 15),
       );
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       await _webrtc.handleAnswer(answer);
       if (!_isCurrentVideoUpgrade(
         completer,
@@ -129,9 +153,25 @@ extension CallControls on CallService {
       _isVideo = true;
       _isVideoOn = true;
       await CallSessionGuard.instance.updateMode(SessionMode.video);
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       await _bindSessionRenderers();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
       _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
-        'toUserId': _remoteUserId,
+        'toUserId': operationRemoteUserId,
         'isVideoOn': true,
       });
       notify();
