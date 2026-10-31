@@ -374,7 +374,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
-            validator: (v) => Validators.minLength(v, 6, l10n: l10n),
+            validator: (v) => Validators.newPassword(v, l10n: l10n),
             decoration: InputDecoration(
               hintText: l10n?.forgotNewPasswordHint ?? t.forgotNewPasswordHint,
               prefixIcon: const Icon(Icons.lock_outline),

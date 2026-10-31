@@ -35,6 +35,8 @@
   },
   "validatorOtp6": "Code OTP à 6 chiffres",
   "validatorPasswordMatch": "Les mots de passe ne correspondent pas",
+  "validatorNameChars": "Lettres, chiffres, espaces, - ' et _ uniquement",
+  "validatorPasswordNoSpaces": "Le mot de passe ne doit pas contenir d'espace",
   "unknownSender": "Inconnu",
   "statusPending": "En attente",
   "statusSent": "Envoyé",

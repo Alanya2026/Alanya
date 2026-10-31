@@ -268,6 +268,18 @@ abstract class AppLocalizations {
   /// **'Les mots de passe ne correspondent pas'**
   String get validatorPasswordMatch;
 
+  /// No description provided for @validatorNameChars.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lettres, chiffres, espaces, - \' et _ uniquement'**
+  String get validatorNameChars;
+
+  /// No description provided for @validatorPasswordNoSpaces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le mot de passe ne doit pas contenir d\'espace'**
+  String get validatorPasswordNoSpaces;
+
   /// No description provided for @unknownSender.
   ///
   /// In fr, this message translates to:

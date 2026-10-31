@@ -128,7 +128,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 TextFormField(
                   controller: _newController,
                   obscureText: _obscureNew,
-                  validator: (v) => Validators.minLength(v, 6, l10n: l10n),
+                  validator: (v) => Validators.newPassword(v, l10n: l10n),
                   decoration: InputDecoration(
                     labelText: l10n.changePasswordNew,
                     prefixIcon: const Icon(Icons.lock_outline),

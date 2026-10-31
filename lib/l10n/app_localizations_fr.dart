@@ -96,6 +96,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get validatorPasswordMatch => 'Les mots de passe ne correspondent pas';
 
   @override
+  String get validatorNameChars =>
+      'Lettres, chiffres, espaces, - \' et _ uniquement';
+
+  @override
+  String get validatorPasswordNoSpaces =>
+      'Le mot de passe ne doit pas contenir d\'espace';
+
+  @override
   String get unknownSender => 'Inconnu';
 
   @override

@@ -28,6 +28,8 @@
   "validatorMinLength": "至少 {n} 个字符",
   "validatorOtp6": "6 位验证码",
   "validatorPasswordMatch": "两次输入的密码不一致",
+  "validatorNameChars": "只能包含字母、数字、空格、- ' 和 _",
+  "validatorPasswordNoSpaces": "密码不能包含空格",
   "unknownSender": "未知",
   "statusPending": "待发送",
   "statusSent": "已发送",

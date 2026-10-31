@@ -96,6 +96,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get validatorPasswordMatch => 'Passwords do not match';
 
   @override
+  String get validatorNameChars => 'Letters, numbers, spaces, - \' and _ only';
+
+  @override
+  String get validatorPasswordNoSpaces => 'Password must not contain spaces';
+
+  @override
   String get unknownSender => 'Unknown';
 
   @override

@@ -95,6 +95,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get validatorPasswordMatch => '两次输入的密码不一致';
 
   @override
+  String get validatorNameChars => '只能包含字母、数字、空格、- \' 和 _';
+
+  @override
+  String get validatorPasswordNoSpaces => '密码不能包含空格';
+
+  @override
   String get unknownSender => '未知';
 
   @override
