@@ -14,7 +14,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_widgets.dart';
 
@@ -69,10 +68,7 @@ Future<SafeboxQuality?> askSafeboxQuality(
   // Espace : on prévient tout de suite plutôt qu'à la réservation.
   final libre = c.overview?.quota.freeBytes;
   if (libre != null && (est.totals[qualite] ?? 0) > libre) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(l10n.safeboxQuotaExceeded),
-      action: SnackBarAction(label: l10n.safeboxGoPlus, onPressed: () => showPaywall(context, null)),
-    ));
+    safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
     return null;
   }
   return qualite;

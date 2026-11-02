@@ -9363,9 +9363,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxOpenFailed => '无法在此手机上打开此文件。';
 
   @override
-  String get safeboxGoPlus => '查看 Alanya Plus';
-
-  @override
   String safeboxFreeSpace(String size) {
     return '剩余 $size';
   }
@@ -9619,6 +9616,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxOpenWith => '用其他应用打开…';
+
+  @override
+  String safeboxVideoPlay(String size) {
+    return '播放 · $size';
+  }
+
+  @override
+  String get safeboxVideoUnreadable => '此视频无法在此播放。请尝试“打开方式…”。';
 
   @override
   String get safeboxCompressNothingToGain => '文件已经很小：压缩几乎没有效果。';

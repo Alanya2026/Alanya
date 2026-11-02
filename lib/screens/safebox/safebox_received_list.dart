@@ -12,7 +12,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../talky_api_client.dart';
-import '../../widgets/billing/paywall_sheet.dart';
 import 'safebox_share_widgets.dart';
 import 'safebox_shared_screens.dart';
 import 'safebox_widgets.dart';
@@ -149,10 +148,7 @@ class _SafeboxReceivedListState extends State<SafeboxReceivedList> {
     if (e is TalkyException && e.code == 'SAFEBOX_DOWNLOAD_LIMIT') {
       safeboxSnack(context, l10n.safeboxShareDownloadLimit((e.details?['limit'] as num?)?.toInt() ?? 3), error: true);
     } else if (e is TalkyException && e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(l10n.safeboxQuotaExceeded),
-        action: SnackBarAction(label: l10n.safeboxGoPlus, onPressed: () => showPaywall(context, null)),
-      ));
+      safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
     } else if (e is TalkyException && e.code == 'SAFEBOX_SHARE_REVOKED') {
       _charger();
     } else {

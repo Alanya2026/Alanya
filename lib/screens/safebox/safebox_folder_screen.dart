@@ -36,10 +36,10 @@ import 'safebox_file_picker.dart';
 import 'safebox_grid.dart';
 import 'safebox_move_picker.dart';
 import 'safebox_note_widgets.dart';
-import 'safebox_photo_screen.dart';
 import 'safebox_received_list.dart';
 import 'safebox_share_widgets.dart';
 import 'safebox_transfers_screen.dart';
+import 'safebox_viewer_screen.dart';
 import 'safebox_widgets.dart';
 
 class SafeboxFolderScreen extends StatefulWidget {
@@ -319,12 +319,25 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     if (r.type != ResultType.done && mounted) safeboxSnack(context, context.l10n.safeboxOpenFailed, error: true);
   }
 
-  /// Une photo s'ouvre dans l'application, avec son commentaire ; les autres
-  /// fichiers, dans l'application du téléphone qui sait les lire.
+  /// Une photo ou une vidéo s'ouvre dans la visionneuse du dossier, avec les
+  /// autres et leurs commentaires ; les autres fichiers, dans l'application
+  /// du téléphone qui sait les lire.
   Future<void> _ouvrirFichier(SafeboxFile f) async {
-    if (f.family != SafeboxFamily.photos) return _ouvrir(f);
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => SafeboxPhotoScreen(file: f)));
-    if (mounted) await _charger(); // le commentaire a pu changer
+    if (!safeboxViewable(f)) return _ouvrir(f);
+    List<SafeboxFile> medias() => _visibles.where(safeboxViewable).toList();
+    final liste = medias();
+    var commentaireChange = false;
+    await showSafeboxViewer(
+      context,
+      files: liste,
+      initialIndex: liste.indexWhere((x) => x.id == f.id),
+      loadMore: () async {
+        await _chargerSuite();
+        return medias();
+      },
+      onNoteChanged: () => commentaireChange = true,
+    );
+    if (commentaireChange && mounted) await _charger();
   }
 
   Future<void> _commenter(SafeboxFile f) async {

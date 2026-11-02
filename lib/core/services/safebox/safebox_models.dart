@@ -566,6 +566,16 @@ class SafeboxFile {
 
   /// Commentaire privé d'une photo ; null s'il n'y en a pas.
   final SafeboxNote? note;
+
+  /// Le même fichier, avec son commentaire tel qu'il est maintenant.
+  SafeboxFile withNote(SafeboxNote? value) => SafeboxFile(
+        id: id, folderId: folderId, name: name, ext: ext, mime: mime, family: family,
+        plainBytes: plainBytes, storedBytes: storedBytes, originalBytes: originalBytes,
+        compressed: compressed, cipherFormat: cipherFormat, key: key, previewUrl: previewUrl,
+        createdAt: createdAt, updatedAt: updatedAt, trashedAt: trashedAt, purgeAt: purgeAt,
+        folderName: folderName, folderRoot: folderRoot, meta: meta, sent: sent, lost: lost,
+        note: value, alsoIn: alsoIn, quality: quality,
+      );
 }
 
 class SafeboxFolderPage {

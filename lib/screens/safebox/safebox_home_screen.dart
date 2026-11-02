@@ -22,7 +22,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../talky_api_client.dart';
-import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_backup_screens.dart';
 import 'safebox_folder_screen.dart';
@@ -248,16 +247,9 @@ class _CarteEspace extends StatelessWidget {
                 ),
             ],
           ),
-          Row(
-            children: [
-              Expanded(
-                child: Text(l10n.safeboxFreeSpace(formatBytes(quota.freeBytes, l10n)),
-                    style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant)),
-              ),
-              if (!quota.plus)
-                TextButton(onPressed: () => showPaywall(context, null), child: Text(l10n.safeboxGoPlus)),
-            ],
-          ),
+          AppSpacing.vGapSm,
+          Text(l10n.safeboxFreeSpace(formatBytes(quota.freeBytes, l10n)),
+              style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant)),
           if (quota.overQuota) ...[
             AppSpacing.vGapSm,
             _Depassement(purgeAfter: context.watch<EntitlementService>().current.purgeAfter),
@@ -373,8 +365,7 @@ class _LigneSauvegarde extends StatelessWidget {
             ? (Icons.block, context.colors.error, l10n.safeboxBackupNoAccess,
                 (l10n.safeboxBackupAllow, () => showSafeboxBackupSetup(context)))
             : dernier?.stop == SafeboxBackupStop.spaceFull
-                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom),
-                    (l10n.safeboxGoPlus, () => showPaywall(context, null)))
+                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom), null)
                 : wifi > 0
                     ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
                         (l10n.safeboxBackupUseMobile, c.allowMobileData))

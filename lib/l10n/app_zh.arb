@@ -2938,7 +2938,6 @@
   "safeboxRootLocked": "四个主文件夹无法重命名、移动或删除。",
   "safeboxInvalidMove": "文件夹不能移动到其自身内部。",
   "safeboxOpenFailed": "无法在此手机上打开此文件。",
-  "safeboxGoPlus": "查看 Alanya Plus",
   "safeboxFreeSpace": "剩余 {size}",
   "safeboxNotifChannel": "上传到保险箱",
   "safeboxAlertChannel": "保险箱空间",
@@ -3012,5 +3011,7 @@
   "safeboxNoteUnavailable": "仅照片可以添加评论。",
   "safeboxNoteAudioFailed": "无法播放音频。",
   "safeboxOpenWith": "用其他应用打开…",
+  "safeboxVideoPlay": "播放 · {size}",
+  "safeboxVideoUnreadable": "此视频无法在此播放。请尝试“打开方式…”。",
   "safeboxCompressNothingToGain": "文件已经很小：压缩几乎没有效果。"
 }

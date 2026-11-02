@@ -16654,12 +16654,6 @@ abstract class AppLocalizations {
   /// **'Impossible d\'ouvrir ce fichier sur ce téléphone.'**
   String get safeboxOpenFailed;
 
-  /// No description provided for @safeboxGoPlus.
-  ///
-  /// In fr, this message translates to:
-  /// **'Voir Alanya Plus'**
-  String get safeboxGoPlus;
-
   /// No description provided for @safeboxFreeSpace.
   ///
   /// In fr, this message translates to:
@@ -17097,6 +17091,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvrir avec…'**
   String get safeboxOpenWith;
+
+  /// No description provided for @safeboxVideoPlay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lire · {size}'**
+  String safeboxVideoPlay(String size);
+
+  /// No description provided for @safeboxVideoUnreadable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette vidéo ne se lit pas ici. Essayez « Ouvrir avec… ».'**
+  String get safeboxVideoUnreadable;
 
   /// Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…).
   ///

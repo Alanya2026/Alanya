@@ -10002,9 +10002,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'ouvrir ce fichier sur ce téléphone.';
 
   @override
-  String get safeboxGoPlus => 'Voir Alanya Plus';
-
-  @override
   String safeboxFreeSpace(String size) {
     return '$size libres';
   }
@@ -10302,6 +10299,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxOpenWith => 'Ouvrir avec…';
+
+  @override
+  String safeboxVideoPlay(String size) {
+    return 'Lire · $size';
+  }
+
+  @override
+  String get safeboxVideoUnreadable =>
+      'Cette vidéo ne se lit pas ici. Essayez « Ouvrir avec… ».';
 
   @override
   String get safeboxCompressNothingToGain =>

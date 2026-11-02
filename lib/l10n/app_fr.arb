@@ -5022,7 +5022,6 @@
   "safeboxRootLocked": "Les quatre dossiers principaux ne peuvent être ni renommés, ni déplacés, ni supprimés.",
   "safeboxInvalidMove": "Un dossier ne peut pas être rangé dans lui-même.",
   "safeboxOpenFailed": "Impossible d'ouvrir ce fichier sur ce téléphone.",
-  "safeboxGoPlus": "Voir Alanya Plus",
   "safeboxFreeSpace": "{size} libres",
   "@safeboxFreeSpace": {"placeholders": {"size": {"type": "String"}}},
   "safeboxNotifChannel": "Envois vers le coffre-fort",
@@ -5118,6 +5117,9 @@
   "safeboxNoteUnavailable": "Les commentaires sont réservés aux photos.",
   "safeboxNoteAudioFailed": "Impossible de lire l'audio.",
   "safeboxOpenWith": "Ouvrir avec…",
+  "safeboxVideoPlay": "Lire · {size}",
+  "@safeboxVideoPlay": {"placeholders": {"size": {"type": "String"}}},
+  "safeboxVideoUnreadable": "Cette vidéo ne se lit pas ici. Essayez « Ouvrir avec… ».",
   "safeboxCompressNothingToGain": "Déjà léger : la compression n'y gagnerait presque rien.",
   "@safeboxCompressNothingToGain": {"description": "Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…)."}
 }

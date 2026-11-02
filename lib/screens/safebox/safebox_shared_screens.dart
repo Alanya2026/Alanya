@@ -16,7 +16,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
 import '../../talky_api_client.dart';
-import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/common/app_avatar.dart';
 import 'safebox_download_sheet.dart';
 import 'safebox_grid.dart';
@@ -33,10 +32,7 @@ void _erreurPartage(BuildContext context, Object e) {
     final limite = (e.details?['limit'] as num?)?.toInt() ?? 3;
     safeboxSnack(context, l10n.safeboxShareDownloadLimit(limite), error: true);
   } else if (e is TalkyException && e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(l10n.safeboxQuotaExceeded),
-      action: SnackBarAction(label: l10n.safeboxGoPlus, onPressed: () => showPaywall(context, null)),
-    ));
+    safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
   } else {
     safeboxShowError(context, e);
   }

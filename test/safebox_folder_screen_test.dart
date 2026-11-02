@@ -13,6 +13,7 @@ import 'package:talky_flutter/core/theme/locale_controller.dart';
 import 'package:talky_flutter/l10n/app_localizations.dart';
 import 'package:talky_flutter/screens/safebox/safebox_folder_screen.dart';
 import 'package:talky_flutter/screens/safebox/safebox_grid.dart';
+import 'package:talky_flutter/screens/safebox/safebox_viewer_screen.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
 /// L'écran d'un dossier (lot 8) : filtres par type dans un album, sélection
@@ -218,6 +219,20 @@ void main() {
     await tester.tap(find.widgetWithText(FilterChip, fr.safeboxFilterWithNote));
     await tester.pumpAndSettle();
     expect(find.byType(SafeboxGridTile), findsNWidgets(4));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('toucher une photo ouvre la visionneuse, sans les documents du dossier', (tester) async {
+    await monter(tester, SafeboxRoot.albums, album);
+    await tester.tap(find.widgetWithText(SafeboxGridTile, 'Hotel.pdf'));
+    await tester.pump();
+    expect(find.byType(SafeboxViewerScreen), findsNothing, reason: 'un document s\'ouvre ailleurs');
+    await tester.tap(find.byType(SafeboxGridTile).at(1));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final v = tester.widget<SafeboxViewerScreen>(find.byType(SafeboxViewerScreen));
+    expect(v.files.map((f) => f.name), ['Plage.jpg', 'Coucher.jpg', 'Danse.mp4'], reason: 'Hotel.pdf reste de côté');
+    expect(v.initialIndex, 1);
     expect(tester.takeException(), isNull);
   });
 

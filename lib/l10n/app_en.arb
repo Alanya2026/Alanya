@@ -4019,7 +4019,6 @@
   "safeboxRootLocked": "The four main folders cannot be renamed, moved or deleted.",
   "safeboxInvalidMove": "A folder cannot be moved into itself.",
   "safeboxOpenFailed": "This file cannot be opened on this phone.",
-  "safeboxGoPlus": "See Alanya Plus",
   "safeboxFreeSpace": "{size} free",
   "safeboxNotifChannel": "Uploads to SafeBox",
   "safeboxAlertChannel": "SafeBox storage",
@@ -4093,5 +4092,7 @@
   "safeboxNoteUnavailable": "Comments are only available for photos.",
   "safeboxNoteAudioFailed": "Could not play the audio.",
   "safeboxOpenWith": "Open with…",
+  "safeboxVideoPlay": "Play · {size}",
+  "safeboxVideoUnreadable": "This video can't be played here. Try “Open with…”.",
   "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing."
 }

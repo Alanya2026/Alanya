@@ -18,7 +18,6 @@ import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/billing/paywall_sheet.dart';
 import 'safebox_widgets.dart';
 
 /// Ouvre l'activation, ou les réglages si la sauvegarde est déjà activée.
@@ -477,15 +476,9 @@ class _SafeboxBackupSetupScreenState extends State<SafeboxBackupSetupScreen> {
             if (tient)
               Text(l10n.safeboxBackupFits(formatBytes(libre - total, l10n)),
                   style: context.text.bodySmall?.copyWith(color: context.semantic.success, fontWeight: FontWeight.w500))
-            else ...[
+            else
               Text(l10n.safeboxBackupOverflows(formatBytes(total - libre, l10n)),
                   style: context.text.bodySmall?.copyWith(color: context.semantic.warning, fontWeight: FontWeight.w500)),
-              TextButton(
-                style: TextButton.styleFrom(padding: EdgeInsets.zero, alignment: Alignment.centerLeft),
-                onPressed: () => showPaywall(context, null),
-                child: Text(l10n.safeboxGoPlus),
-              ),
-            ],
           ],
         ),
         if (hdPreselectionne) ...[
