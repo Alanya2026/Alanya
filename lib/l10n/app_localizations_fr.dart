@@ -4495,6 +4495,42 @@ class AppLocalizationsFr extends AppLocalizations {
       'Réduit la qualité et les téléchargements automatiques';
 
   @override
+  String get callVideoQualitySection => 'Appels vidéo';
+
+  @override
+  String get callVideoQualityLow => 'Basse résolution';
+
+  @override
+  String get callVideoQualityLowSubtitle =>
+      '360p — réseau faible, moins de données';
+
+  @override
+  String get callVideoQualityStandard => 'Qualité standard';
+
+  @override
+  String get callVideoQualityStandardSubtitle => '480p — recommandé';
+
+  @override
+  String get callVideoQualityHd => 'Haute définition';
+
+  @override
+  String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
+
+  @override
+  String get callVideoQualityNote =>
+      'S\'applique au prochain appel. La qualité s\'adapte toujours à la connexion.';
+
+  @override
+  String get plusFeatureVideoHd => 'Appels vidéo HD';
+
+  @override
+  String get paywallVideoHdTitle => 'Les appels vidéo en HD';
+
+  @override
+  String get paywallVideoHdBody =>
+      'La haute définition (720p) fait partie d\'Alanya Plus : votre correspondant vous voit plus net quand la connexion le permet.';
+
+  @override
   String get settingsSectionCommunication => 'Communication';
 
   @override

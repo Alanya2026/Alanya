@@ -53,6 +53,7 @@ IconData plusFeatureIcon(PlusFeature feature) => switch (feature) {
       PlusFeature.style => Icons.palette_outlined,
       PlusFeature.verifiedBadge => Icons.verified_outlined,
       PlusFeature.stickersPremium => Icons.emoji_emotions_outlined,
+      PlusFeature.videoHd => Icons.hd_outlined,
     };
 
 /// Nom court, pour les pastilles de la carte et les listes.
@@ -65,6 +66,7 @@ String plusFeatureName(AppLocalizations l10n, PlusFeature feature) =>
       PlusFeature.style => l10n.plusFeatureStyle,
       PlusFeature.verifiedBadge => l10n.plusFeatureBadge,
       PlusFeature.stickersPremium => l10n.plusFeatureStickers,
+      PlusFeature.videoHd => l10n.plusFeatureVideoHd,
     };
 
 /// Les fonctionnalités livrées, dans l'ordre où l'offre les présente.
@@ -73,6 +75,7 @@ const List<PlusFeature> kPlusShowcase = [
   PlusFeature.backup,
   PlusFeature.trustedTrips,
   PlusFeature.listRingtones,
+  PlusFeature.videoHd,
   PlusFeature.verifiedBadge,
 ];
 

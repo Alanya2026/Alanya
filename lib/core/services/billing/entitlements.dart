@@ -19,7 +19,10 @@ enum PlusFeature {
 
   /// Pack Royal (stickers Plus). Le verrou est imposé par le serveur ; le
   /// catalogue dit lequel (`locked`).
-  stickersPremium('stickers_premium');
+  stickersPremium('stickers_premium'),
+
+  /// Appels vidéo en 720p. Sans ce droit, l'appel part en qualité standard.
+  videoHd('video_hd');
 
   const PlusFeature(this.code);
   final String code;

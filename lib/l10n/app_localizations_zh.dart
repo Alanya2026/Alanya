@@ -4315,6 +4315,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkDataSaverSubtitle => '降低画质并减少自动下载';
 
   @override
+  String get callVideoQualitySection => '视频通话';
+
+  @override
+  String get callVideoQualityLow => '低分辨率';
+
+  @override
+  String get callVideoQualityLowSubtitle => '360p — 网络较差，节省流量';
+
+  @override
+  String get callVideoQualityStandard => '标准画质';
+
+  @override
+  String get callVideoQualityStandardSubtitle => '480p — 推荐';
+
+  @override
+  String get callVideoQualityHd => '高清';
+
+  @override
+  String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
+
+  @override
+  String get callVideoQualityNote => '下次通话生效。画质始终会根据网络自动调整。';
+
+  @override
+  String get plusFeatureVideoHd => '高清视频通话';
+
+  @override
+  String get paywallVideoHdTitle => '高清视频通话';
+
+  @override
+  String get paywallVideoHdBody => '高清（720p）属于 Alanya Plus：网络允许时，对方能更清晰地看到您。';
+
+  @override
   String get settingsSectionCommunication => '通讯';
 
   @override

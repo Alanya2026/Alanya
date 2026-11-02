@@ -1,31 +1,84 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/services/call/video_capture_profile.dart';
 
 void main() {
-  test('le profil standard conserve les contraintes existantes', () {
-    expect(videoCaptureConstraints(profile: 'standard'), {
-      'width': {'ideal': 1280},
-      'height': {'ideal': 720},
-      'frameRate': {'ideal': 30},
+  group('contraintes de capture', () {
+    test('des entiers, que flutter_webrtc lit sur Android et iOS', () {
+      expect(videoCaptureConstraints(quality: CallVideoQuality.standard), {
+        'width': 640,
+        'height': 480,
+        'frameRate': 24,
+      });
+      expect(videoCaptureConstraints(quality: CallVideoQuality.low), {
+        'width': 640,
+        'height': 360,
+        'frameRate': 24,
+      });
+      expect(videoCaptureConstraints(quality: CallVideoQuality.hd), {
+        'width': 1280,
+        'height': 720,
+        'frameRate': 24,
+      });
+    });
+
+    test('plafonds de débit des captures du client', () {
+      expect(CallVideoQuality.low.maxBitrate, 400000);
+      expect(CallVideoQuality.standard.maxBitrate, 1000000);
+      expect(CallVideoQuality.hd.maxBitrate, 2000000);
+      expect(kCallVideoMaxFramerate, 30);
+    });
+
+    test('les contraintes retournées sont indépendantes', () {
+      final first = videoCaptureConstraints(quality: CallVideoQuality.low);
+      first['width'] = 1;
+      expect(
+        videoCaptureConstraints(quality: CallVideoQuality.low)['width'],
+        640,
+      );
     });
   });
 
-  test('le profil réduit vise 640x480 à 24 images par seconde', () {
-    expect(videoCaptureConstraints(profile: 'low'), {
-      'width': {'ideal': 640},
-      'height': {'ideal': 480},
-      'frameRate': {'ideal': 24},
+  group('niveau appliqué', () {
+    test('un code inconnu ou absent retombe sur le standard', () {
+      expect(CallVideoQuality.fromCode(null), CallVideoQuality.standard);
+      expect(CallVideoQuality.fromCode('4k'), CallVideoQuality.standard);
+      expect(CallVideoQuality.fromCode('hd'), CallVideoQuality.hd);
     });
-  });
 
-  test('une valeur inconnue conserve le profil standard', () {
-    expect(videoCaptureConstraints(profile: 'inconnu'),
-        videoCaptureConstraints(profile: 'standard'));
-  });
+    test('sans Alanya Plus, la HD part en standard', () {
+      expect(
+        CallVideoQualityPreferences.effectiveFor(
+          CallVideoQuality.hd,
+          hdAllowed: false,
+        ),
+        CallVideoQuality.standard,
+      );
+      expect(
+        CallVideoQualityPreferences.effectiveFor(
+          CallVideoQuality.hd,
+          hdAllowed: true,
+        ),
+        CallVideoQuality.hd,
+      );
+      expect(
+        CallVideoQualityPreferences.effectiveFor(
+          CallVideoQuality.low,
+          hdAllowed: false,
+        ),
+        CallVideoQuality.low,
+      );
+    });
 
-  test('les contraintes retournées sont indépendantes', () {
-    final first = videoCaptureConstraints(profile: 'low');
-    (first['width'] as Map)['ideal'] = 1;
-    expect(videoCaptureConstraints(profile: 'low')['width'], {'ideal': 640});
+    test('le choix est mémorisé et relu', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = CallVideoQualityPreferences();
+      await prefs.load();
+      expect(prefs.quality, CallVideoQuality.standard);
+      await prefs.setQuality(CallVideoQuality.low);
+      expect(CallVideoQualityPreferences.chosen, CallVideoQuality.low);
+      final stored = await SharedPreferences.getInstance();
+      expect(stored.getString('call_video_quality'), 'low');
+    });
   });
 }

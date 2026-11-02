@@ -25,6 +25,9 @@ class WebRTCService {
   final List<_BufferedIce> _pendingIceCandidates = [];
   bool _remoteDescriptionSet = false;
   int _iceGeneration = 0;
+
+  /// Qualité de la caméra ouverte pour cet appel : l'encodeur suit la même.
+  CallVideoQuality _videoQuality = CallVideoQuality.standard;
   static const int _maxPendingIce = 64;
   static const Duration _pendingIceTtl = Duration(seconds: 30);
   bool _replaceAudioLock = false;
@@ -122,11 +125,15 @@ class WebRTCService {
   /// phases (conférence, restauration d'un sortant, réunions). Le décrochage
   /// 1-à-1, lui, appelle [acquireLocalMedia] et [buildPeerConnection]
   /// séparément afin de lancer la capture sans attendre le réseau.
+  ///
+  /// [videoQuality] impose un niveau (conférence : standard) ; sinon, le
+  /// réglage de l'utilisateur.
   Future<void> init(
     CallType type, {
     List<Map<String, dynamic>>? iceServers,
+    CallVideoQuality? videoQuality,
   }) async {
-    await acquireLocalMedia(type);
+    await acquireLocalMedia(type, videoQuality: videoQuality);
     await buildPeerConnection(type, iceServers: iceServers);
   }
 
@@ -137,7 +144,10 @@ class WebRTCService {
   /// `PeerConnection` : les enchaîner plaçait l'ouverture du micro derrière un
   /// aller-retour HTTPS vers `/turn/credentials` et une construction native,
   /// d'où les quelques secondes de décalage après le décrochage.
-  Future<MediaStream> acquireLocalMedia(CallType type) async {
+  Future<MediaStream> acquireLocalMedia(
+    CallType type, {
+    CallVideoQuality? videoQuality,
+  }) async {
     try {
       debugPrint('[WebRTC] ========== Acquisition média ==========');
       debugPrint(
@@ -170,7 +180,7 @@ class WebRTCService {
       }
 
       debugPrint('[WebRTC] Appel à _getUserMedia...');
-      _localStream = await _getUserMedia(type);
+      _localStream = await _getUserMedia(type, videoQuality: videoQuality);
       debugPrint(
         '[WebRTC] !! Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}',
       );
@@ -195,9 +205,10 @@ class WebRTCService {
 
     MediaStream? videoOnlyStream;
     try {
+      _videoQuality = CallVideoQualityPreferences.effective;
       videoOnlyStream = await navigator.mediaDevices.getUserMedia({
         'audio': false,
-        'video': videoCaptureConstraints(),
+        'video': videoCaptureConstraints(quality: _videoQuality),
       });
       final tracks = videoOnlyStream.getVideoTracks();
       if (tracks.isEmpty) {
@@ -439,13 +450,17 @@ class WebRTCService {
     }
   }
 
-  Future<MediaStream> _getUserMedia(CallType type) async {
+  Future<MediaStream> _getUserMedia(
+    CallType type, {
+    CallVideoQuality? videoQuality,
+  }) async {
     try {
       debugPrint(
         '[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb, Platform: ${_isAndroid ? "ANDROID" : "iOS/WEB"}',
       );
 
       final dynamic audioConstraints;
+      _videoQuality = videoQuality ?? CallVideoQualityPreferences.effective;
 
       if (_isAndroid) {
         // Format compatible avec Android et flutter_webrtc
@@ -470,7 +485,9 @@ class WebRTCService {
 
       final constraints = <String, dynamic>{
         'audio': audioConstraints,
-        'video': type == CallType.video ? videoCaptureConstraints() : false,
+        'video': type == CallType.video
+            ? videoCaptureConstraints(quality: _videoQuality)
+            : false,
       };
 
       debugPrint('[WebRTC] Contraintes: $constraints');
@@ -485,13 +502,11 @@ class WebRTCService {
           debugPrint(
             '[WebRTC] 📍 Tentative fallback Android avec contraintes minimales...',
           );
+          _videoQuality = CallVideoQuality.low;
           final fallbackConstraints = <String, dynamic>{
             'audio': true,
             'video': type == CallType.video
-                ? {
-                    'width': {'ideal': 720},
-                    'height': {'ideal': 480},
-                  }
+                ? videoCaptureConstraints(quality: _videoQuality)
                 : false,
           };
           debugPrint('[WebRTC] Contraintes fallback: $fallbackConstraints');
@@ -555,6 +570,7 @@ class WebRTCService {
 
       await _peerConnection!.setLocalDescription(offer);
       debugPrint('[WebRTC] !! LocalDescription définie');
+      await _applyVideoSendParameters();
       return offer;
     } catch (e) {
       debugPrint('[WebRTC] ** Erreur createOffer: $e');
@@ -602,11 +618,46 @@ class WebRTCService {
 
       await _peerConnection!.setLocalDescription(answer);
       debugPrint('[WebRTC] !! LocalDescription définie');
+      await _applyVideoSendParameters();
       return answer;
     } catch (e) {
       debugPrint('[WebRTC] ** Erreur createAnswer: $e');
       debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
       rethrow;
+    }
+  }
+
+  /// Plafonne l'encodeur de la piste vidéo locale selon [_videoQuality].
+  ///
+  /// Rejoué après chaque description locale (offre, réponse, relance ICE,
+  /// bascule audio → vidéo) : une renégociation peut recréer les encodages.
+  /// `maintain-framerate` : quand le débit manque, l'encodeur baisse la
+  /// résolution plutôt que la cadence — des gestes fluides, une image plus
+  /// floue. Un échec ne coupe jamais l'appel : l'encodeur garde ses défauts.
+  Future<void> _applyVideoSendParameters() async {
+    final pc = _peerConnection;
+    if (pc == null || !hasLocalVideoTrack) return;
+    try {
+      for (final sender in await pc.getSenders()) {
+        if (sender.track?.kind != 'video') continue;
+        final parameters = sender.parameters;
+        final encodings = parameters.encodings;
+        if (encodings == null || encodings.isEmpty) continue;
+        for (final encoding in encodings) {
+          encoding.maxBitrate = _videoQuality.maxBitrate;
+          encoding.maxFramerate = kCallVideoMaxFramerate;
+        }
+        parameters.degradationPreference =
+            RTCDegradationPreference.MAINTAIN_FRAMERATE;
+        final applied = await sender.setParameters(parameters);
+        debugPrint(
+          '[WebRTC] 🎚 Encodeur vidéo ${_videoQuality.code}: '
+          '${_videoQuality.maxBitrate} bit/s, $kCallVideoMaxFramerate i/s max, '
+          'appliqué=$applied',
+        );
+      }
+    } catch (e) {
+      debugPrint('[WebRTC] ** Paramètres d\'encodeur vidéo non appliqués: $e');
     }
   }
 

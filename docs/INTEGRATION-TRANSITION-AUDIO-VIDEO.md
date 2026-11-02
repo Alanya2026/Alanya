@@ -12,5 +12,5 @@ son bouton caméra peut acquérir sa propre piste et réutiliser le même protoc
 Une opération simultanée est sérialisée localement ; les réponses sont liées au
 `transitionId` et au `callId`.
 
-Le profil de capture indépendant est sélectionnable avec
-`CALL_VIDEO_PROFILE=low`, sans effet par défaut.
+La caméra ajoutée suit le réglage de qualité vidéo de l'utilisateur (voir
+`PLAN-OPTIMISATION-VIDEO-ET-SWITCH.md`).

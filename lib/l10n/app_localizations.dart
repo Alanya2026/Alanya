@@ -7888,6 +7888,72 @@ abstract class AppLocalizations {
   /// **'Réduit la qualité et les téléchargements automatiques'**
   String get networkDataSaverSubtitle;
 
+  /// No description provided for @callVideoQualitySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels vidéo'**
+  String get callVideoQualitySection;
+
+  /// No description provided for @callVideoQualityLow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Basse résolution'**
+  String get callVideoQualityLow;
+
+  /// No description provided for @callVideoQualityLowSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'360p — réseau faible, moins de données'**
+  String get callVideoQualityLowSubtitle;
+
+  /// No description provided for @callVideoQualityStandard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qualité standard'**
+  String get callVideoQualityStandard;
+
+  /// No description provided for @callVideoQualityStandardSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'480p — recommandé'**
+  String get callVideoQualityStandardSubtitle;
+
+  /// No description provided for @callVideoQualityHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Haute définition'**
+  String get callVideoQualityHd;
+
+  /// No description provided for @callVideoQualityHdSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'720p — Alanya Plus'**
+  String get callVideoQualityHdSubtitle;
+
+  /// No description provided for @callVideoQualityNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'applique au prochain appel. La qualité s\'adapte toujours à la connexion.'**
+  String get callVideoQualityNote;
+
+  /// No description provided for @plusFeatureVideoHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels vidéo HD'**
+  String get plusFeatureVideoHd;
+
+  /// No description provided for @paywallVideoHdTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les appels vidéo en HD'**
+  String get paywallVideoHdTitle;
+
+  /// No description provided for @paywallVideoHdBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La haute définition (720p) fait partie d\'Alanya Plus : votre correspondant vous voit plus net quand la connexion le permet.'**
+  String get paywallVideoHdBody;
+
   /// No description provided for @settingsSectionCommunication.
   ///
   /// In fr, this message translates to:

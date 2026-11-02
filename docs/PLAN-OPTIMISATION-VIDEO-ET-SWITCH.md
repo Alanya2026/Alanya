@@ -1,12 +1,27 @@
 # Appels vidéo : profil de capture et transition audio → vidéo
 
-## Profil de capture expérimental
+## Qualité vidéo des appels
 
-`videoCaptureConstraints` conserve par défaut la préférence 1280 × 720 à
-30 fps. Le profil `low`, activé uniquement avec
-`--dart-define=CALL_VIDEO_PROFILE=low`, vise 640 × 480 à 24 fps. Ce sont des
-préférences `ideal`, pas des limites garanties ; le profil concerne les appels
-et les réunions et ne modifie ni l'audio, ni ICE, ni le codec.
+Réglage « Appels vidéo » dans Profil › Réseau et données :
+
+| Niveau | Capture | Plafond encodeur | Accès |
+|---|---|---|---|
+| Basse résolution | 640 × 360 | 400 kbit/s | tous |
+| Standard (défaut) | 640 × 480 | 1 Mbit/s | tous |
+| Haute définition | 1280 × 720 | 2 Mbit/s | Alanya Plus (`video_hd`) |
+
+Caméra à 24 i/s, encodeur plafonné à 30 i/s, `degradationPreference:
+maintain-framerate` : quand le débit manque, l'image perd en résolution, pas
+en fluidité. Sous ces plafonds, WebRTC s'adapte seul à la connexion.
+
+Les contraintes `getUserMedia` sont des entiers : flutter_webrtc 0.14 ignore
+les maps `{ideal, min, max}` sur Android (repli 1280 × 720 à 30 i/s) et ne lit
+`ideal` qu'en texte sur iOS. Les paramètres de l'encodeur sont rejoués après
+chaque description locale (`WebRTCService._applyVideoSendParameters`).
+
+Appels de groupe et réunions : capture standard fixe, sans plafond d'encodeur
+pour l'instant. Sans le droit `video_hd`, un choix HD part en standard et
+reprend dès l'abonnement.
 
 ## Transition audio → vidéo
 
