@@ -96,6 +96,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get validatorPasswordMatch => 'Passwords do not match';
 
   @override
+  String get validatorNameChars => 'Letters, numbers, spaces, - \' and _ only';
+
+  @override
+  String get validatorPasswordNoSpaces => 'Password must not contain spaces';
+
+  @override
   String get unknownSender => 'Unknown';
 
   @override
@@ -1694,6 +1700,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoCall => 'Video call';
+
+  @override
+  String get switchToVideoCall => 'Switch to a video call?';
+
+  @override
+  String get switchToVideoCallBody =>
+      'Your camera will turn on. The audio call remains available if the transition fails.';
 
   @override
   String get unpin => 'Unpin';

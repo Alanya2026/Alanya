@@ -44,6 +44,38 @@ class Validators {
     return null;
   }
 
+  /// Nom ou pseudo : au moins 3 caractères ; lettres de toutes écritures,
+  /// chiffres, espace, tiret, apostrophe et tiret bas. La ponctuation
+  /// (`. , ; : ! ? @`…) est refusée. Même règle que `accountInputRules.js`.
+  static String? displayName(String? v, {AppLocalizations? l10n}) {
+    final value = (v ?? '').trim();
+    if (value.isEmpty) {
+      return l10n?.validatorRequired ?? LocaleController.instance.l10n.validatorRequired;
+    }
+    if (value.runes.length < 3) {
+      return l10n?.validatorMinLength(3) ?? LocaleController.instance.l10n.validatorMinLength(3);
+    }
+    if (!_displayNamePattern.hasMatch(value)) {
+      return l10n?.validatorNameChars ?? LocaleController.instance.l10n.validatorNameChars;
+    }
+    return null;
+  }
+
+  static final _displayNamePattern =
+      RegExp(r"^[\p{L}\p{M}\p{N} _'’-]+$", unicode: true);
+
+  /// Nouveau mot de passe : au moins 6 caractères, sans espace.
+  /// La connexion garde [minLength] : un ancien mot de passe peut en contenir.
+  static String? newPassword(String? v, {AppLocalizations? l10n}) {
+    final tooShort = minLength(v, 6, l10n: l10n);
+    if (tooShort != null) return tooShort;
+    if (RegExp(r'\s').hasMatch(v!)) {
+      return l10n?.validatorPasswordNoSpaces ??
+          LocaleController.instance.l10n.validatorPasswordNoSpaces;
+    }
+    return null;
+  }
+
   static String? otp6(String? v, {AppLocalizations? l10n}) {
     if (v == null || v.trim().isEmpty) {
       return l10n?.validatorRequired ?? LocaleController.instance.l10n.validatorRequired;

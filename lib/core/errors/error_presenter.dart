@@ -85,6 +85,12 @@ String? _messagePourCode(AppLocalizations l10n, String? code) {
       return l10n.errCodeInvalidCredentials;
     case 'PASSWORD_INCORRECT':
       return l10n.errCodePasswordIncorrect;
+    case 'PASSWORD_HAS_SPACES':
+      return l10n.validatorPasswordNoSpaces;
+    case 'NAME_TOO_SHORT':
+      return l10n.validatorMinLength(3);
+    case 'NAME_INVALID_CHARS':
+      return l10n.validatorNameChars;
 
     // QR et appairage
     case 'QR_SESSION_EXPIRED':

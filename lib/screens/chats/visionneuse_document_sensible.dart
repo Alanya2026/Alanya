@@ -159,12 +159,19 @@ class _VisionneuseDocumentSensibleState
       appBar: AppBar(
         backgroundColor: AppColors.black,
         foregroundColor: AppColors.white,
+        titleTextStyle: context.text.titleLarge?.copyWith(
+          color: AppColors.white,
+        ),
+        iconTheme: const IconThemeData(color: AppColors.white),
+        actionsIconTheme: const IconThemeData(color: AppColors.white),
         title: Text(widget.titre, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           if (widget.onEnregistrer != null)
             IconButton(
               tooltip: context.l10n.sensitiveSaveSigned,
               onPressed: _enregistrement ? null : _enregistrer,
+              color: AppColors.white,
+              disabledColor: AppColors.white,
               icon: _enregistrement
                   ? const SizedBox(
                       width: 22,

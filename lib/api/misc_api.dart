@@ -62,6 +62,8 @@ extension MiscApi on TalkyApiClient {
         return cache;
       }
       return const [
+        {'urls': 'stun:turn.kemita.eu:3478'},
+        {'urls': 'stun:turn.alanya226.com:3478'},
         {'urls': 'stun:stun.l.google.com:19302'},
         {'urls': 'stun:stun1.l.google.com:19302'},
       ];

@@ -434,7 +434,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       controller: _nameController,
-                      validator: Validators.required,
+                      validator: (v) =>
+                          Validators.displayName(v, l10n: context.l10n),
                     ),
                     AppSpacing.vGapXxl,
                     TextFormField(
@@ -443,7 +444,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         prefixIcon: Icon(Icons.alternate_email),
                       ),
                       controller: _pseudoController,
-                      validator: Validators.required,
+                      validator: (v) =>
+                          Validators.displayName(v, l10n: context.l10n),
                     ),
                     AppSpacing.vGapXxl,
                     TextFormField(

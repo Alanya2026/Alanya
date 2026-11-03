@@ -1274,9 +1274,7 @@ extension _ChatActions on _ChatDetailScreenState {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
+              _attachRow([
                   _attachOption(Icons.photo_library, context.l10n.gallery, sem.info, _pickImageFromGallery),
                   _attachOption(Icons.camera_alt, context.l10n.camera, context.colors.primary, _pickImageFromCamera),
                   _attachOption(Icons.videocam, context.l10n.video2, context.colors.error, _pickVideo),
@@ -1290,12 +1288,9 @@ extension _ChatActions on _ChatDetailScreenState {
                     context.colors.error,
                     _pickSensitive,
                   ),
-                ],
-              ),
+              ]),
               AppSpacing.vGapMd,
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
+              _attachRow([
                   _attachOption(
                     Icons.location_on,
                     context.l10n.location2,
@@ -1326,15 +1321,12 @@ extension _ChatActions on _ChatDetailScreenState {
                     context.colors.tertiary,
                     _pickMusic,
                   ),
-                ],
-              ),
+              ]),
               AppSpacing.vGapMd,
               // Coffre-fort : les fichiers trop gros pour une discussion (jusqu'à
               // 1 Go), qui passent par le coffre et non par les médias. Trois
               // places vides gardent l'alignement de la grille au-dessus.
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
+              _attachRow([
                   _attachOption(
                     Icons.lock_outline,
                     context.l10n.safeboxShareAttach,
@@ -1349,8 +1341,7 @@ extension _ChatActions on _ChatDetailScreenState {
                       maintainState: true,
                       child: _attachOption(Icons.lock_outline, context.l10n.safeboxShareAttach, context.colors.primary, () {}),
                     ),
-                ],
-              ),
+              ]),
             ],
           ),
         ),
@@ -1358,36 +1349,45 @@ extension _ChatActions on _ChatDetailScreenState {
     );
   }
 
-  /// Une entrée du menu. `Flexible` et un retrait latéral réduit : la
-  /// première rangée en compte cinq depuis « Sensible », et doit tenir sur un
-  /// écran de 360 dp (5 × 64 dp dans les 328 dp que laisse la feuille).
+  /// Une rangée du menu : chaque entrée y prend la même largeur. La première
+  /// en compte cinq depuis « Sensible » et doit tenir sur un écran de 360 dp
+  /// (5 × 64 dp dans les 328 dp que laisse la feuille).
+  ///
+  /// L'`Expanded` est posé ICI, sur l'enfant direct de la `Row`, et non dans
+  /// [_attachOption] : la rangée du coffre aligne ses colonnes avec des
+  /// entrées invisibles (`Visibility`), et un `Flexible` sous un `Visibility`
+  /// casse la construction de toute la feuille.
+  Widget _attachRow(List<Widget> entrees) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [for (final e in entrees) Expanded(child: e)],
+      );
+
+  /// Une entrée du menu, à retrait latéral réduit (voir [_attachRow]).
   Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
-    return Flexible(
-      child: InkWell(
-        onTap: () {
-          Navigator.pop(context);
-          onTap();
-        },
-        borderRadius: AppRadius.brSm,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
-            vertical: AppSpacing.sm,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
-              AppSpacing.vGapSm,
-              Text(
-                label,
-                style: context.text.bodySmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+    return InkWell(
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+      borderRadius: AppRadius.brSm,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.sm,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(radius: 28, backgroundColor: color.withAlpha(30), child: Icon(icon, color: color)),
+            AppSpacing.vGapSm,
+            Text(
+              label,
+              style: context.text.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );

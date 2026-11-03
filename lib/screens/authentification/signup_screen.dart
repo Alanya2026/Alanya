@@ -117,7 +117,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
-                  validator: (v) => Validators.required(v, l10n: l10n),
+                  validator: (v) => Validators.displayName(v, l10n: l10n),
                   decoration: InputDecoration(
                     hintText: l10n?.signupNameHint ?? context.l10n.signupNameHint,
                     prefixIcon: const Icon(Icons.person_outline),
@@ -126,7 +126,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 AppSpacing.vGapLg,
                 TextFormField(
                   controller: _pseudoController,
-                  validator: (v) => Validators.required(v, l10n: l10n),
+                  validator: (v) => Validators.displayName(v, l10n: l10n),
                   decoration: InputDecoration(
                     hintText:
                         l10n?.signupPseudoHint ?? context.l10n.signupPseudoHint,
@@ -153,7 +153,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
-                  validator: (v) => Validators.minLength(v, 6, l10n: l10n),
+                  validator: (v) => Validators.newPassword(v, l10n: l10n),
                   decoration: InputDecoration(
                     hintText:
                         l10n?.signupPasswordHint ?? context.l10n.signupPasswordHint,

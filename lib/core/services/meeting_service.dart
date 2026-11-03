@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, ChangeNotifier
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'call/call_terminal_guards.dart';
+import 'call/video_capture_profile.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../screens/meetings/ongoing_meet_screen.dart';
 import '../../talky_api_client.dart';
@@ -742,11 +743,7 @@ class MeetingService extends ChangeNotifier {
           'autoGainControl': true,
         },
         if (video)
-          'video': {
-            'width': {'ideal': 1280},
-            'height': {'ideal': 720},
-            'frameRate': {'ideal': 30},
-          },
+          'video': videoCaptureConstraints(),
       };
 
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -1022,9 +1019,7 @@ class MeetingService extends ChangeNotifier {
 
       if (isVideoMeeting) {
         constraints['video'] = {
-          'width': {'ideal': 1280},
-          'height': {'ideal': 720},
-          'frameRate': {'ideal': 30},
+          ...videoCaptureConstraints(),
         };
       }
 

@@ -95,6 +95,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get validatorPasswordMatch => '两次输入的密码不一致';
 
   @override
+  String get validatorNameChars => '只能包含字母、数字、空格、- \' 和 _';
+
+  @override
+  String get validatorPasswordNoSpaces => '密码不能包含空格';
+
+  @override
   String get unknownSender => '未知';
 
   @override
@@ -1632,6 +1638,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoCall => '视频通话';
+
+  @override
+  String get switchToVideoCall => '切换为视频通话？';
+
+  @override
+  String get switchToVideoCallBody => '您的摄像头将开启。如果切换失败，音频通话仍会保持。';
 
   @override
   String get unpin => '取消置顶';

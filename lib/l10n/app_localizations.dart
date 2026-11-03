@@ -268,6 +268,18 @@ abstract class AppLocalizations {
   /// **'Les mots de passe ne correspondent pas'**
   String get validatorPasswordMatch;
 
+  /// No description provided for @validatorNameChars.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lettres, chiffres, espaces, - \' et _ uniquement'**
+  String get validatorNameChars;
+
+  /// No description provided for @validatorPasswordNoSpaces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le mot de passe ne doit pas contenir d\'espace'**
+  String get validatorPasswordNoSpaces;
+
   /// No description provided for @unknownSender.
   ///
   /// In fr, this message translates to:
@@ -3111,6 +3123,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Appel vidéo'**
   String get videoCall;
+
+  /// No description provided for @switchToVideoCall.
+  ///
+  /// In fr, this message translates to:
+  /// **'Passer à un appel vidéo ?'**
+  String get switchToVideoCall;
+
+  /// No description provided for @switchToVideoCallBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre caméra sera activée. L\'appel audio reste inchangé si la transition échoue.'**
+  String get switchToVideoCallBody;
 
   /// No description provided for @unpin.
   ///

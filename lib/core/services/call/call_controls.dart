@@ -24,6 +24,10 @@ extension CallControls on CallService {
   }
 
   Future<void> toggleCamera() async {
+    if (!_isVideo || !_webrtc.hasLocalVideoTrack) {
+      await _enableCameraWithRenegotiation();
+      return;
+    }
     await _webrtc.toggleCamera();
     _isVideoOn = !_isVideoOn;
     final isGroup = _groupRoomId != null;
@@ -39,6 +43,236 @@ extension CallControls on CallService {
       });
     }
     notify();
+  }
+
+  Future<void> upgradeAudioToVideo() =>
+      _enableCameraWithRenegotiation(announceMode: true);
+
+  Future<void> _enableCameraWithRenegotiation({
+    bool announceMode = false,
+  }) async {
+    if (_groupRoomId != null ||
+        _confSessionId != null ||
+        _remoteUserId == null ||
+        _status != CallStatus.connected ||
+        _videoTransitionInFlight ||
+        (!announceMode && !_isVideo)) {
+      return;
+    }
+    if (announceMode && !isAudioToVideoAvailable) {
+      return;
+    }
+
+    final transitionId =
+        '${DateTime.now().microsecondsSinceEpoch}-$_remoteUserId';
+    final operationCallId = _currentCallId;
+    final operationRemoteUserId = _remoteUserId;
+    final completer = Completer<RTCSessionDescription>();
+    _videoTransitionInFlight = true;
+    _videoTransitionId = transitionId;
+    _videoUpgradeAnswer = completer;
+    notify();
+
+    try {
+      final localVideoTrack = await _webrtc.addLocalVideoTrack();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
+        return;
+      }
+      final offer = await _webrtc.createOffer();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
+        return;
+      }
+      final sent = _apiClient.sendSocketEvent(
+        SocketEvents.callVideoUpgradeOffer,
+        {
+          'targetUserId': operationRemoteUserId.toString(),
+          'callId': operationCallId,
+          'transitionId': transitionId,
+          'offer': {'sdp': offer.sdp, 'type': offer.type},
+        },
+      );
+      if (!sent) throw StateError('Socket indisponible pour la vidéo');
+
+      final answer = await completer.future.timeout(
+        const Duration(seconds: 15),
+      );
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
+        return;
+      }
+      await _webrtc.handleAnswer(answer);
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        if (localVideoTrack != null) {
+          await _webrtc.discardLocalVideoTrack(onlyTrack: localVideoTrack);
+        }
+        return;
+      }
+      final commitAck = Completer<void>();
+      _videoUpgradeCommitAck = commitAck;
+      final sentCommit = _apiClient
+          .sendSocketEvent(SocketEvents.callVideoUpgradeCommit, {
+            'targetUserId': _remoteUserId.toString(),
+            'callId': operationCallId,
+            'transitionId': transitionId,
+          });
+      if (!sentCommit) throw StateError('Commit vidéo impossible');
+      try {
+        await commitAck.future.timeout(const Duration(seconds: 5));
+      } on TimeoutException {
+        _requestVideoUpgradeAck(
+          completer,
+          callId: operationCallId,
+          remoteUserId: operationRemoteUserId,
+          transitionId: transitionId,
+        );
+        await commitAck.future.timeout(const Duration(seconds: 5));
+      }
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
+      _isVideo = true;
+      _isVideoOn = true;
+      await CallSessionGuard.instance.updateMode(SessionMode.video);
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
+      await _bindSessionRenderers();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
+      _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
+        'toUserId': operationRemoteUserId,
+        'isVideoOn': true,
+      });
+      notify();
+    } catch (error) {
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
+      final rolledBack = await _webrtc.rollbackNegotiation();
+      if (!_isCurrentVideoUpgrade(
+        completer,
+        callId: operationCallId,
+        remoteUserId: operationRemoteUserId,
+        transitionId: transitionId,
+      )) {
+        return;
+      }
+      final discarded = await _webrtc.discardLocalVideoTrack();
+      if (!rolledBack || !discarded) {
+        debugPrint(
+          '[CallService] ** nettoyage vidéo incomplet après échec '
+          '(rollback=$rolledBack, piste=$discarded)',
+        );
+      }
+      _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeCancel, {
+        'targetUserId': operationRemoteUserId,
+        'callId': operationCallId,
+        'transitionId': transitionId,
+      });
+      _showTransientMessage(LocaleController.instance.l10n.callFailed);
+      debugPrint('[CallService] ** transition audio → vidéo échouée: $error');
+    } finally {
+      if (identical(_videoUpgradeAnswer, completer)) {
+        _videoUpgradeAnswer = null;
+        _videoUpgradeCommitAck = null;
+        _videoTransitionId = null;
+        _videoTransitionInFlight = false;
+        notify();
+      }
+    }
+  }
+
+  bool _isCurrentVideoUpgrade(
+    Completer<RTCSessionDescription> completer, {
+    required String? callId,
+    required int? remoteUserId,
+    required String transitionId,
+  }) =>
+      identical(_videoUpgradeAnswer, completer) &&
+      isCurrentVideoUpgradeSession(
+        activeCallId: _currentCallId,
+        operationCallId: callId,
+        activeRemoteUserId: _remoteUserId,
+        operationRemoteUserId: remoteUserId,
+        activeTransitionId: _videoTransitionId,
+        operationTransitionId: transitionId,
+        isConnected: _status == CallStatus.connected,
+      );
+
+  void _requestVideoUpgradeAck(
+    Completer<RTCSessionDescription> completer, {
+    required String? callId,
+    required int? remoteUserId,
+    required String transitionId,
+  }) {
+    if (!isActiveVideoUpgradeSession(
+          isConnectedOrReconnecting:
+              _status == CallStatus.connected ||
+              _status == CallStatus.reconnecting,
+          activeCallId: _currentCallId,
+          operationCallId: callId,
+          activeRemoteUserId: _remoteUserId,
+          operationRemoteUserId: remoteUserId,
+          activeTransitionId: _videoTransitionId,
+          operationTransitionId: transitionId,
+        ) ||
+        !identical(_videoUpgradeAnswer, completer)) {
+      return;
+    }
+    _apiClient.sendSocketEvent(SocketEvents.callVideoUpgradeAckRequest, {
+      'targetUserId': remoteUserId,
+      'callId': callId,
+      'transitionId': transitionId,
+    });
   }
 
   Future<void> switchCamera() async {
@@ -163,10 +397,12 @@ extension CallControls on CallService {
         final lue = await audio.AudioHelper.readAppliedRoute(_callKitCallId);
         if (lue != null) {
           _adopterSortiesOffertes(lue.supportedMask);
-          _retenirRoute(resolveAppliedRoute(
-            requested: _audioRoute,
-            reportedName: lue.routeName,
-          ));
+          _retenirRoute(
+            resolveAppliedRoute(
+              requested: _audioRoute,
+              reportedName: lue.routeName,
+            ),
+          );
         }
         notify();
       }
