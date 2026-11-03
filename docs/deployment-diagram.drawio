@@ -91,10 +91,10 @@
         <mxCell id="cl_stun" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;STUN Google&lt;/b&gt;&lt;br&gt;stun(1).l.google.com:19302" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="420" y="560" width="260" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="cl_turnm" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;TURN Metered&lt;/b&gt;&lt;br&gt;global.relay.metered.ca:80/443" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="cl_turnm" value="&lt;&lt;cloud&gt;&gt;&lt;br&gt;&lt;b&gt;TURN coturn&lt;/b&gt;&lt;br&gt;turn.kemita.eu:3478/443" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="720" y="560" width="280" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="dev_turn" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;TURN privé&lt;/b&gt;&lt;br&gt;76.13.44.253:3478" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=middle;" vertex="1" parent="1">
+        <mxCell id="dev_turn" value="&lt;&lt;device&gt;&gt;&lt;br&gt;&lt;b&gt;TURN coturn&lt;/b&gt;&lt;br&gt;turn.alanya226.com:3478/443" style="shape=cube;size=12;direction=south;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;verticalAlign=middle;" vertex="1" parent="1">
           <mxGeometry x="420" y="690" width="260" height="90" as="geometry" />
         </mxCell>
 
