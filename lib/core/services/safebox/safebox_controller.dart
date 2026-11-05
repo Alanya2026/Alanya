@@ -1103,14 +1103,19 @@ class SafeboxController extends ChangeNotifier {
       fetchReceivedItem(info.asItem());
 
   /// Pareil pour un élément reçu : un fichier seul (élément 0) ou un élément d'un lot.
-  Future<({String location, bool published, bool saveFailed})> fetchReceivedItem(SafeboxShareItem item) async {
+  /// [keepPrivateCopy] : la visionneuse lit encore la copie privée ; c'est elle
+  /// qui l'effacera en quittant ce fichier.
+  Future<({String location, bool published, bool saveFailed})> fetchReceivedItem(
+    SafeboxShareItem item, {
+    bool keepPrivateCopy = false,
+  }) async {
     final cle = -item.localId;
     final deja = await received.location(cle);
     if (deja != null) return (location: deja, published: false, saveFailed: false);
     final f = await _telechargerElement(item);
     final loc = await received.publish(f, shareId: cle, name: item.name, mime: item.mime, family: item.family);
     if (loc == null) return (location: f.path, published: false, saveFailed: true);
-    await downloads.evict(item.localId);
+    if (!keepPrivateCopy) await downloads.evict(item.localId);
     return (location: loc, published: true, saveFailed: false);
   }
 

@@ -9586,6 +9586,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxSharedDownloadPlay => 'Télécharger et lire';
 
   @override
+  String get safeboxSharedView => 'Voir';
+
+  @override
   String safeboxSharedWifiAdvised(String size) {
     return 'Wi-Fi conseillé ($size).';
   }
@@ -10114,23 +10117,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxShareRevoked => 'Fichier retiré par l\'expéditeur';
-
-  @override
-  String safeboxShareDownloadLimit(int limit) {
-    return 'Vous avez déjà téléchargé ce fichier $limit fois aujourd\'hui. Réessayez demain, ou enregistrez-le dans votre coffre.';
-  }
-
-  @override
-  String safeboxShareDownloadsLeft(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count téléchargements restants aujourd\'hui',
-      one: '1 téléchargement restant aujourd\'hui',
-      zero: 'Plus de téléchargement aujourd\'hui',
-    );
-    return '$_temp0';
-  }
 
   @override
   String get safeboxShareFallback => 'Fichier du coffre-fort';

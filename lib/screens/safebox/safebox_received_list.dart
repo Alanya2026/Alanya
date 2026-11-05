@@ -145,9 +145,7 @@ class _SafeboxReceivedListState extends State<SafeboxReceivedList> {
 
   void _erreur429(Object e) {
     final l10n = context.l10n;
-    if (e is TalkyException && e.code == 'SAFEBOX_DOWNLOAD_LIMIT') {
-      safeboxSnack(context, l10n.safeboxShareDownloadLimit((e.details?['limit'] as num?)?.toInt() ?? 3), error: true);
-    } else if (e is TalkyException && e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
+    if (e is TalkyException && e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
       safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
     } else if (e is TalkyException && e.code == 'SAFEBOX_SHARE_REVOKED') {
       _charger();
@@ -354,11 +352,6 @@ class _CarteRecue extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (s.downloadsLeft != null) ...[
-                  AppSpacing.vGapXs,
-                  Text(l10n.safeboxShareDownloadsLeft(s.downloadsLeft!),
-                      style: context.text.bodySmall?.copyWith(color: muet)),
-                ],
               ],
             ],
           ),

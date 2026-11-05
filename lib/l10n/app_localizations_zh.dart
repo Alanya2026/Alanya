@@ -8989,6 +8989,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxSharedDownloadPlay => '下载并打开';
 
   @override
+  String get safeboxSharedView => '查看';
+
+  @override
   String safeboxSharedWifiAdvised(String size) {
     return '建议使用 Wi-Fi（$size）。';
   }
@@ -9463,16 +9466,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxShareRevoked => '发送者已移除该文件';
-
-  @override
-  String safeboxShareDownloadLimit(int limit) {
-    return '您今天已下载此文件 $limit 次。请明天再试，或将其保存到您的保险箱。';
-  }
-
-  @override
-  String safeboxShareDownloadsLeft(int count) {
-    return '今天还可下载 $count 次';
-  }
 
   @override
   String get safeboxShareFallback => '保险箱文件';

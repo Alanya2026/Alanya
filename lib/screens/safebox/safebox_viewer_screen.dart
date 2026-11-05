@@ -7,9 +7,14 @@
 //  est préparée d'avance. Une vidéo déjà sur le téléphone, ou de 100 Mo au
 //  plus, se lance seule ; au-delà, un bouton « Lire · 568 Mo » évite de
 //  consommer des données en passant simplement dessus.
+//
+//  Elle sert aussi aux fichiers reçus (05/11/2026, discussions et onglet
+//  Reçus) : [download] les récupère dans l'espace privé de l'application, rien
+//  n'arrive dans la galerie, et leurs commentaires, privés, ne s'affichent pas.
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
@@ -34,12 +39,18 @@ bool safeboxViewable(SafeboxFile f) => f.family == SafeboxFamily.photos || f.fam
 /// Ouvre la visionneuse sur [files], à la position [initialIndex].
 /// [loadMore] : la liste complétée par la page suivante du dossier.
 /// [onNoteChanged] : un commentaire a changé, le dossier est à relire.
+/// [download] : comment récupérer un fichier reçu (sinon, un fichier de mon
+/// coffre). [showNotes] : les commentaires, propres à mon coffre.
+/// [footerBuilder] : les actions sous un fichier reçu.
 Future<void> showSafeboxViewer(
   BuildContext context, {
   required List<SafeboxFile> files,
   required int initialIndex,
   Future<List<SafeboxFile>> Function()? loadMore,
   VoidCallback? onNoteChanged,
+  Future<File> Function(SafeboxFile file)? download,
+  bool showNotes = true,
+  Widget Function(BuildContext context, SafeboxFile file)? footerBuilder,
 }) =>
     Navigator.push(
       context,
@@ -49,6 +60,9 @@ Future<void> showSafeboxViewer(
           initialIndex: initialIndex,
           loadMore: loadMore,
           onNoteChanged: onNoteChanged,
+          download: download,
+          showNotes: showNotes,
+          footerBuilder: footerBuilder,
         ),
       ),
     );
@@ -60,12 +74,18 @@ class SafeboxViewerScreen extends StatefulWidget {
     required this.initialIndex,
     this.loadMore,
     this.onNoteChanged,
+    this.download,
+    this.showNotes = true,
+    this.footerBuilder,
   });
 
   final List<SafeboxFile> files;
   final int initialIndex;
   final Future<List<SafeboxFile>> Function()? loadMore;
   final VoidCallback? onNoteChanged;
+  final Future<File> Function(SafeboxFile file)? download;
+  final bool showNotes;
+  final Widget Function(BuildContext context, SafeboxFile file)? footerBuilder;
 
   @override
   State<SafeboxViewerScreen> createState() => _SafeboxViewerScreenState();
@@ -81,6 +101,8 @@ class _SafeboxViewerScreenState extends State<SafeboxViewerScreen> {
 
   SafeboxController get _c => context.read<SafeboxController>();
   SafeboxFile get _actuel => _fichiers[_position];
+
+  Future<File> _recuperer(SafeboxFile f) => widget.download?.call(f) ?? _c.downloads.fetch(f);
 
   @override
   void initState() {
@@ -102,7 +124,7 @@ class _SafeboxViewerScreenState extends State<SafeboxViewerScreen> {
     if (suivant < _fichiers.length) {
       final f = _fichiers[suivant];
       if (f.family == SafeboxFamily.photos && !f.lost) {
-        unawaited(_c.downloads.fetch(f).then<void>((_) {}, onError: (Object _) {}));
+        unawaited(_recuperer(f).then<void>((_) {}, onError: (Object _) {}));
       }
     }
     final charger = widget.loadMore;
@@ -118,7 +140,7 @@ class _SafeboxViewerScreenState extends State<SafeboxViewerScreen> {
     final l10n = context.l10n;
     final messager = ScaffoldMessenger.of(context);
     try {
-      final f = await _c.downloads.fetch(_actuel);
+      final f = await _recuperer(_actuel);
       final r = await OpenFilex.open(f.path);
       if (r.type != ResultType.done) messager.showSnackBar(SnackBar(content: Text(l10n.safeboxOpenFailed)));
     } catch (e) {
@@ -161,6 +183,9 @@ class _SafeboxViewerScreenState extends State<SafeboxViewerScreen> {
                 itemBuilder: (_, i) => _PageMedia(
                   key: ValueKey(_fichiers[i].id),
                   file: _fichiers[i],
+                  download: _recuperer,
+                  // Les commandes d'une vidéo restent au-dessus des actions.
+                  bottomSpace: widget.footerBuilder == null ? 0 : 64,
                   active: i == _position,
                   onZoom: (z) {
                     if (z != _zoom) setState(() => _zoom = z);
@@ -195,12 +220,13 @@ class _SafeboxViewerScreenState extends State<SafeboxViewerScreen> {
                   ],
                 ),
               ),
-              if (f.family == SafeboxFamily.photos && !f.lost)
+              if (widget.footerBuilder != null || (widget.showNotes && f.family == SafeboxFamily.photos && !f.lost))
                 Positioned(
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: _Commentaire(key: ValueKey(f.id), file: f, onEdit: _modifierCommentaire),
+                  child: widget.footerBuilder?.call(context, f) ??
+                      _Commentaire(key: ValueKey(f.id), file: f, onEdit: _modifierCommentaire),
                 ),
             ],
           ],
@@ -247,7 +273,7 @@ class _Commentaire extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: onEdit,
-                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  style: TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(0, 40)),
                   icon: Icon(note == null ? Icons.add_comment_outlined : Icons.edit_outlined, size: 18),
                   label: Text(note == null ? l10n.safeboxNoteAdd : l10n.safeboxNoteEdit),
                 ),
@@ -264,12 +290,16 @@ class _PageMedia extends StatefulWidget {
   const _PageMedia({
     super.key,
     required this.file,
+    required this.download,
+    required this.bottomSpace,
     required this.active,
     required this.onZoom,
     required this.onTap,
   });
 
   final SafeboxFile file;
+  final Future<File> Function(SafeboxFile file) download;
+  final double bottomSpace;
   final bool active;
   final ValueChanged<bool> onZoom;
   final VoidCallback onTap;
@@ -356,7 +386,7 @@ class _PageMediaState extends State<_PageMedia> {
       _erreur = null;
     });
     try {
-      final f = await context.read<SafeboxController>().downloads.fetch(_f);
+      final f = await widget.download(_f);
       if (!mounted) return;
       setState(() => _local = f);
       if (_estVideo && widget.active) await _lancerVideo();
@@ -434,31 +464,70 @@ class _PageMediaState extends State<_PageMedia> {
     final chewie = _chewie;
     if (chewie != null) {
       // Ses commandes restent loin de l'encoche et de la barre de navigation.
-      return SafeArea(child: Chewie(controller: chewie));
+      return SafeArea(
+        child: Padding(padding: EdgeInsets.only(bottom: widget.bottomSpace), child: Chewie(controller: chewie)),
+      );
     }
     final progres = context.watch<SafeboxController>().downloads.progressOf(_f.id);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SafeboxFileThumb(file: _f, size: 160),
-            AppSpacing.vGapMd,
-            if (_erreur != null)
-              TextButton(onPressed: _telecharger, child: Text(l10n.safeboxRetry))
-            else if (_telechargement || local != null)
-              SizedBox(width: 160, child: LinearProgressIndicator(value: progres))
-            else if (_estVideo && _rechercheFaite)
-              FilledButton.icon(
-                onPressed: _telecharger,
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: Text(l10n.safeboxVideoPlay(formatBytes(_f.plainBytes, l10n))),
-              ),
-          ],
-        ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          _Apercu(file: _f),
+          Center(
+            child: _erreur != null
+                ? FilledButton.tonal(
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                    onPressed: _telecharger,
+                    child: Text(l10n.safeboxRetry),
+                  )
+                : _telechargement || local != null
+                    ? SizedBox(width: 160, child: LinearProgressIndicator(value: progres))
+                    : _estVideo && _rechercheFaite
+                        ? FilledButton.icon(
+                            style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                            onPressed: _telecharger,
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: Text(l10n.safeboxVideoPlay(formatBytes(_f.plainBytes, l10n))),
+                          )
+                        : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
+  }
+}
+
+/// L'aperçu du fichier en grand, sans le recadrer, le temps que le fichier
+/// arrive : rien de plus n'est téléchargé pour lui.
+class _Apercu extends StatefulWidget {
+  const _Apercu({required this.file});
+  final SafeboxFile file;
+
+  @override
+  State<_Apercu> createState() => _ApercuState();
+}
+
+class _ApercuState extends State<_Apercu> {
+  Uint8List? _octets;
+
+  @override
+  void initState() {
+    super.initState();
+    final cache = context.read<SafeboxController>().previews;
+    _octets = cache.peek(widget.file.id);
+    if (_octets != null || widget.file.previewUrl == null) return;
+    cache.load(widget.file).then((b) {
+      if (mounted && b != null) setState(() => _octets = b);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final octets = _octets;
+    if (octets == null) return Center(child: SafeboxFileThumb(file: widget.file, size: 160));
+    return Image.memory(octets, fit: BoxFit.contain, gaplessPlayback: true);
   }
 }

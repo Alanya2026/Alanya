@@ -64,13 +64,12 @@ void main() {
       'id': 12, 'conversationId': 5, 'senderId': 3, 'name': 'Contrat.pdf', 'mime': 'application/pdf',
       'family': 'documents', 'plainBytes': 20, 'available': true, 'isSender': false,
       'storedBytes': 36, 'key': base64Encode(List<int>.filled(32, 1)), 'previewUrl': 'https://p',
-      'downloadsLeft': 2, 'savedFileId': null,
+      'savedFileId': null,
     });
     final f = info.asFile();
     expect(f.id, -12, reason: 'jamais le même numéro qu\'un fichier de mon coffre');
     expect(f.ext, 'pdf');
     expect(f.key, List<int>.filled(32, 1));
-    expect(info.downloadsLeft, 2);
   });
 
   group('détails de la carte (durée, définition, pages)', () {

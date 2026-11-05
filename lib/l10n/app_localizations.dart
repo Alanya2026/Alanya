@@ -16066,6 +16066,12 @@ abstract class AppLocalizations {
   /// **'Télécharger et lire'**
   String get safeboxSharedDownloadPlay;
 
+  /// No description provided for @safeboxSharedView.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir'**
+  String get safeboxSharedView;
+
   /// No description provided for @safeboxSharedWifiAdvised.
   ///
   /// In fr, this message translates to:
@@ -16833,18 +16839,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Fichier retiré par l\'expéditeur'**
   String get safeboxShareRevoked;
-
-  /// No description provided for @safeboxShareDownloadLimit.
-  ///
-  /// In fr, this message translates to:
-  /// **'Vous avez déjà téléchargé ce fichier {limit} fois aujourd\'hui. Réessayez demain, ou enregistrez-le dans votre coffre.'**
-  String safeboxShareDownloadLimit(int limit);
-
-  /// No description provided for @safeboxShareDownloadsLeft.
-  ///
-  /// In fr, this message translates to:
-  /// **'{count, plural, =0{Plus de téléchargement aujourd\'hui} =1{1 téléchargement restant aujourd\'hui} other{{count} téléchargements restants aujourd\'hui}}'**
-  String safeboxShareDownloadsLeft(int count);
 
   /// No description provided for @safeboxShareFallback.
   ///

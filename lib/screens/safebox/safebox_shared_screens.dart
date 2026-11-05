@@ -6,6 +6,8 @@
 //  que le contenu reste disponible tant que l'expéditeur le garde, et la
 //  limite de téléchargements.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,6 +22,7 @@ import '../../widgets/common/app_avatar.dart';
 import 'safebox_download_sheet.dart';
 import 'safebox_grid.dart';
 import 'safebox_share_widgets.dart';
+import 'safebox_viewer_screen.dart';
 import 'safebox_widgets.dart';
 
 /// Au-delà, « Wi-Fi conseillé ».
@@ -28,10 +31,7 @@ const int _gros = 50 << 20;
 /// Les erreurs d'un téléchargement ou d'un « Garder » reçus.
 void _erreurPartage(BuildContext context, Object e) {
   final l10n = context.l10n;
-  if (e is TalkyException && e.code == 'SAFEBOX_DOWNLOAD_LIMIT') {
-    final limite = (e.details?['limit'] as num?)?.toInt() ?? 3;
-    safeboxSnack(context, l10n.safeboxShareDownloadLimit(limite), error: true);
-  } else if (e is TalkyException && e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
+  if (e is TalkyException && e.code == 'SAFEBOX_QUOTA_EXCEEDED') {
     safeboxSnack(context, l10n.safeboxQuotaExceeded, error: true);
   } else {
     safeboxShowError(context, e);
@@ -85,6 +85,9 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
   SafeboxShareInfo? _info;
   bool _charge = false;
   bool _surLeTelephone = false;
+
+  /// Déjà dans les fichiers du téléphone (pas seulement dans l'espace privé).
+  bool _enregistre = false;
   bool _occupe = false;
 
   /// Gardé pendant cet écran : l'élément d'un lot ne se relit pas tout seul.
@@ -105,10 +108,12 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
       final info = await _c.shareInfo(widget.shareId, refresh: refresh);
       final element = widget.item ?? info?.asItem();
       final local = element != null && element.available && await _c.hasReceivedItem(element);
+      final enregistre = element != null && await _c.received.location(-element.localId) != null;
       if (!mounted) return;
       setState(() {
         _info = info;
         _surLeTelephone = local;
+        _enregistre = enregistre;
         _charge = true;
       });
     } catch (e) {
@@ -124,9 +129,14 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
     try {
       final r = await _c.fetchReceivedItem(element);
       if (!mounted) return;
-      setState(() => _surLeTelephone = true);
+      setState(() {
+        _surLeTelephone = true;
+        _enregistre = !r.saveFailed;
+      });
       if (r.published) safeboxSnack(context, l10n.safeboxSavedToDownloads);
       if (r.saveFailed) safeboxSnack(context, l10n.safeboxSaveToDownloadsFailed, error: true);
+      // Une photo ou une vidéo se regarde dans la visionneuse.
+      if (safeboxViewable(element.asFile())) return;
       final ouvert = await _c.received.open(r.location, element.mime);
       if (!ouvert && mounted) safeboxSnack(context, l10n.safeboxOpenFailed, error: true);
     } on TalkyException catch (e) {
@@ -141,6 +151,20 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
     } finally {
       if (mounted) setState(() => _occupe = false);
     }
+  }
+
+  /// Dans la visionneuse : rien n'arrive dans les fichiers du téléphone.
+  Future<void> _voir() async {
+    final element = _element;
+    if (element == null) return;
+    await showSafeboxViewer(
+      context,
+      files: [element.asFile()],
+      initialIndex: 0,
+      showNotes: false,
+      download: (_) => _c.downloads.fetchShareItem(element),
+    );
+    if (mounted) await _charger();
   }
 
   Future<void> _garder() async {
@@ -176,6 +200,7 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
     final progres = element == null ? null : c.downloads.progressOf(element.localId);
     final disponible = element != null && element.available && (info?.available ?? true);
     final dejaGarde = _garde || element?.savedFileId != null;
+    final visible = disponible && !element.lost && safeboxViewable(element.asFile());
     final meta = element?.meta;
     final duree = meta?.durationLabel;
     final nom = element?.name ?? widget.title ?? '';
@@ -217,6 +242,7 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
                         ),
                       if (duree != null)
                         Positioned(right: AppSpacing.md, bottom: AppSpacing.md, child: SafeboxImageLabel(duree)),
+                      if (visible) Positioned.fill(child: Material(type: MaterialType.transparency, child: InkWell(onTap: _voir))),
                     ],
                   ),
                 ),
@@ -273,12 +299,29 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
                           LinearProgressIndicator(value: progres),
                           AppSpacing.vGapSm,
                         ],
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-                          onPressed: _occupe ? null : _telecharger,
-                          icon: Icon(_surLeTelephone ? Icons.open_in_new : Icons.download_rounded),
-                          label: Text(_surLeTelephone ? l10n.safeboxOpen : l10n.safeboxSharedDownloadPlay),
-                        ),
+                        if (visible) ...[
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                            onPressed: _voir,
+                            icon: const Icon(Icons.visibility_outlined),
+                            label: Text(l10n.safeboxSharedView),
+                          ),
+                          if (!_enregistre) ...[
+                            AppSpacing.vGapSm,
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                              onPressed: _occupe ? null : _telecharger,
+                              icon: const Icon(Icons.download_rounded),
+                              label: Text(l10n.safeboxDownload),
+                            ),
+                          ],
+                        ] else
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+                            onPressed: _occupe ? null : _telecharger,
+                            icon: Icon(_surLeTelephone ? Icons.open_in_new : Icons.download_rounded),
+                            label: Text(_surLeTelephone ? l10n.safeboxOpen : l10n.safeboxSharedDownloadPlay),
+                          ),
                         AppSpacing.vGapSm,
                         if (dejaGarde)
                           Row(
@@ -296,17 +339,14 @@ class _SafeboxSharedFileScreenState extends State<SafeboxSharedFileScreen> {
                             icon: const Icon(Icons.lock_outline),
                             label: Text(l10n.safeboxShareSave),
                           ),
-                        AppSpacing.vGapSm,
-                        Text(
-                          [
-                            if (element.plainBytes >= _gros)
-                              l10n.safeboxSharedWifiAdvised(formatBytes(element.plainBytes, l10n)),
-                            if (info?.downloadsLeft != null && !_surLeTelephone)
-                              l10n.safeboxShareDownloadsLeft(info!.downloadsLeft!),
-                          ].join(' '),
-                          textAlign: TextAlign.center,
-                          style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
-                        ),
+                        if (element.plainBytes >= _gros) ...[
+                          AppSpacing.vGapSm,
+                          Text(
+                            l10n.safeboxSharedWifiAdvised(formatBytes(element.plainBytes, l10n)),
+                            textAlign: TextAlign.center,
+                            style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
+                          ),
+                        ],
                       ],
                     ],
                   ),
@@ -393,9 +433,43 @@ class _SafeboxSharedAlbumScreenState extends State<SafeboxSharedAlbumScreen> {
     safeboxSnack(context, l10n.safeboxDownloadStarted);
   }
 
+  /// Une photo ou une vidéo s'ouvre dans la visionneuse, avec les autres
+  /// éléments affichés ; le reste, sur sa fiche.
   void _ouvrirElement(SafeboxShareItem e) {
     if (!e.available) {
       safeboxSnack(context, context.l10n.safeboxSharedUnavailable);
+      return;
+    }
+    if (safeboxViewable(e.asFile())) {
+      final medias = [
+        for (final x in _elements ?? const <SafeboxShareItem>[])
+          if (x.available && safeboxViewable(x.asFile()) && (_filtre == null || x.family == _filtre)) x,
+      ];
+      final parId = {for (final x in medias) x.localId: x};
+      // Gardés hors de la zone d'actions, qui disparaît avec les barres.
+      final gardes = <int>{};
+      final publies = <int>{};
+      unawaited(showSafeboxViewer(
+        context,
+        files: [for (final x in medias) x.asFile()],
+        initialIndex: medias.indexWhere((x) => x.localId == e.localId),
+        showNotes: false,
+        download: (f) => _c.downloads.fetchShareItem(parId[f.id]!),
+        footerBuilder: (_, f) => _ActionsRecu(
+          key: ValueKey(f.id),
+          shareId: widget.shareId,
+          item: parId[f.id]!,
+          kept: gardes,
+          published: publies,
+        ),
+      ).then((_) {
+        // Enregistrés sur le téléphone : la copie privée, gardée le temps de
+        // les regarder, ne sert plus.
+        for (final id in publies) {
+          unawaited(_c.downloads.evict(id));
+        }
+        if (mounted) _charger(refresh: true);
+      }));
       return;
     }
     Navigator.push(
@@ -506,7 +580,6 @@ class _SafeboxSharedAlbumScreenState extends State<SafeboxSharedAlbumScreen> {
                       Text(
                         [
                           if (!toutGarde) l10n.safeboxSharedKeepAlbumHint(formatBytes(tailleDispo, l10n)),
-                          if (info.downloadsLeft != null) l10n.safeboxShareDownloadsLeft(info.downloadsLeft!),
                         ].join(' '),
                         textAlign: TextAlign.center,
                         style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant),
@@ -560,6 +633,116 @@ class _SafeboxSharedAlbumScreenState extends State<SafeboxSharedAlbumScreen> {
                         ),
                       ],
                     ),
+    );
+  }
+}
+
+/// Sous un élément reçu, dans la visionneuse : l'enregistrer sur le téléphone,
+/// ou le garder dans mon coffre.
+class _ActionsRecu extends StatefulWidget {
+  const _ActionsRecu({
+    super.key,
+    required this.shareId,
+    required this.item,
+    required this.kept,
+    required this.published,
+  });
+  final int shareId;
+  final SafeboxShareItem item;
+
+  /// Ceux gardés ou enregistrés depuis l'ouverture de la visionneuse.
+  final Set<int> kept;
+  final Set<int> published;
+
+  @override
+  State<_ActionsRecu> createState() => _ActionsRecuState();
+}
+
+class _ActionsRecuState extends State<_ActionsRecu> {
+  late bool _garde = widget.item.savedFileId != null || widget.kept.contains(widget.item.localId);
+  bool _enregistre = false;
+  bool _occupe = false;
+  SafeboxController get _c => context.read<SafeboxController>();
+
+  @override
+  void initState() {
+    super.initState();
+    _c.received.location(-widget.item.localId).then((l) {
+      if (mounted && l != null) setState(() => _enregistre = true);
+    }, onError: (Object _) {});
+  }
+
+  Future<void> _agir(Future<void> Function() action) async {
+    setState(() => _occupe = true);
+    try {
+      await action();
+    } on TalkyException catch (e) {
+      if (mounted) _erreurPartage(context, e);
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    } finally {
+      if (mounted) setState(() => _occupe = false);
+    }
+  }
+
+  Future<void> _telecharger() => _agir(() async {
+        final l10n = context.l10n;
+        final r = await _c.fetchReceivedItem(widget.item, keepPrivateCopy: true);
+        if (r.published) widget.published.add(widget.item.localId);
+        if (!mounted) return;
+        setState(() => _enregistre = !r.saveFailed);
+        safeboxSnack(context, r.saveFailed ? l10n.safeboxSaveToDownloadsFailed : l10n.safeboxSavedToDownloads, error: r.saveFailed);
+      });
+
+  Future<void> _garder() => _agir(() async {
+        final l10n = context.l10n;
+        await _c.saveShare(widget.shareId, itemId: widget.item.id);
+        widget.kept.add(widget.item.localId);
+        if (!mounted) return;
+        setState(() => _garde = true);
+        safeboxSnack(context, l10n.safeboxShareSavedToast);
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    // Le thème donne toute la largeur aux boutons : ici, ils la partagent.
+    final style = TextButton.styleFrom(foregroundColor: Colors.white, minimumSize: const Size(0, 48));
+    Widget libelle(String texte) => Text(texte, maxLines: 1, overflow: TextOverflow.ellipsis);
+    return ColoredBox(
+      color: Colors.black54,
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            if (!_enregistre)
+              Expanded(
+                child: TextButton.icon(
+                  style: style,
+                  onPressed: _occupe ? null : _telecharger,
+                  icon: const Icon(Icons.download_rounded),
+                  label: libelle(l10n.safeboxDownload),
+                ),
+              ),
+            Expanded(
+              child: _garde
+                  ? TextButton.icon(
+                      style: style,
+                      onPressed: null,
+                      icon: Icon(Icons.check_circle, color: context.semantic.success),
+                      label: Text(l10n.safeboxShareSaved,
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)),
+                    )
+                  : TextButton.icon(
+                      style: style,
+                      onPressed: _occupe ? null : _garder,
+                      icon: const Icon(Icons.lock_outline),
+                      label: libelle(l10n.safeboxShareSave),
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

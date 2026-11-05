@@ -1006,7 +1006,6 @@ class SafeboxShareInfo {
     this.quality = SafeboxQuality.original,
     this.key,
     this.previewUrl,
-    this.downloadsLeft,
     this.savedFileId,
     this.meta,
     this.lost = false,
@@ -1042,7 +1041,6 @@ class SafeboxShareInfo {
       quality: SafeboxQuality.fromName(j['quality'] as String?),
       key: j['key'] is String ? base64Decode(j['key'] as String) : null,
       previewUrl: j['previewUrl'] as String?,
-      downloadsLeft: _intOrNull(j['downloadsLeft']),
       savedFileId: _intOrNull(j['savedFileId']),
       meta: SafeboxMeta.fromJson(j['meta']),
       lost: j['lost'] == true,
@@ -1084,8 +1082,6 @@ class SafeboxShareInfo {
   final Uint8List? key;
   final String? previewUrl;
 
-  /// Téléchargements restants aujourd'hui ; nul pour l'expéditeur.
-  final int? downloadsLeft;
 
   /// Le même fichier, déjà dans mon coffre.
   final int? savedFileId;

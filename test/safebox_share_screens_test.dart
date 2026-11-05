@@ -15,6 +15,8 @@ import 'package:talky_flutter/l10n/app_localizations.dart';
 import 'package:talky_flutter/screens/safebox/safebox_folder_screen.dart';
 import 'package:talky_flutter/screens/safebox/safebox_grid.dart';
 import 'package:talky_flutter/screens/safebox/safebox_share_card.dart';
+import 'package:talky_flutter/screens/safebox/safebox_shared_screens.dart';
+import 'package:talky_flutter/screens/safebox/safebox_viewer_screen.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
 /// Lot 9 sur un faux serveur : la carte (reçue, envoyée, retirée), l'album
@@ -32,7 +34,7 @@ void main() {
   final album = {
     'id': 9, 'conversationId': 50, 'senderId': 3, 'kind': 'batch', 'name': 'Kribi 2026', 'family': 'photos',
     'plainBytes': 4000, 'count': 4, 'families': {'photos': 2, 'videos': 1, 'documents': 1},
-    'available': true, 'isSender': false, 'availableCount': 4, 'savedCount': 0, 'downloadsLeft': 3,
+    'available': true, 'isSender': false, 'availableCount': 4, 'savedCount': 0,
     'sender': {'id': 3, 'name': 'Clarisse'},
     'cover': [element(91, 0, 'Plage.jpg', 'photos'), element(92, 1, 'Danse.mp4', 'videos')],
   };
@@ -71,6 +73,8 @@ void main() {
           };
         } else if (chemin.endsWith('/shares/9')) {
           corps = album;
+        } else if (chemin.endsWith('/shares/9/save')) {
+          corps = fichier(95, 'Plage.jpg', null);
         } else if (chemin.endsWith('/shares/9/items')) {
           corps = {'items': elements, 'nextCursor': null};
         } else if (chemin.endsWith('/shares/7')) {
@@ -105,7 +109,7 @@ void main() {
         return http.Response(jsonEncode(corps), 200, headers: {'content-type': 'application/json; charset=utf-8'});
       });
 
-  Future<SafeboxController> monter(WidgetTester tester, Widget ecran) async {
+  Future<SafeboxController> monter(WidgetTester tester, Widget ecran, {bool settle = true}) async {
     SharedPreferences.setMockInitialValues({});
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
@@ -122,7 +126,7 @@ void main() {
         home: ecran,
       ),
     ));
-    await tester.pumpAndSettle();
+    if (settle) await tester.pumpAndSettle();
     return c;
   }
 
@@ -160,6 +164,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SafeboxGridTile), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  /// Fait avancer l'écran : une barre de téléchargement tourne sans fin.
+  Future<void> laisserFaire(WidgetTester tester) async {
+    for (var i = 0; i < 8; i += 1) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  testWidgets('album reçu : photos et vidéos dans la visionneuse, sans commentaire, avec Télécharger et Garder', (tester) async {
+    await monter(tester, const SafeboxSharedAlbumScreen(shareId: 9, title: 'Kribi 2026'));
+    await tester.tap(find.byType(SafeboxGridTile).first);
+    await laisserFaire(tester);
+    final v = tester.widget<SafeboxViewerScreen>(find.byType(SafeboxViewerScreen));
+    expect(v.files.map((f) => f.name), ['Plage.jpg', 'Danse.mp4', 'Coucher.jpg'], reason: 'le PDF reste sur sa fiche');
+    expect(v.showNotes, isFalse);
+    expect(find.text('1 / 3'), findsOneWidget);
+    expect(find.text(fr.safeboxNoteAdd), findsNothing);
+    expect(find.text(fr.safeboxDownload), findsOneWidget);
+    expect(tester.takeException(), isNull, reason: 'les actions tiennent dans la largeur de l\'écran');
+    await tester.tap(find.text(fr.safeboxShareSave));
+    await laisserFaire(tester);
+    expect(find.text(fr.safeboxShareSaved), findsOneWidget);
+    // Masquer puis rouvrir les barres n'oublie pas ce qui est gardé (au-dessus
+    // du centre : ici, le téléchargement échoue et « Réessayer » s'y trouve).
+    await tester.tapAt(tester.getCenter(find.byType(PageView)) - const Offset(0, 200));
+    await laisserFaire(tester);
+    expect(find.text(fr.safeboxShareSaved), findsNothing);
+    await tester.tapAt(tester.getCenter(find.byType(PageView)) - const Offset(0, 200));
+    await laisserFaire(tester);
+    expect(find.text(fr.safeboxShareSaved), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    tester.takeException(); // le téléchargement réel n'a pas de disque ici
+  });
+
+  testWidgets('album reçu : un document garde sa fiche, sans « Voir »', (tester) async {
+    await monter(tester, const SafeboxSharedAlbumScreen(shareId: 9, title: 'Kribi 2026'));
+    await tester.tap(find.byType(SafeboxGridTile).at(2));
+    await tester.pumpAndSettle();
+    expect(find.byType(SafeboxViewerScreen), findsNothing);
+    expect(find.text(fr.safeboxSharedDownloadPlay), findsOneWidget);
+    expect(find.text(fr.safeboxSharedView), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('photo reçue seule : « Voir » ouvre la visionneuse, « Télécharger » reste à part', (tester) async {
+    await monter(
+      tester,
+      SafeboxSharedFileScreen(shareId: 9, item: SafeboxShareItem.fromJson(9, element(91, 0, 'Plage.jpg', 'photos'))),
+      settle: false,
+    );
+    await laisserFaire(tester);
+    expect(find.text(fr.safeboxDownload), findsOneWidget);
+    await tester.tap(find.text(fr.safeboxSharedView));
+    await laisserFaire(tester);
+    expect(find.byType(SafeboxViewerScreen), findsOneWidget);
+    expect(find.text('1 / 1'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    tester.takeException();
   });
 
   testWidgets('carte chez l\'expéditeur, puis le suivi', (tester) async {
