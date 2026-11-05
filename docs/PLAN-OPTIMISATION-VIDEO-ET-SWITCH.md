@@ -11,7 +11,9 @@ Réglage « Appels vidéo » dans Profil › Réseau et données :
 | Haute définition | 1280 × 720 | 30 i/s | 2,5 Mbit/s | Alanya Plus (`video_hd`) |
 | Full HD | 1920 × 1080 | 30 i/s | 5 Mbit/s | Alanya Plus (`video_hd`) |
 
-La cadence du niveau vaut pour la caméra et pour le plafond de l'encodeur.
+La cadence du niveau est le plafond de l'encodeur. La caméra est toujours
+ouverte à 30 i/s : lui demander 20 faisait choisir à un Xiaomi la plage fixe
+`[10:10]`, mesurée à 10 i/s en 360p.
 `degradationPreference: maintain-framerate` : quand le débit manque, l'image
 perd en résolution, pas en fluidité. Sous ces plafonds, WebRTC s'adapte seul à
 la connexion.

@@ -190,6 +190,10 @@ class CallService extends ChangeNotifier {
   /// contrôle ne connaissait que « haut-parleur allumé / éteint » : avec un
   /// casque Bluetooth appairé, l'utilisateur ne savait pas où sortait le son.
   CallAudioRoute _audioRoute = CallAudioRoute.earpiece;
+
+  /// Compte les demandes de sortie audio : un rattrapage en cours s'arrête dès
+  /// qu'une demande plus récente est passée.
+  int _demandesDeRoute = 0;
   List<CallAudioRoute> _audioRoutes = const [
     CallAudioRoute.earpiece,
     CallAudioRoute.speaker,

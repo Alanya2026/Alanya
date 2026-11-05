@@ -320,8 +320,17 @@ extension CallControls on CallService {
   /// elle annonce encore l'ancienne sortie, et l'appui suivant recalculait la
   /// même cible. Il en fallait deux pour changer de sortie.
   Future<void> setAudioRoute(CallAudioRoute route) async {
-    // Lu avant l'aller-retour : c'est lui qui permet de reconnaître une
-    // relecture périmée, et il aura changé après.
+    // Cette demande prime sur le rattrapage en cours dans `_tenirRouteAudio`.
+    _demandesDeRoute++;
+    await _demanderRoute(route);
+  }
+
+  /// Demande [route] et retient la sortie qui en résulte.
+  ///
+  /// Rend `true` si Telecom a pris la demande, `false` si elle est partie par le
+  /// repli WebRTC.
+  Future<bool> _demanderRoute(CallAudioRoute route) async {
+    // Lu avant l'aller-retour : il aura changé après.
     final precedente = _audioRoute;
     final rapportee = await audio.AudioHelper.applyAudioRoute(
       route,
@@ -334,6 +343,7 @@ extension CallControls on CallService {
       precedente: precedente,
       demandee: route,
       rapportee: rapportee.routeName,
+      avantTelecom: rapportee.routeBeforeName,
     );
     _retenirRoute(effective);
     // La sortie audio dit où est le téléphone : sur l'écouteur interne, il est
@@ -343,6 +353,7 @@ extension CallControls on CallService {
     await CallSessionGuard.instance.updateAudioRoute(effective);
     debugPrint('[CallService] 🔊 Sortie audio: ${effective.name}');
     notify();
+    return rapportee.routeName != null;
   }
 
   /// Retient les sorties que le natif déclare atteignables.

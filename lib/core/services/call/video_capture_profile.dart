@@ -30,7 +30,8 @@ enum CallVideoQuality {
   final int width;
   final int height;
 
-  /// Images par seconde demandées à la caméra, et plafond de l'encodeur.
+  /// Plafond de cadence de l'encodeur, en images par seconde. La caméra, elle,
+  /// tourne à [kCallCaptureFps].
   final int frameRate;
 
   /// Plafond de l'encodeur, en bits/s.
@@ -47,13 +48,21 @@ enum CallVideoQuality {
   }
 }
 
+/// Cadence demandée à la caméra pour les appels individuels, à tous les niveaux.
+///
+/// La cadence d'un niveau se règle à l'encodeur, pas à la caméra : le plugin
+/// prend la plage de la caméra la plus proche, et demander 20 i/s faisait choisir
+/// à un Xiaomi la plage fixe `[10:10]`, mesurée à 10 i/s en 360p. À 30, les
+/// téléphones essayés prennent une plage variable, et l'encodeur écarte le surplus.
+const int kCallCaptureFps = 30;
+
 /// Cadence de capture des groupes et réunions. En maillage, la vidéo est
 /// encodée une fois par participant et sans plafond d'encodeur : on n'y monte
 /// pas à la cadence du niveau Standard.
 const int kConferenceCaptureFps = 24;
 
-/// Contraintes `getUserMedia` de la vidéo. [frameRate] remplace la cadence du
-/// niveau (conférences).
+/// Contraintes `getUserMedia` de la vidéo. [frameRate] remplace
+/// [kCallCaptureFps] (conférences).
 ///
 /// Des entiers, pas des maps `{ideal, min, max}` : flutter_webrtc 0.14 ne lit
 /// pas les maps sur Android (il retombe sur 1280 × 720 à 30 i/s) et n'y lit
@@ -67,7 +76,7 @@ Map<String, dynamic> videoCaptureConstraints({
   return <String, dynamic>{
     'width': q.width,
     'height': q.height,
-    'frameRate': frameRate ?? q.frameRate,
+    'frameRate': frameRate ?? kCallCaptureFps,
   };
 }
 

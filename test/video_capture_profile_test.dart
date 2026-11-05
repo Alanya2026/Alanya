@@ -13,7 +13,7 @@ void main() {
       expect(videoCaptureConstraints(quality: CallVideoQuality.low), {
         'width': 640,
         'height': 360,
-        'frameRate': 20,
+        'frameRate': 30,
       });
       expect(videoCaptureConstraints(quality: CallVideoQuality.hd), {
         'width': 1280,
@@ -25,6 +25,14 @@ void main() {
         'height': 1080,
         'frameRate': 30,
       });
+    });
+
+    // Demander 20 i/s à la caméra d'un Xiaomi lui faisait choisir la plage fixe
+    // [10:10]. La cadence d'un niveau se règle à l'encodeur.
+    test('le 360p filme à 30 i/s et l\'encodeur plafonne à 20', () {
+      expect(videoCaptureConstraints(quality: CallVideoQuality.low)['frameRate'],
+          kCallCaptureFps);
+      expect(CallVideoQuality.low.frameRate, 20);
     });
 
     test('en conférence, le Standard garde sa taille mais pas ses 30 i/s', () {

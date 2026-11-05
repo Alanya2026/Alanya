@@ -190,13 +190,59 @@ CallAudioRoute resolveAppliedRoute({
 ///
 /// Une relecture qui annonce une TROISIÈME sortie, elle, est un vrai arbitrage
 /// — un casque filaire qui impose sa loi — et doit être suivie.
+///
+/// [avantTelecom] est la sortie que Telecom tenait avant la demande ; elle
+/// prime sur [precedente], qui n'est que ce que l'application croyait. Les deux
+/// divergent à la première demande d'un appel : le haut-parleur a été posé par
+/// le chemin WebRTC alors que Telecom tient l'écouteur. Comparée à [precedente],
+/// cette relecture périmée passait pour un arbitrage : l'icône annonçait
+/// l'écouteur, et le capteur de proximité s'armait, alors que le son allait au
+/// haut-parleur.
 CallAudioRoute routeApresDemande({
   required CallAudioRoute precedente,
   required CallAudioRoute demandee,
   String? rapportee,
+  String? avantTelecom,
 }) {
   final lue = routeFromTelecomName(rapportee);
-  if (lue == null || lue == precedente) return demandee;
+  final tenue = routeFromTelecomName(avantTelecom) ?? precedente;
+  if (lue == null || lue == tenue) return demandee;
+  return lue;
+}
+
+/// Laisse à Telecom le temps d'appliquer une sortie avant de la vérifier :
+/// mesuré à 820 ms vers le haut-parleur sur un Xiaomi sous Android 16.
+const Duration kBattementRouteTelecom = Duration(milliseconds: 1200);
+
+/// Vérifie que Telecom a bien pris la sortie [voulue], et la redemande sinon.
+///
+/// Rend la sortie réellement tenue, que l'interface doit afficher, ou `null` si
+/// rien n'est connu ou si [valable] dit que la vérification n'a plus lieu d'être
+/// (fin d'appel, nouvelle demande de l'utilisateur).
+///
+/// Un casque filaire ou Bluetooth tenu par Telecom n'est jamais combattu : il a
+/// été branché par quelqu'un.
+Future<CallAudioRoute?> convergerRouteTelecom({
+  required CallAudioRoute voulue,
+  required Future<void> Function() redemander,
+  required Future<CallAudioRoute?> Function() lire,
+  required bool Function() valable,
+  Duration battement = kBattementRouteTelecom,
+  int essais = 3,
+}) async {
+  CallAudioRoute? lue;
+  for (var essai = 0; essai < essais; essai++) {
+    await Future<void>.delayed(battement);
+    if (!valable()) return null;
+    lue = await lire();
+    if (!valable() || lue == null) return null;
+    if (lue == voulue ||
+        lue == CallAudioRoute.wired ||
+        lue == CallAudioRoute.bluetooth) {
+      return lue;
+    }
+    if (essai < essais - 1) await redemander();
+  }
   return lue;
 }
 
