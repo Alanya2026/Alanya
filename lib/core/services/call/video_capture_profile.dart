@@ -4,23 +4,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../billing/entitlement_service.dart';
 import '../billing/entitlements.dart';
 
-/// Qualité de la vidéo ENVOYÉE pendant un appel individuel : taille de capture
-/// de la caméra et plafond de débit de l'encodeur.
+/// Qualité de la vidéo ENVOYÉE pendant un appel individuel : taille et cadence
+/// de capture de la caméra, plafonds de cadence et de débit de l'encodeur.
 ///
 /// On fixe la capture au lieu de laisser le téléphone filmer en 720p et
 /// WebRTC tout recompresser : une image trop grande, écrasée pour passer sur
 /// un réseau faible, rend des mouvements saccadés. Sous ce plafond, WebRTC
 /// continue de s'adapter seul à la connexion.
 enum CallVideoQuality {
-  low('low', 640, 360, 400000),
-  standard('standard', 640, 480, 1000000),
-  hd('hd', 1280, 720, 2000000);
+  low('low', 640, 360, 20, 600000),
+  // 848 et non 854 : un multiple de 16, mieux géré par les encodeurs matériels.
+  standard('standard', 848, 480, 30, 1200000),
+  hd('hd', 1280, 720, 30, 2500000);
 
-  const CallVideoQuality(this.code, this.width, this.height, this.maxBitrate);
+  const CallVideoQuality(
+    this.code,
+    this.width,
+    this.height,
+    this.frameRate,
+    this.maxBitrate,
+  );
 
   final String code;
   final int width;
   final int height;
+
+  /// Images par seconde demandées à la caméra, et plafond de l'encodeur.
+  final int frameRate;
 
   /// Plafond de l'encodeur, en bits/s.
   final int maxBitrate;
@@ -33,24 +43,27 @@ enum CallVideoQuality {
   }
 }
 
-/// Images par seconde demandées à la caméra.
-const int kCallVideoCaptureFps = 24;
+/// Cadence de capture des groupes et réunions. En maillage, la vidéo est
+/// encodée une fois par participant et sans plafond d'encodeur : on n'y monte
+/// pas à la cadence du niveau Standard.
+const int kConferenceCaptureFps = 24;
 
-/// Plafond d'images par seconde de l'encodeur.
-const int kCallVideoMaxFramerate = 30;
-
-/// Contraintes `getUserMedia` de la vidéo.
+/// Contraintes `getUserMedia` de la vidéo. [frameRate] remplace la cadence du
+/// niveau (conférences).
 ///
 /// Des entiers, pas des maps `{ideal, min, max}` : flutter_webrtc 0.14 ne lit
 /// pas les maps sur Android (il retombe sur 1280 × 720 à 30 i/s) et n'y lit
 /// `ideal` qu'en texte sur iOS. Le plugin choisit le format de caméra le plus
 /// proche de ces valeurs.
-Map<String, dynamic> videoCaptureConstraints({CallVideoQuality? quality}) {
+Map<String, dynamic> videoCaptureConstraints({
+  CallVideoQuality? quality,
+  int? frameRate,
+}) {
   final q = quality ?? CallVideoQualityPreferences.effective;
   return <String, dynamic>{
     'width': q.width,
     'height': q.height,
-    'frameRate': kCallVideoCaptureFps,
+    'frameRate': frameRate ?? q.frameRate,
   };
 }
 

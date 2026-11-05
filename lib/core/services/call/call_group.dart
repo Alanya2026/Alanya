@@ -262,6 +262,7 @@ extension CallGroup on CallService {
       isVideo ? CallType.video : CallType.audio,
       iceServers: iceServers,
       videoQuality: CallVideoQuality.standard,
+      captureFps: kConferenceCaptureFps,
     );
 
     // Même sortie audio que pour un appel 1-à-1, casque compris.

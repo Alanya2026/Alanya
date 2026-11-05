@@ -4,24 +4,26 @@
 
 Réglage « Appels vidéo » dans Profil › Réseau et données :
 
-| Niveau | Capture | Plafond encodeur | Accès |
-|---|---|---|---|
-| Basse résolution | 640 × 360 | 400 kbit/s | tous |
-| Standard (défaut) | 640 × 480 | 1 Mbit/s | tous |
-| Haute définition | 1280 × 720 | 2 Mbit/s | Alanya Plus (`video_hd`) |
+| Niveau | Capture | Cadence | Plafond encodeur | Accès |
+|---|---|---|---|---|
+| Basse résolution | 640 × 360 | 20 i/s | 600 kbit/s | tous |
+| Standard (défaut) | 848 × 480 | 30 i/s | 1,2 Mbit/s | tous |
+| Haute définition | 1280 × 720 | 30 i/s | 2,5 Mbit/s | Alanya Plus (`video_hd`) |
 
-Caméra à 24 i/s, encodeur plafonné à 30 i/s, `degradationPreference:
-maintain-framerate` : quand le débit manque, l'image perd en résolution, pas
-en fluidité. Sous ces plafonds, WebRTC s'adapte seul à la connexion.
+La cadence du niveau vaut pour la caméra et pour le plafond de l'encodeur.
+`degradationPreference: maintain-framerate` : quand le débit manque, l'image
+perd en résolution, pas en fluidité. Sous ces plafonds, WebRTC s'adapte seul à
+la connexion.
 
 Les contraintes `getUserMedia` sont des entiers : flutter_webrtc 0.14 ignore
 les maps `{ideal, min, max}` sur Android (repli 1280 × 720 à 30 i/s) et ne lit
 `ideal` qu'en texte sur iOS. Les paramètres de l'encodeur sont rejoués après
 chaque description locale (`WebRTCService._applyVideoSendParameters`).
 
-Appels de groupe et réunions : capture standard fixe, sans plafond d'encodeur
-pour l'instant. Sans le droit `video_hd`, un choix HD part en standard et
-reprend dès l'abonnement.
+Appels de groupe et réunions : capture standard fixe (848 × 480) à 24 i/s, sans
+plafond d'encodeur pour l'instant. Ils sont en maillage, avec un encodage par
+participant : 30 i/s y pèserait trop. Sans le droit `video_hd`, un choix HD part
+en standard et reprend dès l'abonnement.
 
 ## Transition audio → vidéo
 

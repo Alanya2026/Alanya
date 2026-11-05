@@ -127,13 +127,18 @@ class WebRTCService {
   /// séparément afin de lancer la capture sans attendre le réseau.
   ///
   /// [videoQuality] impose un niveau (conférence : standard) ; sinon, le
-  /// réglage de l'utilisateur.
+  /// réglage de l'utilisateur. [captureFps] remplace la cadence du niveau.
   Future<void> init(
     CallType type, {
     List<Map<String, dynamic>>? iceServers,
     CallVideoQuality? videoQuality,
+    int? captureFps,
   }) async {
-    await acquireLocalMedia(type, videoQuality: videoQuality);
+    await acquireLocalMedia(
+      type,
+      videoQuality: videoQuality,
+      captureFps: captureFps,
+    );
     await buildPeerConnection(type, iceServers: iceServers);
   }
 
@@ -147,6 +152,7 @@ class WebRTCService {
   Future<MediaStream> acquireLocalMedia(
     CallType type, {
     CallVideoQuality? videoQuality,
+    int? captureFps,
   }) async {
     try {
       debugPrint('[WebRTC] ========== Acquisition média ==========');
@@ -180,7 +186,11 @@ class WebRTCService {
       }
 
       debugPrint('[WebRTC] Appel à _getUserMedia...');
-      _localStream = await _getUserMedia(type, videoQuality: videoQuality);
+      _localStream = await _getUserMedia(
+        type,
+        videoQuality: videoQuality,
+        captureFps: captureFps,
+      );
       debugPrint(
         '[WebRTC] !! Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}',
       );
@@ -453,6 +463,7 @@ class WebRTCService {
   Future<MediaStream> _getUserMedia(
     CallType type, {
     CallVideoQuality? videoQuality,
+    int? captureFps,
   }) async {
     try {
       debugPrint(
@@ -486,7 +497,10 @@ class WebRTCService {
       final constraints = <String, dynamic>{
         'audio': audioConstraints,
         'video': type == CallType.video
-            ? videoCaptureConstraints(quality: _videoQuality)
+            ? videoCaptureConstraints(
+                quality: _videoQuality,
+                frameRate: captureFps,
+              )
             : false,
       };
 
@@ -645,14 +659,14 @@ class WebRTCService {
         if (encodings == null || encodings.isEmpty) continue;
         for (final encoding in encodings) {
           encoding.maxBitrate = _videoQuality.maxBitrate;
-          encoding.maxFramerate = kCallVideoMaxFramerate;
+          encoding.maxFramerate = _videoQuality.frameRate;
         }
         parameters.degradationPreference =
             RTCDegradationPreference.MAINTAIN_FRAMERATE;
         final applied = await sender.setParameters(parameters);
         debugPrint(
           '[WebRTC] 🎚 Encodeur vidéo ${_videoQuality.code}: '
-          '${_videoQuality.maxBitrate} bit/s, $kCallVideoMaxFramerate i/s max, '
+          '${_videoQuality.maxBitrate} bit/s, ${_videoQuality.frameRate} i/s max, '
           'appliqué=$applied',
         );
       }

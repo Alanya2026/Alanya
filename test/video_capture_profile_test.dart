@@ -6,27 +6,36 @@ void main() {
   group('contraintes de capture', () {
     test('des entiers, que flutter_webrtc lit sur Android et iOS', () {
       expect(videoCaptureConstraints(quality: CallVideoQuality.standard), {
-        'width': 640,
+        'width': 848,
         'height': 480,
-        'frameRate': 24,
+        'frameRate': 30,
       });
       expect(videoCaptureConstraints(quality: CallVideoQuality.low), {
         'width': 640,
         'height': 360,
-        'frameRate': 24,
+        'frameRate': 20,
       });
       expect(videoCaptureConstraints(quality: CallVideoQuality.hd), {
         'width': 1280,
         'height': 720,
-        'frameRate': 24,
+        'frameRate': 30,
       });
     });
 
+    test('en conférence, le Standard garde sa taille mais pas ses 30 i/s', () {
+      expect(
+        videoCaptureConstraints(
+          quality: CallVideoQuality.standard,
+          frameRate: kConferenceCaptureFps,
+        ),
+        {'width': 848, 'height': 480, 'frameRate': 24},
+      );
+    });
+
     test('plafonds de débit des captures du client', () {
-      expect(CallVideoQuality.low.maxBitrate, 400000);
-      expect(CallVideoQuality.standard.maxBitrate, 1000000);
-      expect(CallVideoQuality.hd.maxBitrate, 2000000);
-      expect(kCallVideoMaxFramerate, 30);
+      expect(CallVideoQuality.low.maxBitrate, 600000);
+      expect(CallVideoQuality.standard.maxBitrate, 1200000);
+      expect(CallVideoQuality.hd.maxBitrate, 2500000);
     });
 
     test('les contraintes retournées sont indépendantes', () {

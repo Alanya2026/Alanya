@@ -743,7 +743,10 @@ class MeetingService extends ChangeNotifier {
           'autoGainControl': true,
         },
         if (video)
-          'video': videoCaptureConstraints(quality: CallVideoQuality.standard),
+          'video': videoCaptureConstraints(
+            quality: CallVideoQuality.standard,
+            frameRate: kConferenceCaptureFps,
+          ),
       };
 
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -1019,7 +1022,10 @@ class MeetingService extends ChangeNotifier {
 
       if (isVideoMeeting) {
         constraints['video'] = {
-          ...videoCaptureConstraints(quality: CallVideoQuality.standard),
+          ...videoCaptureConstraints(
+            quality: CallVideoQuality.standard,
+            frameRate: kConferenceCaptureFps,
+          ),
         };
       }
 
