@@ -1332,6 +1332,8 @@
   "callVideoQualityStandardSubtitle": "480p — 推荐",
   "callVideoQualityHd": "高清",
   "callVideoQualityHdSubtitle": "720p — Alanya Plus",
+  "callVideoQualityFullHd": "全高清",
+  "callVideoQualityFullHdSubtitle": "1080p — Alanya Plus",
   "callVideoQualityNote": "下次通话生效。画质始终会根据网络自动调整。",
   "plusFeatureVideoHd": "高清视频通话",
   "paywallVideoHdTitle": "高清视频通话",

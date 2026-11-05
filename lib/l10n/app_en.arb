@@ -1927,6 +1927,8 @@
   "callVideoQualityStandardSubtitle": "480p — recommended",
   "callVideoQualityHd": "High definition",
   "callVideoQualityHdSubtitle": "720p — Alanya Plus",
+  "callVideoQualityFullHd": "Full HD",
+  "callVideoQualityFullHdSubtitle": "1080p — Alanya Plus",
   "callVideoQualityNote": "Applies from the next call. Quality always adapts to your connection.",
   "plusFeatureVideoHd": "HD video calls",
   "paywallVideoHdTitle": "HD video calls",

@@ -9,6 +9,7 @@ Réglage « Appels vidéo » dans Profil › Réseau et données :
 | Basse résolution | 640 × 360 | 20 i/s | 600 kbit/s | tous |
 | Standard (défaut) | 848 × 480 | 30 i/s | 1,2 Mbit/s | tous |
 | Haute définition | 1280 × 720 | 30 i/s | 2,5 Mbit/s | Alanya Plus (`video_hd`) |
+| Full HD | 1920 × 1080 | 30 i/s | 5 Mbit/s | Alanya Plus (`video_hd`) |
 
 La cadence du niveau vaut pour la caméra et pour le plafond de l'encodeur.
 `degradationPreference: maintain-framerate` : quand le débit manque, l'image
@@ -22,8 +23,8 @@ chaque description locale (`WebRTCService._applyVideoSendParameters`).
 
 Appels de groupe et réunions : capture standard fixe (848 × 480) à 24 i/s, sans
 plafond d'encodeur pour l'instant. Ils sont en maillage, avec un encodage par
-participant : 30 i/s y pèserait trop. Sans le droit `video_hd`, un choix HD part
-en standard et reprend dès l'abonnement.
+participant : 30 i/s y pèserait trop. Sans le droit `video_hd`, un choix HD ou
+Full HD part en standard et reprend dès l'abonnement.
 
 ## Transition audio → vidéo
 

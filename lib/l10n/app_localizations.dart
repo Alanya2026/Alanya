@@ -7930,6 +7930,18 @@ abstract class AppLocalizations {
   /// **'720p — Alanya Plus'**
   String get callVideoQualityHdSubtitle;
 
+  /// No description provided for @callVideoQualityFullHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Full HD'**
+  String get callVideoQualityFullHd;
+
+  /// No description provided for @callVideoQualityFullHdSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'1080p — Alanya Plus'**
+  String get callVideoQualityFullHdSubtitle;
+
   /// No description provided for @callVideoQualityNote.
   ///
   /// In fr, this message translates to:

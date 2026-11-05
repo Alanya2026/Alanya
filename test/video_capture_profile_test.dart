@@ -20,6 +20,11 @@ void main() {
         'height': 720,
         'frameRate': 30,
       });
+      expect(videoCaptureConstraints(quality: CallVideoQuality.fullHd), {
+        'width': 1920,
+        'height': 1080,
+        'frameRate': 30,
+      });
     });
 
     test('en conférence, le Standard garde sa taille mais pas ses 30 i/s', () {
@@ -36,6 +41,7 @@ void main() {
       expect(CallVideoQuality.low.maxBitrate, 600000);
       expect(CallVideoQuality.standard.maxBitrate, 1200000);
       expect(CallVideoQuality.hd.maxBitrate, 2500000);
+      expect(CallVideoQuality.fullHd.maxBitrate, 5000000);
     });
 
     test('les contraintes retournées sont indépendantes', () {
@@ -53,6 +59,24 @@ void main() {
       expect(CallVideoQuality.fromCode(null), CallVideoQuality.standard);
       expect(CallVideoQuality.fromCode('4k'), CallVideoQuality.standard);
       expect(CallVideoQuality.fromCode('hd'), CallVideoQuality.hd);
+      expect(CallVideoQuality.fromCode('fullhd'), CallVideoQuality.fullHd);
+    });
+
+    test('sans Alanya Plus, le Full HD part en standard', () {
+      expect(
+        CallVideoQualityPreferences.effectiveFor(
+          CallVideoQuality.fullHd,
+          hdAllowed: false,
+        ),
+        CallVideoQuality.standard,
+      );
+      expect(
+        CallVideoQualityPreferences.effectiveFor(
+          CallVideoQuality.fullHd,
+          hdAllowed: true,
+        ),
+        CallVideoQuality.fullHd,
+      );
     });
 
     test('sans Alanya Plus, la HD part en standard', () {

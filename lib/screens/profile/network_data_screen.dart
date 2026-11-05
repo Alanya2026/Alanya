@@ -57,9 +57,9 @@ class NetworkDataScreen extends StatelessWidget {
   }
 }
 
-/// Basse résolution, standard (par défaut) ou HD, réservée à Alanya Plus.
-/// Sans le droit, la HD enregistrée reste gardée mais l'écran montre le
-/// niveau réellement appliqué : le standard.
+/// Basse résolution, standard (par défaut), HD ou Full HD, ces deux dernières
+/// réservées à Alanya Plus. Sans le droit, le choix enregistré reste gardé mais
+/// l'écran montre le niveau réellement appliqué : le standard.
 class _CallVideoQualityGroup extends StatelessWidget {
   const _CallVideoQualityGroup();
 
@@ -87,6 +87,10 @@ class _CallVideoQualityGroup extends StatelessWidget {
               l10n.callVideoQualityHd,
               l10n.callVideoQualityHdSubtitle,
             ),
+          CallVideoQuality.fullHd => (
+              l10n.callVideoQualityFullHd,
+              l10n.callVideoQualityFullHdSubtitle,
+            ),
         };
 
     return SettingsGroup(
@@ -95,8 +99,7 @@ class _CallVideoQualityGroup extends StatelessWidget {
         groupValue: shown,
         onChanged: (q) {
           if (q == null) return;
-          if (q == CallVideoQuality.hd &&
-              !guardPlus(context, PlusFeature.videoHd)) {
+          if (q.requiresPlus && !guardPlus(context, PlusFeature.videoHd)) {
             return;
           }
           prefs.setQuality(q);
@@ -108,7 +111,7 @@ class _CallVideoQualityGroup extends StatelessWidget {
                 value: q,
                 title: Text(copy(q).$1),
                 subtitle: Text(copy(q).$2),
-                secondary: q == CallVideoQuality.hd && !hdAllowed
+                secondary: q.requiresPlus && !hdAllowed
                     ? Icon(
                         Icons.workspace_premium_outlined,
                         color: context.colors.primary,

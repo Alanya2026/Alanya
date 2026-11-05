@@ -15,7 +15,8 @@ enum CallVideoQuality {
   low('low', 640, 360, 20, 600000),
   // 848 et non 854 : un multiple de 16, mieux géré par les encodeurs matériels.
   standard('standard', 848, 480, 30, 1200000),
-  hd('hd', 1280, 720, 30, 2500000);
+  hd('hd', 1280, 720, 30, 2500000),
+  fullHd('fullhd', 1920, 1080, 30, 5000000);
 
   const CallVideoQuality(
     this.code,
@@ -34,6 +35,9 @@ enum CallVideoQuality {
 
   /// Plafond de l'encodeur, en bits/s.
   final int maxBitrate;
+
+  /// Réservé à Alanya Plus ([PlusFeature.videoHd]).
+  bool get requiresPlus => this == hd || this == fullHd;
 
   static CallVideoQuality fromCode(String? code) {
     for (final q in values) {
@@ -69,9 +73,9 @@ Map<String, dynamic> videoCaptureConstraints({
 
 /// Choix de qualité vidéo des appels, réglé dans Réseau et données.
 ///
-/// La HD est réservée à Alanya Plus ([PlusFeature.videoHd]) : sans ce droit,
-/// l'appel part en Standard, mais le choix enregistré est gardé et reprend
-/// dès l'abonnement.
+/// La HD et le Full HD sont réservés à Alanya Plus ([PlusFeature.videoHd]) :
+/// sans ce droit, l'appel part en Standard, mais le choix enregistré est gardé
+/// et reprend dès l'abonnement.
 class CallVideoQualityPreferences extends ChangeNotifier {
   static const _kQualityKey = 'call_video_quality';
 
@@ -85,7 +89,7 @@ class CallVideoQualityPreferences extends ChangeNotifier {
     _bound = this;
   }
 
-  /// Le niveau choisi, HD compris même si le droit manque.
+  /// Le niveau choisi, HD et Full HD compris même si le droit manque.
   CallVideoQuality get quality => _quality;
 
   static CallVideoQuality get chosen => _bound?._quality ?? _cached;
@@ -100,9 +104,7 @@ class CallVideoQualityPreferences extends ChangeNotifier {
     CallVideoQuality chosen, {
     required bool hdAllowed,
   }) =>
-      chosen == CallVideoQuality.hd && !hdAllowed
-          ? CallVideoQuality.standard
-          : chosen;
+      chosen.requiresPlus && !hdAllowed ? CallVideoQuality.standard : chosen;
 
   static Future<void> preload() async {
     if (_prefsLoaded) return;

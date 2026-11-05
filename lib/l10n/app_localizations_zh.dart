@@ -4336,6 +4336,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
 
   @override
+  String get callVideoQualityFullHd => '全高清';
+
+  @override
+  String get callVideoQualityFullHdSubtitle => '1080p — Alanya Plus';
+
+  @override
   String get callVideoQualityNote => '下次通话生效。画质始终会根据网络自动调整。';
 
   @override

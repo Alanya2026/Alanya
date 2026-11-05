@@ -4474,6 +4474,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
 
   @override
+  String get callVideoQualityFullHd => 'Full HD';
+
+  @override
+  String get callVideoQualityFullHdSubtitle => '1080p — Alanya Plus';
+
+  @override
   String get callVideoQualityNote =>
       'Applies from the next call. Quality always adapts to your connection.';
 
