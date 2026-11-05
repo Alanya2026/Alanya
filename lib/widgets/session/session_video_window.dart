@@ -114,7 +114,7 @@ class _SessionVideoWindowState extends State<SessionVideoWindow> {
               )
             : RTCVideoView(
                 renderer,
-                mirror: isLocal,
+                mirror: isLocal && _renderers.mirrorLocal,
                 objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
       ),

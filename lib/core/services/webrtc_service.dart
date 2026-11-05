@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../theme/locale_controller.dart';
 import 'call/call_permissions_helper.dart';
+import 'call/session_video_renderers.dart';
 import 'call/video_capture_profile.dart';
 
 enum CallType { audio, video }
@@ -191,6 +192,7 @@ class WebRTCService {
         videoQuality: videoQuality,
         captureFps: captureFps,
       );
+      SessionVideoRenderers.instance.setLocalCameraFront(true);
       debugPrint(
         '[WebRTC] !! Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}',
       );
@@ -227,6 +229,7 @@ class WebRTCService {
       final track = tracks.first;
       await stream.addTrack(track);
       await pc.addTrack(track, stream);
+      SessionVideoRenderers.instance.setLocalCameraFront(true);
       onLocalStream?.call(stream);
       return track;
     } catch (error) {
@@ -940,7 +943,8 @@ class WebRTCService {
       return;
     }
     try {
-      await Helper.switchCamera(tracks.first);
+      final isFront = await Helper.switchCamera(tracks.first);
+      SessionVideoRenderers.instance.setLocalCameraFront(isFront);
     } catch (e) {
       debugPrint('[WebRTC] ** switchCamera: $e');
     }

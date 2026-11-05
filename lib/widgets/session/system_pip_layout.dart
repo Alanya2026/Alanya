@@ -56,7 +56,7 @@ class _SystemPipLayoutState extends State<SystemPipLayout> {
       mirror = false;
     } else if (local != null && local.srcObject != null && local.videoWidth > 0) {
       renderer = local;
-      mirror = true;
+      mirror = _renderers.mirrorLocal;
     } else {
       renderer = null;
       mirror = false;
