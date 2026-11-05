@@ -993,7 +993,7 @@ sa reconnexion~; en parall\`{e}le une notification FCM est \'{e}mise pour le r\'
 
 \section{WebRTC --- STUN\,/\,TURN\,/\,ICE}
 L'endpoint \texttt{GET /api/turn/credentials} fournit la liste des serveurs ICE.
-Deux serveurs STUN Google sont toujours inclus~; les serveurs TURN proviennent
+Les STUN \texttt{turn.kemita.eu} et \texttt{turn.alanya226.com} sont toujours inclus, suivis de deux STUN Google en secours~; les serveurs TURN proviennent
 de la variable \texttt{TURN\_SERVERS}. Si \texttt{TURN\_SECRET} est d\'{e}fini, des
 identifiants \textbf{\'{e}ph\'{e}m\`{e}res} (HMAC-SHA1, TTL \texttt{TURN\_TTL\_SEC}, 3600~s par
 d\'{e}faut) sont g\'{e}n\'{e}r\'{e}s par utilisateur~; sinon les identifiants statiques de la
@@ -1780,16 +1780,17 @@ JWT_REFRESH_SECRET=a3e9c2b1d8f4e7a0b5c6d2e1f3a4b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f
 # Firebase (projet Alanya-2026) -- cle de service : voir serviceAccountKey.json
 FIREBASE_PROJECT_ID=Alanya-2026
 
-# TURN / ICE
-TURN_SERVERS=[{"urls":["turn:global.relay.metered.ca:80",
-  "turn:global.relay.metered.ca:80?transport=tcp",
-  "turn:global.relay.metered.ca:443",
-  "turns:global.relay.metered.ca:443?transport=tcp"],
-  "username":"eebff34aa8046efc8b4e72aa","credential":"1DBkqNdITDjuFXyQ"},
-  {"urls":["turn:76.13.44.253:3478?transport=tcp"],
-  "username":"alanya","credential":"alanya2026"}]
-# TURN_SECRET=...     (active des identifiants ephemeres si defini)
-# TURN_TTL_SEC=3600
+# TURN / ICE (coturn, identifiants ephemeres HMAC)
+TURN_SECRET=...       (secret partage avec les coturn)
+TURN_TTL_SEC=86400
+TURN_SERVERS=[{"urls":["stun:turn.kemita.eu:3478",
+  "turn:turn.kemita.eu:3478?transport=udp",
+  "turn:turn.kemita.eu:3478?transport=tcp",
+  "turns:turn.kemita.eu:443?transport=tcp"],"auth":"hmac"},
+  {"urls":["stun:turn.alanya226.com:3478",
+  "turn:turn.alanya226.com:3478?transport=udp",
+  "turn:turn.alanya226.com:3478?transport=tcp",
+  "turns:turn.alanya226.com:443?transport=tcp"],"auth":"hmac"}]
 
 # Base URL
 BASE_URL=https://158.220.107.211
