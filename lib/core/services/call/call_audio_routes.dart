@@ -71,6 +71,19 @@ CallAudioRoute defaultAudioRoute({
   return isVideo ? CallAudioRoute.speaker : CallAudioRoute.earpiece;
 }
 
+/// Sortie à demander quand un appel passe en vidéo, ou `null` s'il n'y a rien à
+/// changer.
+///
+/// Une vidéo se regarde à distance : le son ne peut pas rester sur l'écouteur.
+/// Un casque reste en place, et un appel déjà vidéo garde le choix de
+/// l'utilisateur : rallumer sa caméra ne doit pas lui imposer le haut-parleur.
+CallAudioRoute? routeForVideoUpgrade({
+  required CallAudioRoute current,
+  required bool wasAlreadyVideo,
+}) => !wasAlreadyVideo && current == CallAudioRoute.earpiece
+    ? CallAudioRoute.speaker
+    : null;
+
 /// Sortie suivante quand on appuie sur le bouton.
 ///
 /// Simple rotation dans l'ordre d'affichage : avec deux routes le bouton reste

@@ -259,7 +259,14 @@ extension CallOneToOne on CallService {
     }
 
     try {
-      final type = _isVideo ? CallType.video : CallType.audio;
+      // Caméra coupée pendant la sonnerie : on répond sans l'ouvrir. L'appel reste
+      // vidéo, on reçoit celle du correspondant, et le bouton caméra ouvrira la
+      // nôtre par renégociation.
+      final answerWithoutCamera = _isVideo && _ringCameraOff;
+      if (answerWithoutCamera) _isVideoOn = false;
+      final type = _isVideo && !answerWithoutCamera
+          ? CallType.video
+          : CallType.audio;
       _webrtc.onLocalStream = (_) {
         notify();
       };
@@ -403,6 +410,17 @@ extension CallOneToOne on CallService {
       // entre-temps repassait « connecté » sous un identifiant fabriqué par
       // `_ensureCallId`, et la fin d'appel du serveur ne le reconnaissait plus.
       if (!await appelToujoursLa()) return;
+
+      // Le serveur ne relaie nos candidats qu'une fois `answer_call` traité. Or
+      // les premiers naissent juste avant son envoi, et WebRTC ne les réémet
+      // jamais : sans ce rejeu, ICE perdait les chemins les plus rapides.
+      _replayOutgoingIce();
+      if (answerWithoutCamera) {
+        _apiClient.sendSocketEvent(SocketEvents.callVideoState, {
+          'toUserId': _remoteUserId,
+          'isVideoOn': false,
+        });
+      }
 
       _status = CallStatus.connected;
       _startDurationTimer();
@@ -653,6 +671,8 @@ extension CallOneToOne on CallService {
     _callDuration = 0;
     _isMuted = false;
     _isVideoOn = true;
+    _ringCameraOff = false;
+    unawaited(_webrtc.closeRingPreview());
     _isSpeakerOn = false;
     _stopWatchingAudioOutputs();
     _audioRoute = CallAudioRoute.earpiece;

@@ -439,6 +439,13 @@ class CallService extends ChangeNotifier {
   List<CallAudioRoute> get availableAudioRoutes =>
       List.unmodifiable(_audioRoutes);
   bool get isVideoOn => _isVideoOn;
+
+  /// L'utilisateur a coupé sa caméra pendant que l'appel sonnait.
+  bool _ringCameraOff = false;
+  bool get isRingCameraOff => _ringCameraOff;
+
+  /// Caméra ouverte pendant la sonnerie, tant que l'appel n'est pas décroché.
+  MediaStream? get ringPreviewStream => _webrtc.ringPreviewStream;
   bool get isRemoteMuted => _isRemoteMuted;
   bool get isRemoteVideoOn => _isRemoteVideoOn;
   int get callDuration => _callDuration;

@@ -26,6 +26,21 @@ plafond d'encodeur pour l'instant. Ils sont en maillage, avec un encodage par
 participant : 30 i/s y pèserait trop. Sans le droit `video_hd`, un choix HD ou
 Full HD part en standard et reprend dès l'abonnement.
 
+## Sonnerie d'un appel vidéo
+
+L'appelant ouvre sa caméra et son micro avant que la ligne ne sonne. L'appelé
+ouvre sa caméra dès la sonnerie, quand l'écran d'appel de l'application est
+affiché et que la permission est déjà accordée : aperçu en fond d'écran, bouton
+pour la couper avant de décrocher, reprise de la même capture au décrochage.
+
+- **Rien ne sort avant le décrochage** : aucune PeerConnection n'existe encore.
+- **Le micro attend le décrochage** : `getUserMedia` audio prend le focus audio
+  et couperait la sonnerie. Il reste la première chose ouverte après le tap.
+- **Application en arrière-plan ou écran système** : Android refuse la caméra,
+  elle s'ouvre au décrochage.
+- **Décroché caméra coupée** : l'appel reste vidéo sans piste locale, le bouton
+  caméra l'ajoute par la renégociation de la transition audio → vidéo.
+
 ## Transition audio → vidéo
 
 La transition est active par défaut ; `--dart-define=CALL_AUDIO_TO_VIDEO=false`
@@ -33,7 +48,8 @@ la coupe. Elle est limitée aux appels individuels déjà connectés :
 
 1. l'appelant confirme localement puis acquiert uniquement sa caméra ;
 2. une offre/réponse SDP dédiée est relayée sur l'appel existant ;
-3. l'appel audio, le micro, la route, le `callId` et la durée sont conservés ;
+3. l'appel audio, le micro, le `callId` et la durée sont conservés ; le son passe
+   de l'écouteur au haut-parleur, un casque reste en place ;
 4. le correspondant reçoit la vidéo sans ouvrir sa caméra ;
 5. un échec, un timeout ou un refus conserve l'audio et arrête la piste
    nouvellement acquise.

@@ -29,6 +29,86 @@ class WebRTCService {
 
   /// Qualité de la caméra ouverte pour cet appel : l'encodeur suit la même.
   CallVideoQuality _videoQuality = CallVideoQuality.standard;
+
+  /// Caméra ouverte pendant la sonnerie d'un appel vidéo entrant.
+  ///
+  /// Rien ne peut en sortir : aucune PeerConnection n'existe avant le décrochage.
+  MediaStream? _ringPreviewStream;
+  MediaStream? get ringPreviewStream => _ringPreviewStream;
+
+  /// Ouvrir, fermer et reprendre s'exécutent l'un après l'autre : ouvrir deux
+  /// fois la même caméra évincerait la capture qui sert à l'appel.
+  Future<void> _ringPreviewOps = Future<void>.value();
+
+  Future<void> _enqueueRingPreview(Future<void> Function() op) {
+    return _ringPreviewOps = _ringPreviewOps
+        .then((_) => op())
+        .catchError((Object e) {
+          debugPrint('[WebRTC] ** caméra de sonnerie: $e');
+        });
+  }
+
+  Future<void> openRingPreview() => _enqueueRingPreview(() async {
+    if (_ringPreviewStream != null) return;
+    _ringPreviewStream = await navigator.mediaDevices.getUserMedia({
+      'audio': false,
+      'video': videoCaptureConstraints(
+        quality: CallVideoQualityPreferences.effective,
+      ),
+    });
+  });
+
+  Future<void> closeRingPreview() => _enqueueRingPreview(() async {
+    final stream = _ringPreviewStream;
+    if (stream == null) return;
+    _ringPreviewStream = null;
+    for (final track in stream.getTracks()) {
+      await track.stop();
+    }
+  });
+
+  /// Reprend la piste de la caméra de sonnerie, ou `null` s'il n'y en a pas.
+  Future<MediaStreamTrack?> _takeRingPreviewTrack() async {
+    await _ringPreviewOps;
+    final tracks =
+        _ringPreviewStream?.getVideoTracks() ?? const <MediaStreamTrack>[];
+    _ringPreviewStream = null;
+    return tracks.isEmpty ? null : tracks.first;
+  }
+
+  /// Ouvre le micro et la caméra, en reprenant la caméra déjà ouverte pendant
+  /// la sonnerie : c'est ce qui évite de la rallumer au décrochage. Le micro,
+  /// lui, ne s'ouvre qu'ici : `getUserMedia` audio prend le focus audio et
+  /// couperait la sonnerie.
+  Future<MediaStream> _captureLocalMedia(
+    CallType type, {
+    CallVideoQuality? videoQuality,
+    int? captureFps,
+  }) async {
+    if (type != CallType.video) await closeRingPreview();
+    final previewTrack = type == CallType.video
+        ? await _takeRingPreviewTrack()
+        : null;
+    if (previewTrack == null) {
+      return _getUserMedia(
+        type,
+        videoQuality: videoQuality,
+        captureFps: captureFps,
+      );
+    }
+    try {
+      final stream = await _getUserMedia(
+        CallType.audio,
+        videoQuality: videoQuality,
+      );
+      await stream.addTrack(previewTrack);
+      return stream;
+    } catch (_) {
+      await previewTrack.stop();
+      rethrow;
+    }
+  }
+
   static const int _maxPendingIce = 64;
   static const Duration _pendingIceTtl = Duration(seconds: 30);
   bool _replaceAudioLock = false;
@@ -187,7 +267,7 @@ class WebRTCService {
       }
 
       debugPrint('[WebRTC] Appel à _getUserMedia...');
-      _localStream = await _getUserMedia(
+      _localStream = await _captureLocalMedia(
         type,
         videoQuality: videoQuality,
         captureFps: captureFps,
@@ -955,6 +1035,7 @@ class WebRTCService {
   Future<void> dispose() async {
     try {
       debugPrint('[WebRTC] == Nettoyage WebRTC...');
+      await closeRingPreview();
       clearPendingIce();
       _remoteDescriptionSet = false;
       _iceGeneration = 0;
