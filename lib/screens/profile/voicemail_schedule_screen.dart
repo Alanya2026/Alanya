@@ -8,12 +8,15 @@ import '../../core/db/app_database.dart';
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/services/call/voicemail_greeting_player.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/entitlements.dart';
 import '../../core/services/call/voicemail_provider.dart';
 import '../../core/services/local_cache_repository.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/contact_list_display.dart';
 import '../../talky_models.dart';
+import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/calls/greeting_recorder_sheet.dart';
 import '../../widgets/profile/settings_group.dart';
 import 'pick_contact_list_sheet.dart';
@@ -66,6 +69,12 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
 
   VoicemailSchedule get _schedule =>
       context.read<VoicemailProvider>().schedule ?? const VoicemailSchedule();
+
+  /// Allumer un mode demande Alanya Plus ; éteindre, jamais.
+  Future<void> _allumer(String champ, bool valeur) async {
+    if (valeur && !guardPlus(context, PlusFeature.voicemail)) return;
+    await _patch({champ: valeur});
+  }
 
   Future<void> _patch(Map<String, dynamic> patch) async {
     try {
@@ -244,6 +253,20 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
           : ListView(
               children: [
                 AppSpacing.vGapLg,
+                if (!context
+                    .watch<EntitlementService>()
+                    .has(PlusFeature.voicemail)) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
+                    child: PlusLockedBanner(
+                      feature: PlusFeature.voicemail,
+                      text: l10n.plusLockedVoicemail,
+                    ),
+                  ),
+                  AppSpacing.vGapLg,
+                ],
                 // L'état courant en premier : c'est la question que se pose
                 // celui qui ouvre cet écran — « est-ce que ça tourne, là ? ».
                 if (vm.isActive) _carteEtatCourant(vm),
@@ -256,7 +279,7 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
                     title: l10n.voicemailAfterDelay,
                     subtitle: l10n.voicemailAfterDelaySubtitle,
                     value: s.noAnswerEnabled,
-                    onChanged: (v) => _patch({'noAnswerEnabled': v}),
+                    onChanged: (v) => _allumer('noAnswerEnabled', v),
                   ),
                 ),
                 AppSpacing.vGapXxl,
@@ -268,7 +291,7 @@ class _VoicemailScheduleScreenState extends State<VoicemailScheduleScreen> {
                     title: l10n.voicemailSlotsEnabled,
                     subtitle: l10n.voicemailSlotsEnabledSubtitle,
                     value: s.enabled,
-                    onChanged: (v) => _patch({'enabled': v}),
+                    onChanged: (v) => _allumer('enabled', v),
                   ),
                 ),
                 if (s.enabled) _editeurDePlages(s),

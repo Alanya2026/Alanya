@@ -4494,6 +4494,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'High definition (720p) is part of Alanya Plus: the person you call sees you more sharply when the connection allows.';
 
   @override
+  String get plusFeatureVoicemail => 'Voicemail';
+
+  @override
+  String get paywallVoicemailTitle => 'Voicemail';
+
+  @override
+  String get paywallVoicemailBody =>
+      'Voicemail is part of Alanya Plus: during your chosen hours, your phone stays silent and callers leave you a message.';
+
+  @override
+  String get plusLockedVoicemail =>
+      'Voicemail is part of Alanya Plus. Your settings are kept and will come back when you subscribe; until then, your phone rings as usual.';
+
+  @override
   String get settingsSectionCommunication => 'Communication';
 
   @override

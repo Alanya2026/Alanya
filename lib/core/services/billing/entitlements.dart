@@ -22,7 +22,11 @@ enum PlusFeature {
   stickersPremium('stickers_premium'),
 
   /// Appels vidéo en 720p. Sans ce droit, l'appel part en qualité standard.
-  videoHd('video_hd');
+  videoHd('video_hd'),
+
+  /// Répondeur. Sans ce droit, le serveur n'intercepte plus les appels et
+  /// refuse de l'allumer ; l'éteindre reste toujours permis.
+  voicemail('voicemail');
 
   const PlusFeature(this.code);
   final String code;

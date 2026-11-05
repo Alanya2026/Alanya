@@ -4537,6 +4537,20 @@ class AppLocalizationsFr extends AppLocalizations {
       'La haute définition (720p) fait partie d\'Alanya Plus : votre correspondant vous voit plus net quand la connexion le permet.';
 
   @override
+  String get plusFeatureVoicemail => 'Répondeur';
+
+  @override
+  String get paywallVoicemailTitle => 'Le répondeur';
+
+  @override
+  String get paywallVoicemailBody =>
+      'Le répondeur fait partie d\'Alanya Plus : sur vos créneaux, le téléphone reste silencieux et vos correspondants vous laissent un message.';
+
+  @override
+  String get plusLockedVoicemail =>
+      'Le répondeur est réservé à Alanya Plus. Vos réglages sont conservés et reprendront dès l\'abonnement ; en attendant, votre téléphone sonne normalement.';
+
+  @override
   String get settingsSectionCommunication => 'Communication';
 
   @override

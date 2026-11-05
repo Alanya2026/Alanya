@@ -4354,6 +4354,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallVideoHdBody => '高清（720p）属于 Alanya Plus：网络允许时，对方能更清晰地看到您。';
 
   @override
+  String get plusFeatureVoicemail => '语音信箱';
+
+  @override
+  String get paywallVoicemailTitle => '语音信箱';
+
+  @override
+  String get paywallVoicemailBody =>
+      '语音信箱属于 Alanya Plus：在您选择的时段内手机保持安静，来电者可给您留言。';
+
+  @override
+  String get plusLockedVoicemail =>
+      '语音信箱为 Alanya Plus 专享功能。您的设置已保留，订阅后即可恢复；在此之前，手机会正常响铃。';
+
+  @override
   String get settingsSectionCommunication => '通讯';
 
   @override
