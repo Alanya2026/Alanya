@@ -451,7 +451,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
 
     if (isGroup) {
       if (_hasLocalVideo(cs)) {
-        return _PipVideo(renderer: _localRenderer!, mirror: true);
+        return _PipVideo(
+          renderer: _localRenderer!,
+          mirror: _renderers.mirrorLocal,
+        );
       }
       return _PipAvatar(name: localName, photoUrl: localPhoto);
     }
@@ -467,7 +470,10 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
     }
 
     if (_hasLocalVideo(cs)) {
-      return _PipVideo(renderer: _localRenderer!, mirror: true);
+      return _PipVideo(
+        renderer: _localRenderer!,
+        mirror: _renderers.mirrorLocal,
+      );
     }
     return _PipAvatar(name: localName, photoUrl: localPhoto);
   }
@@ -524,7 +530,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
       if (_hasLocalVideo(cs)) {
         return RTCVideoView(
           _localRenderer!,
-          mirror: true,
+          mirror: _renderers.mirrorLocal,
           objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
         );
       }
@@ -714,7 +720,7 @@ class _OngoingCallScreenState extends State<OngoingCallScreen>
                     isSpeaking: isLocal
                         ? cs.amISpeaking
                         : cs.activeSpeakers.contains(focusedId),
-                    mirror: isLocal,
+                    mirror: isLocal && _renderers.mirrorLocal,
                     onDismiss: _dismissFocus,
                   );
                 }

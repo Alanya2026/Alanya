@@ -7888,6 +7888,132 @@ abstract class AppLocalizations {
   /// **'Réduit la qualité et les téléchargements automatiques'**
   String get networkDataSaverSubtitle;
 
+  /// No description provided for @callVideoQualitySection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels vidéo'**
+  String get callVideoQualitySection;
+
+  /// No description provided for @callVideoQualityLow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Basse résolution'**
+  String get callVideoQualityLow;
+
+  /// No description provided for @callVideoQualityLowSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'360p — réseau faible, moins de données'**
+  String get callVideoQualityLowSubtitle;
+
+  /// No description provided for @callVideoQualityStandard.
+  ///
+  /// In fr, this message translates to:
+  /// **'Qualité standard'**
+  String get callVideoQualityStandard;
+
+  /// No description provided for @callVideoQualityStandardSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'480p — recommandé'**
+  String get callVideoQualityStandardSubtitle;
+
+  /// No description provided for @callVideoQualityHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Haute définition'**
+  String get callVideoQualityHd;
+
+  /// No description provided for @callVideoQualityHdSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'720p — Alanya Plus'**
+  String get callVideoQualityHdSubtitle;
+
+  /// No description provided for @callVideoQualityFullHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Full HD'**
+  String get callVideoQualityFullHd;
+
+  /// No description provided for @callVideoQualityFullHdSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'1080p — Alanya Plus'**
+  String get callVideoQualityFullHdSubtitle;
+
+  /// No description provided for @callVideoQualityNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'S\'applique au prochain appel. La qualité s\'adapte toujours à la connexion.'**
+  String get callVideoQualityNote;
+
+  /// No description provided for @plusFeatureVideoHd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels vidéo HD'**
+  String get plusFeatureVideoHd;
+
+  /// No description provided for @paywallVideoHdTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les appels vidéo en HD'**
+  String get paywallVideoHdTitle;
+
+  /// No description provided for @paywallVideoHdBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'La haute définition (720p) fait partie d\'Alanya Plus : votre correspondant vous voit plus net quand la connexion le permet.'**
+  String get paywallVideoHdBody;
+
+  /// No description provided for @plusFeatureCallFilter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtre d\'appels'**
+  String get plusFeatureCallFilter;
+
+  /// No description provided for @paywallCallFilterTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le filtre d\'appels'**
+  String get paywallCallFilterTitle;
+
+  /// No description provided for @paywallCallFilterBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le filtre d\'appels fait partie d\'Alanya Plus : seules les personnes de vos contacts peuvent vous appeler, les autres appels ne passent pas.'**
+  String get paywallCallFilterBody;
+
+  /// No description provided for @plusLockedCallFilter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le filtre d\'appels est réservé à Alanya Plus. Votre réglage est conservé et reprendra dès l\'abonnement ; en attendant, tout le monde peut vous appeler.'**
+  String get plusLockedCallFilter;
+
+  /// No description provided for @plusFeatureVoicemail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Répondeur'**
+  String get plusFeatureVoicemail;
+
+  /// No description provided for @paywallVoicemailTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le répondeur'**
+  String get paywallVoicemailTitle;
+
+  /// No description provided for @paywallVoicemailBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le répondeur fait partie d\'Alanya Plus : sur vos créneaux, le téléphone reste silencieux et vos correspondants vous laissent un message.'**
+  String get paywallVoicemailBody;
+
+  /// No description provided for @plusLockedVoicemail.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le répondeur est réservé à Alanya Plus. Vos réglages sont conservés et reprendront dès l\'abonnement ; en attendant, votre téléphone sonne normalement.'**
+  String get plusLockedVoicemail;
+
   /// No description provided for @settingsSectionCommunication.
   ///
   /// In fr, this message translates to:
@@ -8445,6 +8571,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Messages'**
   String get privacySectionMessages;
+
+  /// No description provided for @privacySectionCalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels'**
+  String get privacySectionCalls;
+
+  /// No description provided for @privacyCallFilter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls mes contacts peuvent m\'appeler'**
+  String get privacyCallFilter;
+
+  /// No description provided for @privacyCallFilterSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les personnes absentes de vos contacts ne pourront ni vous appeler, ni vous inviter à un appel de groupe.'**
+  String get privacyCallFilterSubtitle;
+
+  /// No description provided for @privacyCallFilterLockedSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus — les personnes absentes de vos contacts ne pourront plus vous appeler.'**
+  String get privacyCallFilterLockedSubtitle;
 
   /// No description provided for @privacySectionLists.
   ///

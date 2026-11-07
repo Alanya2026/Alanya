@@ -138,10 +138,8 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byIcon(Icons.more_horiz));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Activer le haut-parleur'));
-        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Activer le haut-parleur'));
+        await tester.pump();
 
         expect(tapped, 1);
       },
@@ -185,27 +183,20 @@ void main() {
       expect(find.byIcon(Icons.headset), findsOneWidget);
     });
 
-    testWidgets('en vidéo, la sortie audio reste atteignable par le menu', (
+    testWidgets('en vidéo, la sortie audio est dans la barre, à côté de la caméra', (
       tester,
     ) async {
       var tapped = 0;
       await tester.pumpWidget(bar(isVideo: true, onSpeaker: () => tapped += 1));
 
-      // Le deuxième bouton de la barre est la caméra en vidéo : sans entrée
-      // dans le menu, le haut-parleur — forcé à ON à l'init — ne pouvait plus
-      // jamais être coupé.
-      await tester.tap(find.byIcon(Icons.more_horiz));
-      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.videocam), findsOneWidget);
 
-      final entry = find.text('Activer le haut-parleur');
-      expect(entry, findsOneWidget);
-
-      await tester.tap(entry);
-      await tester.pumpAndSettle();
-      expect(tapped, 1, reason: 'l\'entrée doit réellement changer la sortie');
+      await tester.tap(find.bySemanticsLabel('Activer le haut-parleur'));
+      await tester.pump();
+      expect(tapped, 1, reason: 'le bouton doit réellement changer la sortie');
     });
 
-    testWidgets('avec trois sorties, le menu annonce le tour, pas la bascule', (
+    testWidgets('avec trois sorties, le bouton annonce le tour, pas la bascule', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -220,16 +211,36 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.more_horiz));
-      await tester.pumpAndSettle();
-
       expect(
-        find.textContaining('Changer la sortie audio'),
+        find.bySemanticsLabel(RegExp('Changer la sortie audio.*Bluetooth')),
         findsOneWidget,
         reason: '« Activer le haut-parleur » mentirait une fois sur deux',
       );
-      expect(find.text('Bluetooth'), findsOneWidget);
     });
+  });
+
+  test('la caméra ne s\'ouvre à la sonnerie qu\'en vidéo individuelle', () {
+    bool applies({
+      bool isVideo = true,
+      bool isGroup = false,
+      bool isConference = false,
+      bool cameraTurnedOff = false,
+    }) => shouldOpenCameraWhileRinging(
+      isVideo: isVideo,
+      isGroup: isGroup,
+      isConference: isConference,
+      cameraTurnedOff: cameraTurnedOff,
+    );
+
+    expect(applies(), isTrue);
+    expect(applies(isVideo: false), isFalse);
+    expect(applies(isGroup: true), isFalse);
+    expect(applies(isConference: true), isFalse);
+    expect(
+      applies(cameraTurnedOff: true),
+      isFalse,
+      reason: 'couper sa caméra avant de décrocher doit la fermer vraiment',
+    );
   });
 
   test(

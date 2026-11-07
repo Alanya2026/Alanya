@@ -258,7 +258,12 @@ extension CallGroup on CallService {
 
   Future<void> _initLocalStream(bool isVideo) async {
     final iceServers = await _apiClient.fetchIceServers();
-    await _webrtc.init(isVideo ? CallType.video : CallType.audio, iceServers: iceServers);
+    await _webrtc.init(
+      isVideo ? CallType.video : CallType.audio,
+      iceServers: iceServers,
+      videoQuality: CallVideoQuality.standard,
+      captureFps: kConferenceCaptureFps,
+    );
 
     // Même sortie audio que pour un appel 1-à-1, casque compris.
     await _initAudioRoute(isVideo: isVideo);

@@ -163,6 +163,7 @@ extension CallControls on CallService {
       )) {
         return;
       }
+      final wasAlreadyVideo = _isVideo;
       _isVideo = true;
       _isVideoOn = true;
       await CallSessionGuard.instance.updateMode(SessionMode.video);
@@ -174,6 +175,7 @@ extension CallControls on CallService {
       )) {
         return;
       }
+      await _routeAudioForVideoUpgrade(wasAlreadyVideo: wasAlreadyVideo);
       await _bindSessionRenderers();
       if (!_isCurrentVideoUpgrade(
         completer,
@@ -318,8 +320,17 @@ extension CallControls on CallService {
   /// elle annonce encore l'ancienne sortie, et l'appui suivant recalculait la
   /// même cible. Il en fallait deux pour changer de sortie.
   Future<void> setAudioRoute(CallAudioRoute route) async {
-    // Lu avant l'aller-retour : c'est lui qui permet de reconnaître une
-    // relecture périmée, et il aura changé après.
+    // Cette demande prime sur le rattrapage en cours dans `_tenirRouteAudio`.
+    _demandesDeRoute++;
+    await _demanderRoute(route);
+  }
+
+  /// Demande [route] et retient la sortie qui en résulte.
+  ///
+  /// Rend `true` si Telecom a pris la demande, `false` si elle est partie par le
+  /// repli WebRTC.
+  Future<bool> _demanderRoute(CallAudioRoute route) async {
+    // Lu avant l'aller-retour : il aura changé après.
     final precedente = _audioRoute;
     final rapportee = await audio.AudioHelper.applyAudioRoute(
       route,
@@ -332,6 +343,7 @@ extension CallControls on CallService {
       precedente: precedente,
       demandee: route,
       rapportee: rapportee.routeName,
+      avantTelecom: rapportee.routeBeforeName,
     );
     _retenirRoute(effective);
     // La sortie audio dit où est le téléphone : sur l'écouteur interne, il est
@@ -341,6 +353,7 @@ extension CallControls on CallService {
     await CallSessionGuard.instance.updateAudioRoute(effective);
     debugPrint('[CallService] 🔊 Sortie audio: ${effective.name}');
     notify();
+    return rapportee.routeName != null;
   }
 
   /// Retient les sorties que le natif déclare atteignables.
@@ -373,6 +386,56 @@ extension CallControls on CallService {
     _audioRoutes = availableAudioRoutes(kinds);
     await setAudioRoute(defaultAudioRoute(kinds: kinds, isVideo: isVideo));
     _watchAudioOutputs(isVideo: isVideo);
+  }
+
+  /// Aligne la sortie audio sur un appel qui vient de passer en vidéo.
+  Future<void> _routeAudioForVideoUpgrade({
+    required bool wasAlreadyVideo,
+  }) async {
+    if (kIsWeb) return;
+    _watchAudioOutputs(isVideo: true);
+    final route = routeForVideoUpgrade(
+      current: _audioRoute,
+      wasAlreadyVideo: wasAlreadyVideo,
+    );
+    if (route != null) await setAudioRoute(route);
+  }
+
+  /// Ouvre la caméra pendant qu'un appel vidéo individuel sonne, sans jamais
+  /// demander la permission : une boîte de dialogue ne doit pas recouvrir la
+  /// sonnerie. Sans permission, la caméra s'ouvrira au décrochage, comme avant.
+  Future<void> openRingCamera() async {
+    if (_status != CallStatus.incoming ||
+        !shouldOpenCameraWhileRinging(
+          isVideo: _isVideo,
+          isGroup: _groupRoomId != null,
+          isConference: isConference,
+          cameraTurnedOff: _ringCameraOff,
+        )) {
+      return;
+    }
+    if (!await CallPermissionsHelper.isCameraGranted()) return;
+    await _webrtc.openRingPreview();
+    notify();
+  }
+
+  /// Ferme la caméra de la sonnerie sans toucher au choix de l'utilisateur.
+  Future<void> closeRingCamera() async {
+    await _webrtc.closeRingPreview();
+    notify();
+  }
+
+  /// « Couper la caméra » pendant la sonnerie : l'appel sera décroché sans
+  /// ouvrir la caméra, jusqu'à ce que l'utilisateur la rallume en cours d'appel.
+  Future<void> toggleRingCamera() async {
+    if (_status != CallStatus.incoming) return;
+    _ringCameraOff = !_ringCameraOff;
+    notify();
+    if (_ringCameraOff) {
+      await closeRingCamera();
+    } else {
+      await openRingCamera();
+    }
   }
 
   /// Un casque branché ou débranché en cours d'appel doit se voir sans que

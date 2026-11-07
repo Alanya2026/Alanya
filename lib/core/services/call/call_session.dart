@@ -94,11 +94,50 @@ extension CallSession on CallService {
   Future<void> _markCallSessionConnected() async {
     if (kIsWeb) return;
     await CallSessionGuard.instance.markConnected();
-    // La connexion Telecom n'existe qu'à partir d'ici : elle naît de
-    // `startCall`, bien après que `_initAudioRoute` a choisi la sortie
-    // d'ouverture. Cette première demande est donc partie dans le vide — on la
-    // repose maintenant qu'il y a quelqu'un pour l'entendre.
-    await setAudioRoute(_audioRoute);
+    // `_initAudioRoute` a choisi la sortie d'ouverture avant que Telecom ne
+    // tienne l'appel : cette première demande est partie dans le vide, on la
+    // repose ici.
+    final parTelecom = await _demanderRoute(_audioRoute);
+    unawaited(_tenirRouteAudio(demandeDejaPrise: parTelecom));
+  }
+
+  /// Amène Telecom sur la sortie voulue, puis aligne l'interface sur ce qu'il
+  /// fait vraiment.
+  ///
+  /// Quand on décroche, la connexion Telecom naît après la demande ci-dessus,
+  /// et il prend l'écouteur par défaut. Mesuré sur un Xiaomi sous Android 16 :
+  /// appel vidéo reçu avec l'icône sur le haut-parleur et le son à l'écouteur,
+  /// c'est-à-dire très faible, et deux appuis pour s'en sortir.
+  Future<void> _tenirRouteAudio({required bool demandeDejaPrise}) async {
+    final callId = _callKitCallId;
+    final voulue = _audioRoute;
+    final jeton = ++_demandesDeRoute;
+    bool valable() => _callKitCallId == callId && _demandesDeRoute == jeton;
+    try {
+      if (!demandeDejaPrise) {
+        final prete = await audio.AudioHelper.waitForTelecomConnection(callId);
+        if (!prete || !valable()) return;
+        debugPrint('[CallService] 🔊 Telecom prêt, sortie redemandée');
+        await _demanderRoute(voulue);
+        if (!valable()) return;
+      }
+      final reelle = await convergerRouteTelecom(
+        voulue: voulue,
+        redemander: () => _demanderRoute(voulue),
+        lire: () async => routeFromTelecomName(
+          (await audio.AudioHelper.readAppliedRoute(callId))?.routeName,
+        ),
+        valable: valable,
+      );
+      if (reelle == null) return;
+      debugPrint('[CallService] 🔊 Sortie tenue par Telecom: ${reelle.name}');
+      if (reelle == _audioRoute) return;
+      _retenirRoute(reelle);
+      await CallSessionGuard.instance.updateAudioRoute(reelle);
+      notify();
+    } catch (e) {
+      debugPrint('[CallService] ** suivi de la sortie audio: $e');
+    }
   }
 
   Future<void> _releaseCallSession() async {

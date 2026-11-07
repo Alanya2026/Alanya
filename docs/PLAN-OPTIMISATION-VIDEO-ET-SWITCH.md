@@ -1,12 +1,47 @@
 # Appels vidéo : profil de capture et transition audio → vidéo
 
-## Profil de capture expérimental
+## Qualité vidéo des appels
 
-`videoCaptureConstraints` conserve par défaut la préférence 1280 × 720 à
-30 fps. Le profil `low`, activé uniquement avec
-`--dart-define=CALL_VIDEO_PROFILE=low`, vise 640 × 480 à 24 fps. Ce sont des
-préférences `ideal`, pas des limites garanties ; le profil concerne les appels
-et les réunions et ne modifie ni l'audio, ni ICE, ni le codec.
+Réglage « Appels vidéo » dans Profil › Réseau et données :
+
+| Niveau | Capture | Cadence | Plafond encodeur | Accès |
+|---|---|---|---|---|
+| Basse résolution | 640 × 360 | 20 i/s | 600 kbit/s | tous |
+| Standard (défaut) | 848 × 480 | 30 i/s | 1,2 Mbit/s | tous |
+| Haute définition | 1280 × 720 | 30 i/s | 2,5 Mbit/s | Alanya Plus (`video_hd`) |
+| Full HD | 1920 × 1080 | 30 i/s | 5 Mbit/s | Alanya Plus (`video_hd`) |
+
+La cadence du niveau est le plafond de l'encodeur. La caméra est toujours
+ouverte à 30 i/s : lui demander 20 faisait choisir à un Xiaomi la plage fixe
+`[10:10]`, mesurée à 10 i/s en 360p.
+`degradationPreference: maintain-framerate` : quand le débit manque, l'image
+perd en résolution, pas en fluidité. Sous ces plafonds, WebRTC s'adapte seul à
+la connexion.
+
+Les contraintes `getUserMedia` sont des entiers : flutter_webrtc 0.14 ignore
+les maps `{ideal, min, max}` sur Android (repli 1280 × 720 à 30 i/s) et ne lit
+`ideal` qu'en texte sur iOS. Les paramètres de l'encodeur sont rejoués après
+chaque description locale (`WebRTCService._applyVideoSendParameters`).
+
+Appels de groupe et réunions : capture standard fixe (848 × 480) à 24 i/s, sans
+plafond d'encodeur pour l'instant. Ils sont en maillage, avec un encodage par
+participant : 30 i/s y pèserait trop. Sans le droit `video_hd`, un choix HD ou
+Full HD part en standard et reprend dès l'abonnement.
+
+## Sonnerie d'un appel vidéo
+
+L'appelant ouvre sa caméra et son micro avant que la ligne ne sonne. L'appelé
+ouvre sa caméra dès la sonnerie, quand l'écran d'appel de l'application est
+affiché et que la permission est déjà accordée : aperçu en fond d'écran, bouton
+pour la couper avant de décrocher, reprise de la même capture au décrochage.
+
+- **Rien ne sort avant le décrochage** : aucune PeerConnection n'existe encore.
+- **Le micro attend le décrochage** : `getUserMedia` audio prend le focus audio
+  et couperait la sonnerie. Il reste la première chose ouverte après le tap.
+- **Application en arrière-plan ou écran système** : Android refuse la caméra,
+  elle s'ouvre au décrochage.
+- **Décroché caméra coupée** : l'appel reste vidéo sans piste locale, le bouton
+  caméra l'ajoute par la renégociation de la transition audio → vidéo.
 
 ## Transition audio → vidéo
 
@@ -15,7 +50,8 @@ la coupe. Elle est limitée aux appels individuels déjà connectés :
 
 1. l'appelant confirme localement puis acquiert uniquement sa caméra ;
 2. une offre/réponse SDP dédiée est relayée sur l'appel existant ;
-3. l'appel audio, le micro, la route, le `callId` et la durée sont conservés ;
+3. l'appel audio, le micro, le `callId` et la durée sont conservés ; le son passe
+   de l'écouteur au haut-parleur, un casque reste en place ;
 4. le correspondant reçoit la vidéo sans ouvrir sa caméra ;
 5. un échec, un timeout ou un refus conserve l'audio et arrête la piste
    nouvellement acquise.

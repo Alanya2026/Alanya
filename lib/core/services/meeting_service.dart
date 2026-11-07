@@ -743,10 +743,14 @@ class MeetingService extends ChangeNotifier {
           'autoGainControl': true,
         },
         if (video)
-          'video': videoCaptureConstraints(),
+          'video': videoCaptureConstraints(
+            quality: CallVideoQuality.standard,
+            frameRate: kConferenceCaptureFps,
+          ),
       };
 
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      SessionVideoRenderers.instance.setLocalCameraFront(true);
       _isVideoOff = !video;
       debugPrint('[MeetingService] !! prepareLocalMedia: ${_localStream?.getTracks().length} tracks');
       notifyListeners();
@@ -1019,12 +1023,16 @@ class MeetingService extends ChangeNotifier {
 
       if (isVideoMeeting) {
         constraints['video'] = {
-          ...videoCaptureConstraints(),
+          ...videoCaptureConstraints(
+            quality: CallVideoQuality.standard,
+            frameRate: kConferenceCaptureFps,
+          ),
         };
       }
 
       debugPrint('[MeetingService] Appel getUserMedia avec contraintes: $constraints');
       _localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      SessionVideoRenderers.instance.setLocalCameraFront(true);
       if (!isVideoMeeting) _isVideoOff = true;
       debugPrint('[MeetingService] !! Stream local obtenu: ${_localStream?.getTracks().length} tracks');
       notifyListeners();
@@ -1176,7 +1184,8 @@ class MeetingService extends ChangeNotifier {
   Future<void> switchCamera() async {
     if (_localStream != null && _localStream!.getVideoTracks().isNotEmpty) {
       final track = _localStream!.getVideoTracks().first;
-      await Helper.switchCamera(track);
+      final isFront = await Helper.switchCamera(track);
+      SessionVideoRenderers.instance.setLocalCameraFront(isFront);
     }
   }
 

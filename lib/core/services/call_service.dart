@@ -33,6 +33,7 @@ import 'call/pending_outgoing_call_store.dart';
 import 'call/call_conf_routing.dart';
 import 'call/call_audio_routes.dart';
 import 'call/call_video_transition_policy.dart';
+import 'call/video_capture_profile.dart';
 import 'call/call_restart_policy.dart';
 import 'call/call_restart_roles.dart';
 import 'call/call_terminal_guards.dart';
@@ -189,6 +190,10 @@ class CallService extends ChangeNotifier {
   /// contrôle ne connaissait que « haut-parleur allumé / éteint » : avec un
   /// casque Bluetooth appairé, l'utilisateur ne savait pas où sortait le son.
   CallAudioRoute _audioRoute = CallAudioRoute.earpiece;
+
+  /// Compte les demandes de sortie audio : un rattrapage en cours s'arrête dès
+  /// qu'une demande plus récente est passée.
+  int _demandesDeRoute = 0;
   List<CallAudioRoute> _audioRoutes = const [
     CallAudioRoute.earpiece,
     CallAudioRoute.speaker,
@@ -438,6 +443,13 @@ class CallService extends ChangeNotifier {
   List<CallAudioRoute> get availableAudioRoutes =>
       List.unmodifiable(_audioRoutes);
   bool get isVideoOn => _isVideoOn;
+
+  /// L'utilisateur a coupé sa caméra pendant que l'appel sonnait.
+  bool _ringCameraOff = false;
+  bool get isRingCameraOff => _ringCameraOff;
+
+  /// Caméra ouverte pendant la sonnerie, tant que l'appel n'est pas décroché.
+  MediaStream? get ringPreviewStream => _webrtc.ringPreviewStream;
   bool get isRemoteMuted => _isRemoteMuted;
   bool get isRemoteVideoOn => _isRemoteVideoOn;
   int get callDuration => _callDuration;
