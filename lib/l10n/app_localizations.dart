@@ -16522,6 +16522,90 @@ abstract class AppLocalizations {
   /// **'Préparation…'**
   String get safeboxPreparing;
 
+  /// No description provided for @safeboxSettingsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réglages du coffre'**
+  String get safeboxSettingsTitle;
+
+  /// No description provided for @safeboxCleanupSection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Après un ajout depuis le téléphone'**
+  String get safeboxCleanupSection;
+
+  /// No description provided for @safeboxCleanupKeep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Garder sur le téléphone'**
+  String get safeboxCleanupKeep;
+
+  /// No description provided for @safeboxCleanupKeepHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les photos et vidéos ajoutées au coffre restent aussi sur le téléphone.'**
+  String get safeboxCleanupKeepHint;
+
+  /// No description provided for @safeboxCleanupAsk.
+  ///
+  /// In fr, this message translates to:
+  /// **'Me demander à chaque ajout'**
+  String get safeboxCleanupAsk;
+
+  /// No description provided for @safeboxCleanupAskHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'À chaque ajout, l\'application vous demande si les photos et vidéos doivent quitter le téléphone.'**
+  String get safeboxCleanupAskHint;
+
+  /// No description provided for @safeboxCleanupAlways.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toujours retirer du téléphone'**
+  String get safeboxCleanupAlways;
+
+  /// No description provided for @safeboxCleanupAlwaysHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Chaque photo ou vidéo ajoutée quitte le téléphone dès qu\'elle est entièrement dans le coffre.'**
+  String get safeboxCleanupAlwaysHint;
+
+  /// No description provided for @safeboxCleanupNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique ne retire rien du téléphone.'**
+  String get safeboxCleanupNote;
+
+  /// No description provided for @safeboxCleanupAskTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du téléphone ?'**
+  String get safeboxCleanupAskTitle;
+
+  /// No description provided for @safeboxCleanupAskBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Une fois dans le coffre, cette photo ou vidéo ira dans la corbeille du téléphone (récupérable 30 jours).} other{Une fois dans le coffre, ces {count} photos et vidéos iront dans la corbeille du téléphone (récupérables 30 jours).}}'**
+  String safeboxCleanupAskBody(int count);
+
+  /// No description provided for @safeboxCleanupLighter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Attention : elles partent dans un format plus léger, la version du coffre sera moins nette que l\'original.'**
+  String get safeboxCleanupLighter;
+
+  /// No description provided for @safeboxCleanupDelete.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du téléphone'**
+  String get safeboxCleanupDelete;
+
+  /// No description provided for @safeboxCleanupDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 photo ou vidéo retirée du téléphone} other{{count} photos et vidéos retirées du téléphone}}'**
+  String safeboxCleanupDone(int count);
+
   /// No description provided for @safeboxPreparingFile.
   ///
   /// In fr, this message translates to:

@@ -159,6 +159,7 @@ class SafeboxUploadJob {
     this.sourceFp,
     this.wifiOnly = false,
     this.backupKey,
+    this.phoneMediaId,
     DateTime? createdAt,
   })  : done = done ?? <int>{},
         createdAt = createdAt ?? DateTime.now();
@@ -193,6 +194,7 @@ class SafeboxUploadJob {
         sourceFp: j['sourceFp'] as String?,
         wifiOnly: j['wifiOnly'] == true,
         backupKey: j['backupKey'] as String?,
+        phoneMediaId: j['phoneMediaId'] as String?,
         meta: j['meta'] is Map ? Map<String, dynamic>.from(j['meta'] as Map) : null,
         createdAt: DateTime.tryParse('${j['createdAt']}'),
       );
@@ -249,6 +251,10 @@ class SafeboxUploadJob {
 
   /// Le fichier du téléphone que la sauvegarde automatique envoie, ou null.
   final String? backupKey;
+
+  /// L'original dans la galerie d'Android, à envoyer à la corbeille une fois
+  /// ce fichier dans le coffre (réglage « Après un ajout », 07/11/2026).
+  final String? phoneMediaId;
   final DateTime createdAt;
 
   /// Octets envoyés pendant les blocs en cours (non gardé).
@@ -318,6 +324,7 @@ class SafeboxUploadJob {
         if (sourceFp != null) 'sourceFp': sourceFp,
         if (wifiOnly) 'wifiOnly': true,
         if (backupKey != null) 'backupKey': backupKey,
+        if (phoneMediaId != null) 'phoneMediaId': phoneMediaId,
         'createdAt': createdAt.toIso8601String(),
       };
 }

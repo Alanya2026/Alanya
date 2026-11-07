@@ -138,6 +138,9 @@ class _Telephone implements SafeboxDeviceSource {
   Future<File?> open(SafeboxDeviceItem item) async => null;
   @override
   Future<Set<String>> delete(List<SafeboxDeviceItem> items) async => {};
+
+  @override
+  Future<Set<String>> trashMedia(List<String> mediaIds) async => mediaIds.toSet();
   @override
   Future<({int free, int total})?> storage() async => null;
 }

@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/services/safebox/safebox_controller.dart';
+import '../../core/services/safebox/safebox_phone_cleanup.dart';
 import '../../core/services/safebox/safebox_models.dart';
 import '../../core/services/safebox/safebox_upload_manager.dart';
 import '../../core/theme/app_dimens.dart';
@@ -37,6 +38,7 @@ import 'safebox_grid.dart';
 import 'safebox_move_picker.dart';
 import 'safebox_note_widgets.dart';
 import 'safebox_received_list.dart';
+import 'safebox_settings_screen.dart';
 import 'safebox_share_widgets.dart';
 import 'safebox_transfers_screen.dart';
 import 'safebox_viewer_screen.dart';
@@ -285,8 +287,19 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
       forgetSafeboxPickCopies(tri.ok);
       return;
     }
+    // Réglage « Après un ajout » : les photos et vidéos de la galerie quittent
+    // le téléphone une fois dans le coffre, jamais avant.
+    final effacables = tri.ok.where(_c.phoneTrashable).length;
+    final supprimer = effacables > 0 &&
+        switch (await SafeboxPhoneCleanup.load()) {
+          SafeboxPhoneCleanup.keep => false,
+          SafeboxPhoneCleanup.always => true,
+          SafeboxPhoneCleanup.ask => mounted &&
+              await askSafeboxPhoneCleanup(context, count: effacables, lighter: qualite != SafeboxQuality.original),
+        };
+    if (!mounted) return;
     safeboxSnack(context, l10n.safeboxPreparing);
-    final echecs = await _c.addFiles(tri.ok, page.folder, quality: qualite);
+    final echecs = await _c.addFiles(tri.ok, page.folder, quality: qualite, deleteFromPhone: supprimer);
     if (echecs.isNotEmpty && mounted) {
       safeboxSnack(context, l10n.safeboxCompressionFailed(echecs.length, echecs.first), error: true);
     }

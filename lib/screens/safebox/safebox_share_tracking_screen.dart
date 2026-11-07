@@ -2,6 +2,9 @@
 //  du 24/10/2026) : combien de membres l'ont reçu, chacun d'eux (téléchargé,
 //  gardé dans son coffre, pas encore), « Envoyer ailleurs » et « Retirer le
 //  partage ». Rien ne s'efface tout seul : le fichier reste dans Partager.
+//
+//  En tête (07/11/2026), ce qui a été envoyé : les photos et vidéos s'ouvrent
+//  dans la visionneuse, comme chez les destinataires.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +17,7 @@ import '../../core/utils/byte_format.dart';
 import '../../widgets/common/app_avatar.dart';
 import 'safebox_chat_picker.dart';
 import 'safebox_share_widgets.dart';
+import 'safebox_viewer_screen.dart';
 import 'safebox_widgets.dart';
 
 class SafeboxShareTrackingScreen extends StatefulWidget {
@@ -62,6 +66,26 @@ class _SafeboxShareTrackingScreenState extends State<SafeboxShareTrackingScreen>
       others: info.isBatch ? info.count - 1 : 0,
       send: (_, ids) => _c.sendShareElsewhere(info, ids),
     );
+  }
+
+  /// Les photos et vidéos envoyées, dans la visionneuse, à partir de [depart].
+  Future<void> _voir(SafeboxShareInfo info, SafeboxShareItem depart) async {
+    try {
+      final elements = info.isBatch ? await _c.shareItems(widget.shareId) : [info.asItem()];
+      if (!mounted) return;
+      final medias = [for (final e in elements) if (e.available && safeboxViewable(e.asFile())) e];
+      final parId = {for (final e in medias) e.localId: e};
+      final i = medias.indexWhere((e) => e.localId == depart.localId);
+      await showSafeboxViewer(
+        context,
+        files: [for (final e in medias) e.asFile()],
+        initialIndex: i < 0 ? 0 : i,
+        showNotes: false,
+        download: (f) => _c.downloads.fetchShareItem(parId[f.id]!),
+      );
+    } catch (e) {
+      if (mounted) safeboxShowError(context, e);
+    }
   }
 
   Future<void> _retirer() async {
@@ -157,6 +181,7 @@ class _SafeboxShareTrackingScreenState extends State<SafeboxShareTrackingScreen>
                             style: context.text.bodyMedium?.copyWith(color: context.colors.onSurfaceVariant),
                           ),
                         ),
+                      if (info.available) _Envoye(info: info, onOpen: (e) => _voir(info, e)),
                       if (resume != null) _Resume(tracking: resume, sentAt: info.createdAt),
                       AppSpacing.vGapLg,
                       Text(l10n.safeboxTrackingMembers.toUpperCase(),
@@ -179,6 +204,60 @@ class _SafeboxShareTrackingScreenState extends State<SafeboxShareTrackingScreen>
                     ],
                   ),
                 ),
+    );
+  }
+}
+
+/// Ce qui a été envoyé : jusqu'à quatre aperçus ; une photo ou une vidéo
+/// s'ouvre dans la visionneuse. Rien pour un envoi sans photo ni vidéo.
+class _Envoye extends StatelessWidget {
+  const _Envoye({required this.info, required this.onOpen});
+  final SafeboxShareInfo info;
+  final ValueChanged<SafeboxShareItem> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final elements = (info.isBatch ? info.cover : [info.asItem()])
+        .where((e) => e.available && safeboxViewable(e.asFile()))
+        .take(4)
+        .toList();
+    if (elements.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              for (var i = 0; i < 4; i += 1) ...[
+                if (i > 0) AppSpacing.hGapXs,
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: i < elements.length
+                        ? InkWell(
+                            borderRadius: AppRadius.brSm,
+                            onTap: () => onOpen(elements[i]),
+                            child: SafeboxFileThumb(file: elements[i].asFile(), fill: true),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(minimumSize: const Size(0, 40)),
+              onPressed: () => onOpen(elements.first),
+              icon: const Icon(Icons.visibility_outlined, size: 18),
+              label: Text(l10n.safeboxSharedView),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -187,6 +187,22 @@ class PhoneSafeboxDeviceSource implements SafeboxDeviceSource {
   }
 
   @override
+  Future<Set<String>> trashMedia(List<String> mediaIds) async {
+    if (!Platform.isAndroid || mediaIds.isEmpty) return {};
+    final assets = [
+      for (final id in mediaIds) ?await AssetEntity.fromId(id),
+    ];
+    if (assets.isEmpty) return {};
+    try {
+      // Corbeille d'Android : récupérable 30 jours (Android 11 et plus).
+      return (await PhotoManager.editor.android.moveToTrash(assets)).toSet();
+    } catch (e) {
+      debugPrint('[Coffre] corbeille d\'Android indisponible, suppression : $e');
+      return (await PhotoManager.editor.deleteWithIds([for (final a in assets) a.id])).toSet();
+    }
+  }
+
+  @override
   Future<({int free, int total})?> storage() async {
     try {
       final r = await _canal.invokeMapMethod<String, dynamic>('storage');

@@ -9899,6 +9899,71 @@ class AppLocalizationsFr extends AppLocalizations {
   String get safeboxPreparing => 'Préparation…';
 
   @override
+  String get safeboxSettingsTitle => 'Réglages du coffre';
+
+  @override
+  String get safeboxCleanupSection => 'Après un ajout depuis le téléphone';
+
+  @override
+  String get safeboxCleanupKeep => 'Garder sur le téléphone';
+
+  @override
+  String get safeboxCleanupKeepHint =>
+      'Les photos et vidéos ajoutées au coffre restent aussi sur le téléphone.';
+
+  @override
+  String get safeboxCleanupAsk => 'Me demander à chaque ajout';
+
+  @override
+  String get safeboxCleanupAskHint =>
+      'À chaque ajout, l\'application vous demande si les photos et vidéos doivent quitter le téléphone.';
+
+  @override
+  String get safeboxCleanupAlways => 'Toujours retirer du téléphone';
+
+  @override
+  String get safeboxCleanupAlwaysHint =>
+      'Chaque photo ou vidéo ajoutée quitte le téléphone dès qu\'elle est entièrement dans le coffre.';
+
+  @override
+  String get safeboxCleanupNote =>
+      'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique ne retire rien du téléphone.';
+
+  @override
+  String get safeboxCleanupAskTitle => 'Retirer du téléphone ?';
+
+  @override
+  String safeboxCleanupAskBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Une fois dans le coffre, ces $count photos et vidéos iront dans la corbeille du téléphone (récupérables 30 jours).',
+      one:
+          'Une fois dans le coffre, cette photo ou vidéo ira dans la corbeille du téléphone (récupérable 30 jours).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxCleanupLighter =>
+      'Attention : elles partent dans un format plus léger, la version du coffre sera moins nette que l\'original.';
+
+  @override
+  String get safeboxCleanupDelete => 'Retirer du téléphone';
+
+  @override
+  String safeboxCleanupDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos et vidéos retirées du téléphone',
+      one: '1 photo ou vidéo retirée du téléphone',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String safeboxPreparingFile(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

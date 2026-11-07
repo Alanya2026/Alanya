@@ -326,6 +326,9 @@ class _FauxTelephone implements SafeboxDeviceSource {
   Future<File?> open(SafeboxDeviceItem item) async => _elements.firstWhere((e) => e.item.key == item.key).file;
   @override
   Future<Set<String>> delete(List<SafeboxDeviceItem> items) async => {for (final i in items) i.key};
+
+  @override
+  Future<Set<String>> trashMedia(List<String> mediaIds) async => mediaIds.toSet();
   @override
   Future<({int free, int total})?> storage() async => (free: 1 << 30, total: 64 << 30);
 }

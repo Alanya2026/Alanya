@@ -26,6 +26,7 @@ import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_backup_screens.dart';
 import 'safebox_folder_screen.dart';
 import 'safebox_free_up_screen.dart';
+import 'safebox_settings_screen.dart';
 import 'safebox_transfers_screen.dart';
 import 'safebox_trash_screen.dart';
 import 'safebox_widgets.dart';
@@ -63,13 +64,43 @@ class SafeboxHomeScreen extends StatefulWidget {
   State<SafeboxHomeScreen> createState() => _SafeboxHomeScreenState();
 }
 
-class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> {
+class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> with WidgetsBindingObserver {
+  late final SafeboxController _c = context.read<SafeboxController>();
+
   @override
   void initState() {
     super.initState();
-    final c = context.read<SafeboxController>();
-    c.ensureStarted();
-    c.refreshOverview();
+    _c.ensureStarted();
+    _c.refreshOverview();
+    WidgetsBinding.instance.addObserver(this);
+    _c.addListener(_surveiller);
+    // Des originaux arrivés pendant que le coffre était fermé.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _viderTelephone());
+  }
+
+  @override
+  void dispose() {
+    _c.removeListener(_surveiller);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _viderTelephone();
+  }
+
+  void _surveiller() {
+    if (_c.phoneTrashReady) _viderTelephone();
+  }
+
+  /// Les photos et vidéos arrivées dans le coffre quittent le téléphone (réglage
+  /// « Après un ajout ») : seulement application ouverte, Android demandant
+  /// confirmation.
+  Future<void> _viderTelephone() async {
+    if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    final n = await _c.emptyPhoneTrash();
+    if (n != null && n > 0 && mounted) safeboxSnack(context, context.l10n.safeboxCleanupDone(n));
   }
 
   @override
@@ -115,6 +146,11 @@ class _Accueil extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.safeboxTitle),
         actions: [
+          IconButton(
+            tooltip: l10n.safeboxSettingsTitle,
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => showSafeboxSettings(context),
+          ),
           IconButton(
             tooltip: l10n.safeboxTabTransfers,
             icon: Badge(isLabelVisible: actifs > 0, label: Text('$actifs'), child: const Icon(Icons.swap_vert)),

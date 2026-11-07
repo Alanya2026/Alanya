@@ -34,12 +34,14 @@ import java.util.concurrent.Executors
  *  - copy { uri, path } → true : copie le document pour l'envoyer ;
  *  - release { uri } : l'inscrit retire le dossier ;
  *  - storage → { free, total } : la mémoire du téléphone (« Libérer la mémoire ») ;
- *  - pickFiles { mimeTypes } → [{ uri, name, size, path? }] : des fichiers à
+ *  - pickFiles { mimeTypes } → [{ uri, name, size, path?, mediaId? }] : des fichiers à
  *    ajouter au coffre (31/10/2026). `path` : l'original, lisible tel quel
  *    (photo, vidéo ou audio autorisés par la galerie) — rien n'est copié ;
  *    sans lui, l'application le copie par `copy`. Le sélecteur de
  *    file_picker recopiait tout fichier choisi (568 Mo : 12 s d'attente, et
- *    la copie restait dans le cache).
+ *    la copie restait dans le cache). `mediaId` : le numéro de la photo ou
+ *    vidéo dans la galerie d'Android, pour l'envoyer à la corbeille une fois
+ *    dans le coffre si l'inscrit le veut (07/11/2026).
  *
  * Les listes et copies tournent hors du fil principal.
  */
@@ -187,7 +189,28 @@ class SafeboxDocumentFolders(private val activity: FragmentActivity) {
             Log.w(TAG, "chemin introuvable pour $uri : ${e.message}")
             null
         }
-        return mapOf("uri" to uri.toString(), "name" to nom, "size" to taille, "path" to chemin)
+        val media = chemin?.let {
+            try { numeroMedia(it) } catch (e: Exception) {
+                Log.w(TAG, "numéro de galerie introuvable : ${e.message}")
+                null
+            }
+        }
+        return mapOf("uri" to uri.toString(), "name" to nom, "size" to taille, "path" to chemin, "mediaId" to media)
+    }
+
+    /** Le numéro d'une photo ou d'une vidéo dans la galerie d'Android, d'après son chemin. */
+    @Suppress("DEPRECATION") // DATA : le seul lien entre un chemin et la galerie.
+    private fun numeroMedia(chemin: String): String? {
+        val type = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (" +
+            "${MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE}, ${MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO})"
+        activity.contentResolver.query(
+            MediaStore.Files.getContentUri("external"),
+            arrayOf(MediaStore.MediaColumns._ID),
+            "${MediaStore.MediaColumns.DATA} = ? AND $type",
+            arrayOf(chemin),
+            null,
+        )?.use { c -> if (c.moveToFirst()) return c.getLong(0).toString() }
+        return null
     }
 
     /**

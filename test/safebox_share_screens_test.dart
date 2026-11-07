@@ -15,6 +15,7 @@ import 'package:talky_flutter/l10n/app_localizations.dart';
 import 'package:talky_flutter/screens/safebox/safebox_folder_screen.dart';
 import 'package:talky_flutter/screens/safebox/safebox_grid.dart';
 import 'package:talky_flutter/screens/safebox/safebox_share_card.dart';
+import 'package:talky_flutter/screens/safebox/safebox_share_tracking_screen.dart';
 import 'package:talky_flutter/screens/safebox/safebox_shared_screens.dart';
 import 'package:talky_flutter/screens/safebox/safebox_viewer_screen.dart';
 import 'package:talky_flutter/talky_api_client.dart';
@@ -75,6 +76,8 @@ void main() {
           corps = album;
         } else if (chemin.endsWith('/shares/9/save')) {
           corps = fichier(95, 'Plage.jpg', null);
+        } else if (chemin.endsWith('/shares/9/recipients')) {
+          corps = {'members': [], 'tracking': {'members': 3, 'downloaded': 1, 'saved': 0}};
         } else if (chemin.endsWith('/shares/9/items')) {
           corps = {'items': elements, 'nextCursor': null};
         } else if (chemin.endsWith('/shares/7')) {
@@ -243,6 +246,25 @@ void main() {
     expect(find.text(fr.safeboxTrackingSendElsewhere), findsOneWidget);
     expect(find.text(fr.safeboxTrackingRevoke), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('album chez l\'expéditeur : ce qu\'il a envoyé s\'ouvre dans la visionneuse', (tester) async {
+    album['isSender'] = true;
+    album['tracking'] = {'members': 3, 'downloaded': 1, 'saved': 0};
+    addTearDown(() {
+      album['isSender'] = false;
+      album.remove('tracking');
+    });
+    await monter(tester, const SafeboxShareTrackingScreen(shareId: 9, title: 'Kribi 2026'), settle: false);
+    await laisserFaire(tester);
+    expect(find.text(fr.safeboxSharedView), findsOneWidget);
+    await tester.tap(find.text(fr.safeboxSharedView));
+    await laisserFaire(tester);
+    final v = tester.widget<SafeboxViewerScreen>(find.byType(SafeboxViewerScreen));
+    expect(v.files.map((f) => f.name), ['Plage.jpg', 'Danse.mp4', 'Coucher.jpg']);
+    expect(v.footerBuilder, isNull, reason: 'ni Télécharger ni Garder : c\'est déjà à lui');
+    await tester.pumpWidget(const SizedBox());
+    tester.takeException();
   });
 
   testWidgets('carte d\'un fichier retiré par l\'expéditeur : pas de bouton', (tester) async {

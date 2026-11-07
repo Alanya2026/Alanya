@@ -271,6 +271,11 @@ abstract class SafeboxDeviceSource {
   /// confirmation, une fois pour le lot). Rend les clés retirées.
   Future<Set<String>> delete(List<SafeboxDeviceItem> items);
 
+  /// Envoie ces photos et vidéos (numéros de la galerie d'Android) à la
+  /// corbeille du téléphone (Android 11 et plus ; avant, supprimées), après
+  /// une seule confirmation. Rend les numéros retirés.
+  Future<Set<String>> trashMedia(List<String> mediaIds);
+
   /// Mémoire du téléphone : libre et totale, en octets.
   Future<({int free, int total})?> storage();
 }

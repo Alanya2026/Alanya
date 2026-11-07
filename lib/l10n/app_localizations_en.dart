@@ -9791,6 +9791,71 @@ class AppLocalizationsEn extends AppLocalizations {
   String get safeboxPreparing => 'Preparing…';
 
   @override
+  String get safeboxSettingsTitle => 'SafeBox settings';
+
+  @override
+  String get safeboxCleanupSection => 'After adding from the phone';
+
+  @override
+  String get safeboxCleanupKeep => 'Keep on the phone';
+
+  @override
+  String get safeboxCleanupKeepHint =>
+      'Photos and videos added to SafeBox also stay on the phone.';
+
+  @override
+  String get safeboxCleanupAsk => 'Ask me each time';
+
+  @override
+  String get safeboxCleanupAskHint =>
+      'Each time you add files, the app asks whether the photos and videos should leave the phone.';
+
+  @override
+  String get safeboxCleanupAlways => 'Always remove from the phone';
+
+  @override
+  String get safeboxCleanupAlwaysHint =>
+      'Each photo or video you add leaves the phone once it is fully in SafeBox.';
+
+  @override
+  String get safeboxCleanupNote =>
+      'Only photos and videos taken from the gallery are affected, and never before they are fully in SafeBox. Android asks you to confirm, then moves them to its trash, where they can be recovered for 30 days (Android 11 and later; before that, deletion is permanent). In HD or Compressed, the copy kept in SafeBox is less sharp than the original. Automatic backup never removes anything from the phone.';
+
+  @override
+  String get safeboxCleanupAskTitle => 'Remove from the phone?';
+
+  @override
+  String safeboxCleanupAskBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Once in SafeBox, these $count photos and videos will go to the phone\'s trash (recoverable for 30 days).',
+      one:
+          'Once in SafeBox, this photo or video will go to the phone\'s trash (recoverable for 30 days).',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxCleanupLighter =>
+      'Note: they are sent in a lighter format, so the SafeBox copy will be less sharp than the original.';
+
+  @override
+  String get safeboxCleanupDelete => 'Remove from the phone';
+
+  @override
+  String safeboxCleanupDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos and videos removed from the phone',
+      one: '1 photo or video removed from the phone',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String safeboxPreparingFile(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

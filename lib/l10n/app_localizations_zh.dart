@@ -9273,6 +9273,63 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxPreparing => '正在准备…';
 
   @override
+  String get safeboxSettingsTitle => 'SafeBox 设置';
+
+  @override
+  String get safeboxCleanupSection => '从手机添加之后';
+
+  @override
+  String get safeboxCleanupKeep => '保留在手机上';
+
+  @override
+  String get safeboxCleanupKeepHint => '添加到 SafeBox 的照片和视频也会保留在手机上。';
+
+  @override
+  String get safeboxCleanupAsk => '每次都询问我';
+
+  @override
+  String get safeboxCleanupAskHint => '每次添加时，应用都会询问是否从手机中移除这些照片和视频。';
+
+  @override
+  String get safeboxCleanupAlways => '始终从手机中移除';
+
+  @override
+  String get safeboxCleanupAlwaysHint => '添加的每张照片或每个视频完全进入 SafeBox 后，会从手机中移除。';
+
+  @override
+  String get safeboxCleanupNote =>
+      '仅限从相册选取的照片和视频，并且只在其完全进入 SafeBox 之后。Android 会请您确认，然后将其移入回收站，30 天内可恢复（Android 11 及以上；更早版本为永久删除）。以高清或压缩格式保存时，SafeBox 中的版本不如原件清晰。自动备份不会从手机中移除任何内容。';
+
+  @override
+  String get safeboxCleanupAskTitle => '从手机中移除？';
+
+  @override
+  String safeboxCleanupAskBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '进入 SafeBox 后，这 $count 张照片和视频将移入手机回收站（30 天内可恢复）。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxCleanupLighter => '注意：它们以较小的格式保存，SafeBox 中的版本不如原件清晰。';
+
+  @override
+  String get safeboxCleanupDelete => '从手机中移除';
+
+  @override
+  String safeboxCleanupDone(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已从手机中移除 $count 张照片和视频',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String safeboxPreparingFile(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

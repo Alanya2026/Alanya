@@ -22,6 +22,7 @@ import '../video_codec_policy.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
 import '../connectivity_service.dart';
+import 'safebox_phone_cleanup.dart';
 import 'safebox_backup.dart';
 import 'safebox_backup_background.dart';
 import 'safebox_cipher.dart';
@@ -37,10 +38,20 @@ import 'safebox_upload_manager.dart';
 
 /// Un fichier choisi par l'inscrit, pas encore préparé.
 class SafeboxPick {
-  const SafeboxPick({required this.path, required this.name, required this.size, this.temporary = false});
+  const SafeboxPick({
+    required this.path,
+    required this.name,
+    required this.size,
+    this.temporary = false,
+    this.phoneMediaId,
+  });
   final String path;
   final String name;
   final int size;
+
+  /// Le numéro de l'original dans la galerie d'Android, s'il y est (photo ou
+  /// vidéo) : de quoi l'envoyer à la corbeille une fois dans le coffre.
+  final String? phoneMediaId;
 
   /// Une copie faite par l'application pour l'envoi (pas l'original du
   /// téléphone) : effacée une fois envoyée, ou si l'envoi est abandonné.
@@ -153,6 +164,13 @@ class SafeboxController extends ChangeNotifier {
     _abonnementPartages = uploads.completedJobs.listen((e) {
       final cle = e.job.backupKey;
       if (cle != null) unawaited(backup.markSaved(cle));
+      final original = e.job.phoneMediaId;
+      if (original != null) {
+        unawaited(SafeboxPhoneTrash.add(original).then((_) {
+          _corbeilleTelephoneAVider = true;
+          notifyListeners();
+        }));
+      }
       final conv = e.job.shareConversationId;
       if (conv == null) return;
       final groupe = e.job.shareGroup;
@@ -162,6 +180,44 @@ class SafeboxController extends ChangeNotifier {
   }
 
   late final StreamSubscription<({SafeboxUploadJob job, SafeboxFile file})> _abonnementPartages;
+
+  // ── Après un ajout : retirer l'original du téléphone (07/11/2026) ────────
+
+  /// Une photo ou une vidéo de la galerie : elle peut quitter le téléphone.
+  bool phoneTrashable(SafeboxPick pick) {
+    if (pick.phoneMediaId == null) return false;
+    final f = familyOf(pick.name);
+    return f == SafeboxFamily.photos || f == SafeboxFamily.videos;
+  }
+
+  bool _corbeilleTelephoneAVider = false;
+  bool _corbeilleEnCours = false;
+
+  /// Un original vient d'arriver dans le coffre, et plus rien de ce qui doit
+  /// quitter le téléphone n'est en route : l'accueil peut vider la liste.
+  bool get phoneTrashReady =>
+      _corbeilleTelephoneAVider &&
+      !_corbeilleEnCours &&
+      !uploads.jobs.any((j) =>
+          j.phoneMediaId != null && j.state != SafeboxUploadState.completed && j.state != SafeboxUploadState.failed);
+
+  /// Envoie à la corbeille du téléphone les originaux arrivés dans le coffre,
+  /// en un lot (une seule confirmation d'Android). Rend le nombre retiré, ou
+  /// null s'il n'y avait rien à faire. Refusés dans la confirmation : oubliés.
+  Future<int?> emptyPhoneTrash() async {
+    if (_corbeilleEnCours) return null;
+    _corbeilleEnCours = true;
+    _corbeilleTelephoneAVider = false;
+    try {
+      final ids = await SafeboxPhoneTrash.pending();
+      if (ids.isEmpty) return null;
+      final retires = await device.trashMedia(ids);
+      await SafeboxPhoneTrash.forget(ids);
+      return retires.length;
+    } finally {
+      _corbeilleEnCours = false;
+    }
+  }
 
   final SafeboxForeground _premierPlan;
 
@@ -439,12 +495,16 @@ class SafeboxController extends ChangeNotifier {
   ///
   /// Rend les noms des fichiers dont la compression a échoué : ils partent
   /// en Original, et l'écran le dit.
+  ///
+  /// [deleteFromPhone] : les photos et vidéos de la galerie iront à la
+  /// corbeille du téléphone une fois dans le coffre ([emptyPhoneTrash]).
   Future<List<String>> addFiles(
     List<SafeboxPick> picks,
     SafeboxFolder folder, {
     required SafeboxQuality quality,
     int? shareConversationId,
     String? shareTitle,
+    bool deleteFromPhone = false,
   }) async {
     final prep = await _prep();
     await prep.workDir.create(recursive: true);
@@ -459,7 +519,7 @@ class SafeboxController extends ChangeNotifier {
     }
     try {
       return await _preparer(picks, folder, prep, quality: quality, hevc: hevc, maxApercu: maxApercu,
-          shareConversationId: shareConversationId, shareGroup: groupe);
+          shareConversationId: shareConversationId, shareGroup: groupe, deleteFromPhone: deleteFromPhone);
     } finally {
       if (groupe != null) {
         _groupesEnPreparation.remove(groupe);
@@ -477,6 +537,7 @@ class SafeboxController extends ChangeNotifier {
     required int maxApercu,
     int? shareConversationId,
     String? shareGroup,
+    bool deleteFromPhone = false,
   }) async {
     final echecs = <String>[];
     for (final pick in picks) {
@@ -499,6 +560,7 @@ class SafeboxController extends ChangeNotifier {
         shareGroup: shareGroup,
         sourceFp: empreinte,
         onCompressionFailed: () => echecs.add(pick.name),
+        phoneMediaId: deleteFromPhone && phoneTrashable(pick) ? pick.phoneMediaId : null,
       );
     }
     return echecs;
@@ -520,6 +582,7 @@ class SafeboxController extends ChangeNotifier {
     String? backupKey,
     String? source,
     void Function()? onCompressionFailed,
+    String? phoneMediaId,
   }) async {
     try {
       var chemin = pick.path;
@@ -578,6 +641,7 @@ class SafeboxController extends ChangeNotifier {
           sourceFp: sourceFp,
           wifiOnly: wifiOnly,
           backupKey: backupKey,
+          phoneMediaId: phoneMediaId,
         ),
         cle,
       );

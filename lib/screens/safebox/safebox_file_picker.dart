@@ -86,6 +86,7 @@ Future<List<SafeboxPick>?> pickSafeboxPhoneFiles(
           name: '${d['name']}',
           size: (d['size'] as num?)?.toInt() ?? -1,
           temporary: d['path'] == null,
+          phoneMediaId: d['path'] == null ? null : d['mediaId'] as String?,
         ),
   ];
 }
