@@ -4494,6 +4494,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'High definition (720p) is part of Alanya Plus: the person you call sees you more sharply when the connection allows.';
 
   @override
+  String get plusFeatureCallFilter => 'Call filter';
+
+  @override
+  String get paywallCallFilterTitle => 'Call filter';
+
+  @override
+  String get paywallCallFilterBody =>
+      'Call filter is part of Alanya Plus: only people in your contacts can call you, other calls don\'t go through.';
+
+  @override
+  String get plusLockedCallFilter =>
+      'Call filter is part of Alanya Plus. Your setting is kept and will come back when you subscribe; until then, anyone can call you.';
+
+  @override
   String get plusFeatureVoicemail => 'Voicemail';
 
   @override
@@ -4808,6 +4822,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacySectionMessages => 'Messages';
+
+  @override
+  String get privacySectionCalls => 'Calls';
+
+  @override
+  String get privacyCallFilter => 'Only my contacts can call me';
+
+  @override
+  String get privacyCallFilterSubtitle =>
+      'People who aren\'t in your contacts can\'t call you or invite you to a group call.';
+
+  @override
+  String get privacyCallFilterLockedSubtitle =>
+      'Alanya Plus — people who aren\'t in your contacts will no longer be able to call you.';
 
   @override
   String get privacySectionLists => 'Lists & groups';

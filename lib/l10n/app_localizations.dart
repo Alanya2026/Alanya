@@ -7966,6 +7966,30 @@ abstract class AppLocalizations {
   /// **'La haute définition (720p) fait partie d\'Alanya Plus : votre correspondant vous voit plus net quand la connexion le permet.'**
   String get paywallVideoHdBody;
 
+  /// No description provided for @plusFeatureCallFilter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Filtre d\'appels'**
+  String get plusFeatureCallFilter;
+
+  /// No description provided for @paywallCallFilterTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le filtre d\'appels'**
+  String get paywallCallFilterTitle;
+
+  /// No description provided for @paywallCallFilterBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le filtre d\'appels fait partie d\'Alanya Plus : seules les personnes de vos contacts peuvent vous appeler, les autres appels ne passent pas.'**
+  String get paywallCallFilterBody;
+
+  /// No description provided for @plusLockedCallFilter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le filtre d\'appels est réservé à Alanya Plus. Votre réglage est conservé et reprendra dès l\'abonnement ; en attendant, tout le monde peut vous appeler.'**
+  String get plusLockedCallFilter;
+
   /// No description provided for @plusFeatureVoicemail.
   ///
   /// In fr, this message translates to:
@@ -8547,6 +8571,30 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Messages'**
   String get privacySectionMessages;
+
+  /// No description provided for @privacySectionCalls.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appels'**
+  String get privacySectionCalls;
+
+  /// No description provided for @privacyCallFilter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls mes contacts peuvent m\'appeler'**
+  String get privacyCallFilter;
+
+  /// No description provided for @privacyCallFilterSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les personnes absentes de vos contacts ne pourront ni vous appeler, ni vous inviter à un appel de groupe.'**
+  String get privacyCallFilterSubtitle;
+
+  /// No description provided for @privacyCallFilterLockedSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Plus — les personnes absentes de vos contacts ne pourront plus vous appeler.'**
+  String get privacyCallFilterLockedSubtitle;
 
   /// No description provided for @privacySectionLists.
   ///

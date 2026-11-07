@@ -4354,6 +4354,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paywallVideoHdBody => '高清（720p）属于 Alanya Plus：网络允许时，对方能更清晰地看到您。';
 
   @override
+  String get plusFeatureCallFilter => '来电过滤';
+
+  @override
+  String get paywallCallFilterTitle => '来电过滤';
+
+  @override
+  String get paywallCallFilterBody =>
+      '来电过滤属于 Alanya Plus：只有您的联系人才能给您打电话，其他来电无法接通。';
+
+  @override
+  String get plusLockedCallFilter =>
+      '来电过滤为 Alanya Plus 专享功能。您的设置已保留，订阅后即可恢复；在此之前，任何人都可以给您打电话。';
+
+  @override
   String get plusFeatureVoicemail => '语音信箱';
 
   @override
@@ -4658,6 +4672,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacySectionMessages => '消息';
+
+  @override
+  String get privacySectionCalls => '通话';
+
+  @override
+  String get privacyCallFilter => '仅我的联系人可以给我打电话';
+
+  @override
+  String get privacyCallFilterSubtitle => '不在您联系人中的人无法给您打电话，也无法邀请您加入群组通话。';
+
+  @override
+  String get privacyCallFilterLockedSubtitle =>
+      'Alanya Plus — 不在您联系人中的人将无法再给您打电话。';
 
   @override
   String get privacySectionLists => '名单与群组';

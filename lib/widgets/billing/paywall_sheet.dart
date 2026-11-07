@@ -441,5 +441,9 @@ class PlusLockedBanner extends StatelessWidget {
           l10n.paywallVoicemailTitle,
           l10n.paywallVoicemailBody,
         ),
+      PlusFeature.callFilter => (
+          l10n.paywallCallFilterTitle,
+          l10n.paywallCallFilterBody,
+        ),
       _ => (l10n.paywallGenericTitle, l10n.paywallGenericBody),
     };
