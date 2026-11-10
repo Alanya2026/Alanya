@@ -69,15 +69,20 @@ extension Contexte on BuildContext {
   Vault get vault => AppScope.of(this).vault!;
 }
 
-/// « 640 Mo », « 1,2 Go », « 640 MB »…
+/// « 640 Mo », « 1,95 Go », « 640 MB »… Même calcul que l'application mobile
+/// (lib/core/utils/byte_format.dart) : 1 Go = 1024 Mo, sinon les deux
+/// applications n'affichent pas le même espace.
 String formatBytes(BuildContext context, int bytes) {
   final l = context.l;
   final locale = Localizations.localeOf(context).toLanguageTag();
-  String n(double v) => NumberFormat(v >= 100 || v == v.roundToDouble() ? '0' : '0.#', locale).format(v);
-  if (bytes < 1000) return l.bytesB(bytes);
-  if (bytes < 1000 * 1000) return l.bytesKB(n(bytes / 1000));
-  if (bytes < 1000 * 1000 * 1000) return l.bytesMB(n(bytes / 1e6));
-  return l.bytesGB(n(bytes / 1e9));
+  String n(double v, int decimales) =>
+      NumberFormat(decimales == 0 ? '#,##0' : '#,##0.${'#' * decimales}', locale).format(v);
+  if (bytes < 1024) return l.bytesB(bytes);
+  final ko = bytes / 1024;
+  if (ko < 1024) return l.bytesKB(n(ko, 0));
+  final mo = ko / 1024;
+  if (mo < 1024) return l.bytesMB(n(mo, 1));
+  return l.bytesGB(n(mo / 1024, 2));
 }
 
 String rootName(BuildContext context, SafeboxRoot r) {

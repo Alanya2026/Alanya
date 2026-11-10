@@ -118,11 +118,11 @@ class _Espace extends StatelessWidget {
               child: Row(children: [
                 for (final r in SafeboxRoot.values)
                   if ((quota.byRoot[r]?.bytes ?? 0) > 0)
-                    Flexible(
+                    Expanded(
                       flex: ((quota.byRoot[r]!.bytes / total) * 1000).ceil(),
                       child: ColoredBox(color: _couleurs[r]!),
                     ),
-                Flexible(
+                Expanded(
                   flex: (((total - quota.usedBytes).clamp(0, total) / total) * 1000).ceil(),
                   child: const ColoredBox(color: Palette.border),
                 ),
