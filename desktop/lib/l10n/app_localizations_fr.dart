@@ -217,4 +217,139 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get logoutConfirmText =>
       'L\'application efface ce qu\'elle garde sur cet ordinateur. Vos fichiers restent dans le coffre ; pour revenir, il faudra scanner de nouveau le code avec votre téléphone.';
+
+  @override
+  String get close => 'Fermer';
+
+  @override
+  String get save => 'Enregistrer';
+
+  @override
+  String get open => 'Ouvrir';
+
+  @override
+  String get empty => 'Vider';
+
+  @override
+  String get previous => 'Précédent';
+
+  @override
+  String get next => 'Suivant';
+
+  @override
+  String get download => 'Télécharger';
+
+  @override
+  String get downloadFolder => 'Télécharger le dossier';
+
+  @override
+  String downloadSaved(String path) {
+    return 'Enregistré : $path';
+  }
+
+  @override
+  String get downloadFailed => 'Le téléchargement n\'a pas abouti. Réessayez.';
+
+  @override
+  String get showInFolder => 'Afficher dans le dossier';
+
+  @override
+  String get openWith => 'Ouvrir avec…';
+
+  @override
+  String get openFailed =>
+      'Aucun logiciel de l\'ordinateur ne sait ouvrir ce fichier.';
+
+  @override
+  String viewerPosition(int index, int total) {
+    return '$index sur $total';
+  }
+
+  @override
+  String get viewerKeys =>
+      '← → pour passer d\'un fichier à l\'autre · molette pour zoomer · Échap pour fermer';
+
+  @override
+  String get viewerCannotShow =>
+      'L\'ordinateur ne sait pas afficher cette photo ici.';
+
+  @override
+  String get viewerVideoHint =>
+      'La vidéo s\'ouvre dans le lecteur de l\'ordinateur.';
+
+  @override
+  String get viewerAudioHint =>
+      'L\'audio s\'ouvre dans le lecteur de l\'ordinateur.';
+
+  @override
+  String get viewerDocumentHint =>
+      'Le document s\'ouvre avec le logiciel de l\'ordinateur.';
+
+  @override
+  String get viewerPlay => 'Lire';
+
+  @override
+  String get fileLost =>
+      'Ce fichier est introuvable chez l\'hébergeur : il ne peut plus être ouvert.';
+
+  @override
+  String get noteNone => 'Pas de commentaire.';
+
+  @override
+  String get noteAdd => 'Ajouter un commentaire';
+
+  @override
+  String get noteEdit => 'Modifier le commentaire';
+
+  @override
+  String get noteEditTitle => 'Commentaire';
+
+  @override
+  String get noteHint =>
+      'Quelques mots sur ce fichier (200 caractères au plus)';
+
+  @override
+  String get noteAudio => 'Commentaire audio';
+
+  @override
+  String get noteListen => 'Écouter le commentaire audio';
+
+  @override
+  String exportRunning(String name) {
+    return 'Téléchargement de $name';
+  }
+
+  @override
+  String exportRunningMany(String name, int done, int total) {
+    return 'Téléchargement de $name : $done sur $total';
+  }
+
+  @override
+  String exportDone(String name) {
+    return '$name est sur l\'ordinateur';
+  }
+
+  @override
+  String exportFailed(String name) {
+    return '$name n\'a pas pu être téléchargé';
+  }
+
+  @override
+  String exportCancelled(String name) {
+    return 'Téléchargement de $name arrêté';
+  }
+
+  @override
+  String get settingsFiles => 'Fichiers sur cet ordinateur';
+
+  @override
+  String get settingsDownloadFolder => 'Dossier des téléchargements';
+
+  @override
+  String get settingsKeptFiles => 'Fichiers gardés pour la visionneuse';
+
+  @override
+  String settingsKeptFilesSize(String size) {
+    return '$size · se retéléchargent au besoin';
+  }
 }

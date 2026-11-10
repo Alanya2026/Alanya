@@ -445,6 +445,228 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'L\'application efface ce qu\'elle garde sur cet ordinateur. Vos fichiers restent dans le coffre ; pour revenir, il faudra scanner de nouveau le code avec votre téléphone.'**
   String get logoutConfirmText;
+
+  /// No description provided for @close.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get close;
+
+  /// No description provided for @save.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistrer'**
+  String get save;
+
+  /// No description provided for @open.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir'**
+  String get open;
+
+  /// No description provided for @empty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vider'**
+  String get empty;
+
+  /// No description provided for @previous.
+  ///
+  /// In fr, this message translates to:
+  /// **'Précédent'**
+  String get previous;
+
+  /// No description provided for @next.
+  ///
+  /// In fr, this message translates to:
+  /// **'Suivant'**
+  String get next;
+
+  /// No description provided for @download.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get download;
+
+  /// No description provided for @downloadFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger le dossier'**
+  String get downloadFolder;
+
+  /// No description provided for @downloadSaved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Enregistré : {path}'**
+  String downloadSaved(String path);
+
+  /// No description provided for @downloadFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le téléchargement n\'a pas abouti. Réessayez.'**
+  String get downloadFailed;
+
+  /// No description provided for @showInFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Afficher dans le dossier'**
+  String get showInFolder;
+
+  /// No description provided for @openWith.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir avec…'**
+  String get openWith;
+
+  /// No description provided for @openFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun logiciel de l\'ordinateur ne sait ouvrir ce fichier.'**
+  String get openFailed;
+
+  /// No description provided for @viewerPosition.
+  ///
+  /// In fr, this message translates to:
+  /// **'{index} sur {total}'**
+  String viewerPosition(int index, int total);
+
+  /// No description provided for @viewerKeys.
+  ///
+  /// In fr, this message translates to:
+  /// **'← → pour passer d\'un fichier à l\'autre · molette pour zoomer · Échap pour fermer'**
+  String get viewerKeys;
+
+  /// No description provided for @viewerCannotShow.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ordinateur ne sait pas afficher cette photo ici.'**
+  String get viewerCannotShow;
+
+  /// No description provided for @viewerVideoHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La vidéo s\'ouvre dans le lecteur de l\'ordinateur.'**
+  String get viewerVideoHint;
+
+  /// No description provided for @viewerAudioHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'audio s\'ouvre dans le lecteur de l\'ordinateur.'**
+  String get viewerAudioHint;
+
+  /// No description provided for @viewerDocumentHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le document s\'ouvre avec le logiciel de l\'ordinateur.'**
+  String get viewerDocumentHint;
+
+  /// No description provided for @viewerPlay.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lire'**
+  String get viewerPlay;
+
+  /// No description provided for @fileLost.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce fichier est introuvable chez l\'hébergeur : il ne peut plus être ouvert.'**
+  String get fileLost;
+
+  /// No description provided for @noteNone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas de commentaire.'**
+  String get noteNone;
+
+  /// No description provided for @noteAdd.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un commentaire'**
+  String get noteAdd;
+
+  /// No description provided for @noteEdit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le commentaire'**
+  String get noteEdit;
+
+  /// No description provided for @noteEditTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commentaire'**
+  String get noteEditTitle;
+
+  /// No description provided for @noteHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quelques mots sur ce fichier (200 caractères au plus)'**
+  String get noteHint;
+
+  /// No description provided for @noteAudio.
+  ///
+  /// In fr, this message translates to:
+  /// **'Commentaire audio'**
+  String get noteAudio;
+
+  /// No description provided for @noteListen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter le commentaire audio'**
+  String get noteListen;
+
+  /// No description provided for @exportRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement de {name}'**
+  String exportRunning(String name);
+
+  /// No description provided for @exportRunningMany.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement de {name} : {done} sur {total}'**
+  String exportRunningMany(String name, int done, int total);
+
+  /// No description provided for @exportDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} est sur l\'ordinateur'**
+  String exportDone(String name);
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{name} n\'a pas pu être téléchargé'**
+  String exportFailed(String name);
+
+  /// No description provided for @exportCancelled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Téléchargement de {name} arrêté'**
+  String exportCancelled(String name);
+
+  /// No description provided for @settingsFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers sur cet ordinateur'**
+  String get settingsFiles;
+
+  /// No description provided for @settingsDownloadFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dossier des téléchargements'**
+  String get settingsDownloadFolder;
+
+  /// No description provided for @settingsKeptFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fichiers gardés pour la visionneuse'**
+  String get settingsKeptFiles;
+
+  /// No description provided for @settingsKeptFilesSize.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size} · se retéléchargent au besoin'**
+  String settingsKeptFilesSize(String size);
 }
 
 class _AppLocalizationsDelegate

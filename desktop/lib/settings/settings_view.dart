@@ -1,11 +1,15 @@
-// Écran 7 : compte, cet ordinateur, langue, déconnexion. Le dossier des
-// téléchargements et les fichiers gardés arrivent avec la visionneuse (D3).
+// Écran 7 : compte, cet ordinateur, fichiers gardés sur l'ordinateur,
+// langue, déconnexion.
+
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/exporter.dart';
 import '../core/session_store.dart';
 import '../ui/common.dart';
+import '../ui/system.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -78,6 +82,9 @@ class SettingsView extends StatelessWidget {
                   ),
                 ]),
               ),
+              const SizedBox(height: 24),
+              _Section(l.settingsFiles),
+              const _FichiersOrdinateur(),
               const SizedBox(height: 24),
               _Section(l.settingsApp),
               Card(
@@ -153,4 +160,87 @@ class _Section extends StatelessWidget {
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, letterSpacing: 0.8, color: Palette.muted),
         ),
       );
+}
+
+class _FichiersOrdinateur extends StatefulWidget {
+  const _FichiersOrdinateur();
+
+  @override
+  State<_FichiersOrdinateur> createState() => _FichiersOrdinateurState();
+}
+
+class _FichiersOrdinateurState extends State<_FichiersOrdinateur> {
+  Directory? _dossier;
+  int? _gardes;
+  bool _vidage = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_dossier == null) _lire();
+  }
+
+  Future<void> _lire() async {
+    final vault = context.vault;
+    final d = await DownloadFolder.get();
+    final g = await vault.keptBytes();
+    if (mounted) {
+      setState(() {
+        _dossier = d;
+        _gardes = g;
+      });
+    }
+  }
+
+  Future<void> _vider() async {
+    setState(() => _vidage = true);
+    await context.vault.clearKept();
+    await _lire();
+    if (mounted) setState(() => _vidage = false);
+  }
+
+  Future<void> _ouvrirDossier() async {
+    final d = _dossier;
+    if (d == null) return;
+    await d.create(recursive: true);
+    await showInFolder(d.path);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    final t = Theme.of(context).textTheme;
+    Widget ligne(String titre, String sousTitre, Widget action) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(titre, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 2),
+                Text(sousTitre, style: t.bodySmall),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            action,
+          ]),
+        );
+    return Card(
+      child: Column(children: [
+        ligne(
+          l.settingsDownloadFolder,
+          _dossier?.path ?? '…',
+          OutlinedButton(onPressed: _dossier == null ? null : _ouvrirDossier, child: Text(l.open)),
+        ),
+        const Divider(height: 1, indent: 20, endIndent: 20),
+        ligne(
+          l.settingsKeptFiles,
+          _gardes == null ? '…' : l.settingsKeptFilesSize(formatBytes(context, _gardes!)),
+          OutlinedButton(
+            onPressed: _vidage || (_gardes ?? 0) == 0 ? null : _vider,
+            child: Text(l.empty),
+          ),
+        ),
+      ]),
+    );
+  }
 }

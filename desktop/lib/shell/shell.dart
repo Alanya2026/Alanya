@@ -7,6 +7,7 @@ import '../browse/folder_view.dart';
 import '../browse/home_view.dart';
 import '../settings/settings_view.dart';
 import '../ui/common.dart';
+import 'export_bar.dart';
 
 /// Ce que montre la partie droite.
 sealed class Destination {
@@ -84,7 +85,9 @@ class _ShellState extends State<Shell> {
           ),
         ),
         Expanded(
-          child: switch (_ici) {
+          child: Column(children: [
+            Expanded(
+              child: switch (_ici) {
             HomeDestination() => HomeView(
                 onOpenRoot: _racine,
                 onOpenFolder: (root, id) => _aller(FolderDestination(root, id)),
@@ -97,7 +100,10 @@ class _ShellState extends State<Shell> {
                 onBack: _precedents.isEmpty ? null : _retour,
               ),
             SettingsDestination() => const SettingsView(),
-          },
+              },
+            ),
+            const ExportBar(),
+          ]),
         ),
       ]),
     );

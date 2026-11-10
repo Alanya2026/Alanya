@@ -6,7 +6,10 @@ import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/exporter.dart';
+
 import '../ui/common.dart';
+import '../viewer/viewer_screen.dart';
 import 'thumbnail.dart';
 
 class FolderView extends StatefulWidget {
@@ -114,6 +117,13 @@ class _FolderViewState extends State<FolderView> {
                   Text(folderName(context, page.folder), style: t.headlineSmall),
                 ]),
               ),
+              if (_fichiers.isNotEmpty || page.folders.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: () => _telechargerDossier(page.folder),
+                  icon: const Icon(Icons.download_outlined, size: 18),
+                  label: Text(l.downloadFolder),
+                ),
+              const SizedBox(width: 8),
               IconButton(tooltip: l.refresh, onPressed: _charge ? null : _charger, icon: const Icon(Icons.refresh)),
             ]),
           ),
@@ -155,20 +165,43 @@ class _FolderViewState extends State<FolderView> {
     );
   }
 
+  Future<void> _telechargerDossier(SafeboxFolder dossier) async {
+    final l = context.l;
+    final messager = ScaffoldMessenger.of(context);
+    final exporter = context.vault.exporter;
+    await exporter.saveFolder(dossier.id, folderName(context, dossier));
+    final t = exporter.task;
+    if (!mounted || t == null) return;
+    if (t.state == ExportState.failed) messager.showSnackBar(SnackBar(content: Text(l.downloadFailed)));
+  }
+
+  void _ouvrir(SafeboxFile f) {
+    final i = _fichiers.indexWhere((x) => x.id == f.id);
+    if (i >= 0) openViewer(context, _fichiers, i);
+  }
+
   Widget _grille(List<SafeboxFile> fichiers) {
     final visuel = widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos || widget.root == SafeboxRoot.albums;
     if (visuel) {
       return SliverGrid(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 180, mainAxisSpacing: 6, crossAxisSpacing: 6),
         delegate: SliverChildBuilderDelegate(
-          (context, i) => Tooltip(message: fichiers[i].name, waitDuration: const Duration(milliseconds: 600), child: Thumbnail(file: fichiers[i])),
+          (context, i) => Tooltip(
+            message: fichiers[i].name,
+            waitDuration: const Duration(milliseconds: 600),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _ouvrir(fichiers[i]),
+              child: Thumbnail(file: fichiers[i]),
+            ),
+          ),
           childCount: fichiers.length,
         ),
       );
     }
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, i) => _Ligne(file: fichiers[i]),
+        (context, i) => _Ligne(file: fichiers[i], onTap: () => _ouvrir(fichiers[i])),
         childCount: fichiers.length,
       ),
     );
@@ -260,14 +293,18 @@ class _SousDossier extends StatelessWidget {
 }
 
 class _Ligne extends StatelessWidget {
-  const _Ligne({required this.file});
+  const _Ligne({required this.file, required this.onTap});
   final SafeboxFile file;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Card(
-          child: Padding(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(children: [
               SizedBox(width: 44, height: 44, child: Thumbnail(file: file)),
@@ -278,6 +315,7 @@ class _Ligne extends StatelessWidget {
               const SizedBox(width: 12),
               Text(formatBytes(context, file.plainBytes), style: Theme.of(context).textTheme.bodySmall),
             ]),
+          ),
           ),
         ),
       );

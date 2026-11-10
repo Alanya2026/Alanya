@@ -36,6 +36,7 @@ class _CoffreAppState extends State<CoffreApp> {
   /// Un coffre par connexion : rien du compte précédent (aperçus déchiffrés
   /// en mémoire) ne survit à une déconnexion.
   Vault? _vault;
+  final _navigateur = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
@@ -56,6 +57,9 @@ class _CoffreAppState extends State<CoffreApp> {
     if (connecte && _vault == null) {
       setState(() => _vault = Vault(widget.session.api));
     } else if (!connecte && _vault != null) {
+      // Visionneuse ou boîte de dialogue ouverte : on revient à la racine
+      // avant de retirer le coffre.
+      _navigateur.currentState?.popUntil((r) => r.isFirst);
       final ancien = _vault;
       setState(() => _vault = null);
       WidgetsBinding.instance.addPostFrameCallback((_) => ancien?.dispose());
@@ -72,6 +76,7 @@ class _CoffreAppState extends State<CoffreApp> {
           locale: widget.locale,
           vault: _vault,
           child: MaterialApp(
+            navigatorKey: _navigateur,
             onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
             debugShowCheckedModeBanner: false,
             theme: buildTheme(),

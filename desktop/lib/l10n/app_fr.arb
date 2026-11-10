@@ -17,21 +17,72 @@
   "errorNetwork": "Pas de connexion au serveur. Vérifiez Internet, puis réessayez.",
   "errorGeneric": "Une erreur est survenue. Réessayez dans un instant.",
   "bytesB": "{n} o",
-  "@bytesB": {"placeholders": {"n": {"type": "int"}}},
+  "@bytesB": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "bytesKB": "{n} Ko",
-  "@bytesKB": {"placeholders": {"n": {"type": "String"}}},
+  "@bytesKB": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
   "bytesMB": "{n} Mo",
-  "@bytesMB": {"placeholders": {"n": {"type": "String"}}},
+  "@bytesMB": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
   "bytesGB": "{n} Go",
-  "@bytesGB": {"placeholders": {"n": {"type": "String"}}},
+  "@bytesGB": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
   "spaceUsedOf": "{used} sur {total}",
-  "@spaceUsedOf": {"placeholders": {"used": {"type": "String"}, "total": {"type": "String"}}},
+  "@spaceUsedOf": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "spaceFree": "{free} libres",
-  "@spaceFree": {"placeholders": {"free": {"type": "String"}}},
+  "@spaceFree": {
+    "placeholders": {
+      "free": {
+        "type": "String"
+      }
+    }
+  },
   "spaceTrash": "Corbeille · {size}",
-  "@spaceTrash": {"placeholders": {"size": {"type": "String"}}},
+  "@spaceTrash": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
   "fileCount": "{n, plural, =0{Aucun fichier} =1{1 fichier} other{{n} fichiers}}",
-  "@fileCount": {"placeholders": {"n": {"type": "int"}}},
+  "@fileCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "homeFolders": "Vos dossiers",
   "homeRecentAlbums": "Albums récents",
   "folderEmpty": "Vide",
@@ -58,14 +109,128 @@
   "settingsApp": "Application",
   "settingsComputerHint": "Visible dans « Appareils connectés » sur votre téléphone",
   "settingsConnectedOn": "Connecté le {date} · visible dans « Appareils connectés » sur votre téléphone",
-  "@settingsConnectedOn": {"placeholders": {"date": {"type": "String"}}},
+  "@settingsConnectedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "settingsLanguage": "Langue",
   "settingsLanguageSystem": "Celle du système",
   "settingsVersion": "Alanya Coffre-fort {version}",
-  "@settingsVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "logout": "Se déconnecter",
   "logoutTitle": "Se déconnecter de cet ordinateur",
   "logoutText": "Efface tout ce que l'application garde sur cet ordinateur. Vos fichiers restent dans le coffre.",
   "logoutConfirmTitle": "Se déconnecter ?",
-  "logoutConfirmText": "L'application efface ce qu'elle garde sur cet ordinateur. Vos fichiers restent dans le coffre ; pour revenir, il faudra scanner de nouveau le code avec votre téléphone."
+  "logoutConfirmText": "L'application efface ce qu'elle garde sur cet ordinateur. Vos fichiers restent dans le coffre ; pour revenir, il faudra scanner de nouveau le code avec votre téléphone.",
+  "close": "Fermer",
+  "save": "Enregistrer",
+  "open": "Ouvrir",
+  "empty": "Vider",
+  "previous": "Précédent",
+  "next": "Suivant",
+  "download": "Télécharger",
+  "downloadFolder": "Télécharger le dossier",
+  "downloadSaved": "Enregistré : {path}",
+  "@downloadSaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadFailed": "Le téléchargement n'a pas abouti. Réessayez.",
+  "showInFolder": "Afficher dans le dossier",
+  "openWith": "Ouvrir avec…",
+  "openFailed": "Aucun logiciel de l'ordinateur ne sait ouvrir ce fichier.",
+  "viewerPosition": "{index} sur {total}",
+  "@viewerPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "viewerKeys": "← → pour passer d'un fichier à l'autre · molette pour zoomer · Échap pour fermer",
+  "viewerCannotShow": "L'ordinateur ne sait pas afficher cette photo ici.",
+  "viewerVideoHint": "La vidéo s'ouvre dans le lecteur de l'ordinateur.",
+  "viewerAudioHint": "L'audio s'ouvre dans le lecteur de l'ordinateur.",
+  "viewerDocumentHint": "Le document s'ouvre avec le logiciel de l'ordinateur.",
+  "viewerPlay": "Lire",
+  "fileLost": "Ce fichier est introuvable chez l'hébergeur : il ne peut plus être ouvert.",
+  "noteNone": "Pas de commentaire.",
+  "noteAdd": "Ajouter un commentaire",
+  "noteEdit": "Modifier le commentaire",
+  "noteEditTitle": "Commentaire",
+  "noteHint": "Quelques mots sur ce fichier (200 caractères au plus)",
+  "noteAudio": "Commentaire audio",
+  "noteListen": "Écouter le commentaire audio",
+  "exportRunning": "Téléchargement de {name}",
+  "@exportRunning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "exportRunningMany": "Téléchargement de {name} : {done} sur {total}",
+  "@exportRunningMany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportDone": "{name} est sur l'ordinateur",
+  "@exportDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "exportFailed": "{name} n'a pas pu être téléchargé",
+  "@exportFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "exportCancelled": "Téléchargement de {name} arrêté",
+  "@exportCancelled": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsFiles": "Fichiers sur cet ordinateur",
+  "settingsDownloadFolder": "Dossier des téléchargements",
+  "settingsKeptFiles": "Fichiers gardés pour la visionneuse",
+  "settingsKeptFilesSize": "{size} · se retéléchargent au besoin",
+  "@settingsKeptFilesSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  }
 }

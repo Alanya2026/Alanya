@@ -214,4 +214,134 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get logoutConfirmText =>
       'The app erases what it keeps on this computer. Your files stay in your SafeBox; to come back, you\'ll scan the code again with your phone.';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get open => 'Open';
+
+  @override
+  String get empty => 'Empty';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get downloadFolder => 'Download folder';
+
+  @override
+  String downloadSaved(String path) {
+    return 'Saved: $path';
+  }
+
+  @override
+  String get downloadFailed => 'The download didn\'t finish. Try again.';
+
+  @override
+  String get showInFolder => 'Show in folder';
+
+  @override
+  String get openWith => 'Open with…';
+
+  @override
+  String get openFailed => 'No app on this computer can open this file.';
+
+  @override
+  String viewerPosition(int index, int total) {
+    return '$index of $total';
+  }
+
+  @override
+  String get viewerKeys =>
+      '← → to move between files · scroll to zoom · Esc to close';
+
+  @override
+  String get viewerCannotShow => 'This computer can\'t show this photo here.';
+
+  @override
+  String get viewerVideoHint => 'The video opens in the computer\'s player.';
+
+  @override
+  String get viewerAudioHint => 'The audio opens in the computer\'s player.';
+
+  @override
+  String get viewerDocumentHint =>
+      'The document opens with the computer\'s app.';
+
+  @override
+  String get viewerPlay => 'Play';
+
+  @override
+  String get fileLost =>
+      'This file can\'t be found at the host: it can no longer be opened.';
+
+  @override
+  String get noteNone => 'No comment.';
+
+  @override
+  String get noteAdd => 'Add a comment';
+
+  @override
+  String get noteEdit => 'Edit comment';
+
+  @override
+  String get noteEditTitle => 'Comment';
+
+  @override
+  String get noteHint => 'A few words about this file (up to 200 characters)';
+
+  @override
+  String get noteAudio => 'Audio comment';
+
+  @override
+  String get noteListen => 'Listen to the audio comment';
+
+  @override
+  String exportRunning(String name) {
+    return 'Downloading $name';
+  }
+
+  @override
+  String exportRunningMany(String name, int done, int total) {
+    return 'Downloading $name: $done of $total';
+  }
+
+  @override
+  String exportDone(String name) {
+    return '$name is on this computer';
+  }
+
+  @override
+  String exportFailed(String name) {
+    return '$name couldn\'t be downloaded';
+  }
+
+  @override
+  String exportCancelled(String name) {
+    return 'Download of $name stopped';
+  }
+
+  @override
+  String get settingsFiles => 'Files on this computer';
+
+  @override
+  String get settingsDownloadFolder => 'Download folder';
+
+  @override
+  String get settingsKeptFiles => 'Files kept for the viewer';
+
+  @override
+  String settingsKeptFilesSize(String size) {
+    return '$size · downloaded again when needed';
+  }
 }

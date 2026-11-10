@@ -14,6 +14,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'cipher.dart';
 import 'http.dart';
 import 'models.dart';
 import 'upload_stall_guard.dart';
@@ -337,7 +338,18 @@ mixin SafeboxCalls {
     await getSafeboxBlock(url, onBytes: out.addAll);
     return Uint8List.fromList(out);
   }
+
+  /// L'audio d'un commentaire, en clair (m4a) : un seul bloc chiffré.
+  Future<Uint8List> fetchSafeboxNoteAudio(SafeboxNoteAudio audio) async {
+    final recu = BytesBuilder(copy: false);
+    await getSafeboxBlock(audio.url, onBytes: recu.add);
+    final plan = safeboxPlanBlock(1, plainSize: audio.plainBytes, blockSize: kSafeboxNoteAudioBlockBytes);
+    return safeboxDecryptBlock(audio.key, recu.takeBytes(), plan);
+  }
 }
+
+/// Taille de bloc d'un audio de commentaire (5 minutes tiennent dans un bloc).
+const int kSafeboxNoteAudioBlockBytes = 8 << 20;
 
 /// Envoie [request] sous la surveillance de [guard]. Un envoi bloqué lève
 /// une erreur réseau (statut 0). La course avec [guard] ne dépend pas du
