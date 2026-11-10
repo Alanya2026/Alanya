@@ -3,6 +3,7 @@
 //  le téléphone (galerie ou ZIP). Onglet de l'accueil, et écran à part depuis
 //  un dossier.
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -10,8 +11,6 @@ import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../core/services/safebox/safebox_controller.dart';
 import '../../core/services/safebox/safebox_export.dart';
-import '../../core/services/safebox/safebox_models.dart';
-import '../../core/services/safebox/safebox_upload_manager.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';

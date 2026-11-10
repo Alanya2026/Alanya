@@ -1,7 +1,7 @@
 import 'dart:convert';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import '../../l10n/app_localizations.dart';
-import '../services/safebox/safebox_models.dart';
 
 /// Type de message « fichier du coffre-fort » (backend :
 /// utils/safeboxShareMessage.js). Les types 0 à 9 sont ceux de l'application,

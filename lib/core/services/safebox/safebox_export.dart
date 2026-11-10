@@ -15,13 +15,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gal/gal.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'safebox_models.dart';
 import 'safebox_received_files.dart';
 
 enum SafeboxExportTarget { gallery, zip }

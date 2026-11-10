@@ -1,4 +1,5 @@
-import '../../talky_api_client.dart' show TalkyException;
+import 'package:alanya_safebox/alanya_safebox.dart' show SafeboxHttpException;
+
 import '../utils/app_exceptions.dart';
 import '../utils/media_staging.dart' show MediaStagingException;
 import 'error_kind.dart';
@@ -64,7 +65,8 @@ class AppError implements Exception {
   factory AppError.from(Object? erreur) {
     if (erreur is AppError) return erreur;
 
-    if (erreur is TalkyException) {
+    // TalkyException en est une ; le paquet du coffre lève aussi les siennes.
+    if (erreur is SafeboxHttpException) {
       // La cause d'origine, quand elle a survécu, classe mieux que le statut :
       // elle distingue une coupure réseau d'un délai dépassé, là où le statut
       // `0` les confond.

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_cipher.dart';
 
 Uint8List _octets(int n, int graine) =>
     Uint8List.fromList(List<int>.generate(n, (i) => (i * 31 + graine) & 0xff));

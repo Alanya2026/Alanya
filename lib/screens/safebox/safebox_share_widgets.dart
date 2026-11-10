@@ -7,13 +7,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/db/app_database.dart';
 import '../../core/services/safebox/safebox_controller.dart';
-import '../../core/services/safebox/safebox_models.dart';
-import '../../core/services/safebox/safebox_upload_manager.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/conversation_display.dart';

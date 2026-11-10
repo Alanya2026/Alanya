@@ -8,8 +8,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,19 +24,21 @@ import '../video_codec_policy.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
 import '../connectivity_service.dart';
+import '../secure_storage_guard.dart';
 import 'safebox_phone_cleanup.dart';
-import 'safebox_backup.dart';
 import 'safebox_backup_background.dart';
-import 'safebox_cipher.dart';
 import 'safebox_device_media.dart';
-import 'safebox_download_manager.dart';
 import 'safebox_export.dart';
 import 'safebox_foreground.dart';
 import 'safebox_media_prep.dart';
-import 'safebox_models.dart';
-import 'safebox_quality.dart';
 import 'safebox_received_files.dart';
-import 'safebox_upload_manager.dart';
+
+/// Le stockage sécurisé des clés d'envoi en cours, avec les options du
+/// téléphone (voir secure_storage_guard.dart).
+const FlutterSecureStorage kSafeboxSecureStorage = FlutterSecureStorage(
+  aOptions: kSecureStorageAndroidOptions,
+  iOptions: kSecureStorageIosOptions,
+);
 
 /// Un fichier choisi par l'inscrit, pas encore préparé.
 class SafeboxPick {
@@ -134,7 +138,12 @@ class SafeboxController extends ChangeNotifier {
         _enCharge = charging ?? _batterieEnCharge,
         _premierPlan = foreground ?? SafeboxForeground(),
         _alertes = SafeboxQuotaAlerter(quotaAlert ?? _notifierEspace),
-        uploads = uploadManager ?? SafeboxUploadManager(transport: ApiSafeboxTransport(api)),
+        uploads = uploadManager ??
+            SafeboxUploadManager(
+              transport: ApiSafeboxTransport(api),
+              store: PrefsSafeboxJobStore(secure: kSafeboxSecureStorage),
+              unmetered: () => ConnectivityService().currentIsUnmetered,
+            ),
         downloads = SafeboxDownloadManager(transport: ApiSafeboxDownloadTransport(api)),
         previews = SafeboxPreviewCache(transport: ApiSafeboxDownloadTransport(api)) {
     exports = SafeboxExporter(

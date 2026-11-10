@@ -16,6 +16,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -23,7 +24,6 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/services/safebox/safebox_controller.dart';
-import '../../core/services/safebox/safebox_models.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';

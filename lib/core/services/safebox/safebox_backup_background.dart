@@ -15,15 +15,14 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../talky_api_client.dart';
-import 'safebox_backup.dart';
 import 'safebox_controller.dart';
-import 'safebox_upload_manager.dart';
 
 const String kSafeboxBackupTask = 'alanya.coffre.sauvegarde';
 

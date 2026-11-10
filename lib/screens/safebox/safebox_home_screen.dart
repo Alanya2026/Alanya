@@ -7,21 +7,18 @@
 //  dossiers remplis depuis le téléphone, les albums récents, « Libérer de
 //  l'espace » et la corbeille, et un bouton « + ».
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../core/services/billing/entitlement_service.dart';
-import '../../core/services/safebox/safebox_backup.dart';
 import '../../core/services/safebox/safebox_controller.dart';
-import '../../core/services/safebox/safebox_models.dart';
-import '../../core/services/safebox/safebox_upload_manager.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_backup_screens.dart';
 import 'safebox_folder_screen.dart';

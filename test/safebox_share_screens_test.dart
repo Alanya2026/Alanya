@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +8,6 @@ import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_controller.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 import 'package:talky_flutter/core/theme/app_theme.dart';
 import 'package:talky_flutter/core/theme/locale_controller.dart';
 import 'package:talky_flutter/core/utils/safebox_share_payload.dart';

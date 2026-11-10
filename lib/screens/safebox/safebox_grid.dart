@@ -2,10 +2,10 @@
 //  albums de tous types (vignette, durée d'une vidéo, nom d'un document ou
 //  d'une musique), sélection multiple.
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/services/safebox/safebox_models.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import 'safebox_widgets.dart';

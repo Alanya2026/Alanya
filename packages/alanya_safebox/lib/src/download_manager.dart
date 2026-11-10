@@ -13,9 +13,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../talky_api_client.dart';
-import 'safebox_cipher.dart';
-import 'safebox_models.dart';
+import 'api.dart';
+import 'http.dart';
+import 'cipher.dart';
+import 'models.dart';
 
 abstract class SafeboxDownloadTransport {
   Future<SafeboxDownloadPlan> plan(int fileId);
@@ -29,7 +30,7 @@ abstract class SafeboxDownloadTransport {
 
 class ApiSafeboxDownloadTransport implements SafeboxDownloadTransport {
   ApiSafeboxDownloadTransport(this.api);
-  final TalkyApiClient api;
+  final SafeboxCalls api;
 
   @override
   Future<SafeboxDownloadPlan> plan(int fileId) => api.fetchSafeboxDownload(fileId);
@@ -131,7 +132,7 @@ class SafeboxDownloadManager extends ChangeNotifier {
     for (var essai = 0;; essai += 1) {
       try {
         return await action();
-      } on TalkyException catch (e) {
+      } on SafeboxHttpException catch (e) {
         if (e.statusCode != 0 || essai >= networkRetries.length) rethrow;
         await _sleep(networkRetries[essai]);
       }
@@ -167,7 +168,7 @@ class SafeboxDownloadManager extends ChangeNotifier {
                   _progres[file.id] = (geo.plainStart + recu.length * geo.plainLength / geo.cipherLength) / file.plainBytes;
                   notifyListeners();
                 }));
-          } on TalkyException catch (e) {
+          } on SafeboxHttpException catch (e) {
             // Adresses de 15 minutes : un gros fichier sur une ligne lente les use.
             if (e.statusCode != 403 || adresseRenouvelee) rethrow;
             adresseRenouvelee = true;
@@ -176,7 +177,7 @@ class SafeboxDownloadManager extends ChangeNotifier {
         }
         final chiffre = recu.takeBytes();
         if (chiffre.length != geo.cipherLength) {
-          throw TalkyException('bloc $n de ${chiffre.length} octets', 0, code: 'SAFEBOX_BLOCK_SIZE');
+          throw SafeboxHttpException('bloc $n de ${chiffre.length} octets', 0, code: 'SAFEBOX_BLOCK_SIZE');
         }
         await raf.writeFrom(await _decrypt(plan.key, chiffre, geo));
       }
@@ -184,7 +185,7 @@ class SafeboxDownloadManager extends ChangeNotifier {
       await raf.close();
     }
     if (await partiel.length() != file.plainBytes) {
-      throw TalkyException('taille finale inattendue', 0, code: 'SAFEBOX_BLOCK_SIZE');
+      throw SafeboxHttpException('taille finale inattendue', 0, code: 'SAFEBOX_BLOCK_SIZE');
     }
     return partiel.rename(cible.path);
   }

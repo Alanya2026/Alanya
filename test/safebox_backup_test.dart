@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_backup.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_backup_background.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 
 /// Lot 10 : la sauvegarde automatique, sans téléphone ni serveur.
 void main() {

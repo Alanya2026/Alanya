@@ -2,15 +2,14 @@ import 'dart:convert';
 
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talky_flutter/core/errors/app_error.dart';
 import 'package:talky_flutter/core/errors/error_presenter.dart';
 import 'package:talky_flutter/core/services/chat/conversation_merge.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_received_files.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_upload_manager.dart';
 import 'package:talky_flutter/core/theme/locale_controller.dart';
 import 'package:talky_flutter/core/utils/safebox_share_payload.dart';
 import 'package:talky_flutter/l10n/app_localizations.dart';

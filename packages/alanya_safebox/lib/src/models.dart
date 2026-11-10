@@ -4,9 +4,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'safebox_quality.dart';
+import 'quality.dart';
 
-export 'safebox_quality.dart' show SafeboxQuality;
+export 'quality.dart' show SafeboxQuality;
 
 /// Les quatre types de fichiers (la « famille »), décidés par l'extension.
 enum SafeboxFamily {

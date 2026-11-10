@@ -18,8 +18,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'safebox_models.dart';
-import 'safebox_quality.dart';
+import 'models.dart';
+import 'quality.dart';
 
 // ── Réglages ─────────────────────────────────────────────────────────────────
 

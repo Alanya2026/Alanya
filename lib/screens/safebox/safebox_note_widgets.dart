@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,7 +13,6 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 
 import '../../core/services/safebox/safebox_controller.dart';
-import '../../core/services/safebox/safebox_models.dart';
 import '../../core/services/voice_record_config.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';

@@ -1,10 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_cipher.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_upload_manager.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 
 const _mio = 1 << 20;

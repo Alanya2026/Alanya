@@ -9,14 +9,13 @@
 
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
 
-import 'safebox_backup.dart';
-import 'safebox_models.dart';
 
 class PhoneSafeboxDeviceSource implements SafeboxDeviceSource {
   static const _canal = MethodChannel('com.alanya/safebox_documents');

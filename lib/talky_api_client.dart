@@ -10,6 +10,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:device_info_plus/device_info_plus.dart';
@@ -24,8 +25,6 @@ import 'core/services/call/call_history_rules.dart';
 import 'core/services/storage_service.dart';
 import 'core/utils/app_log.dart';
 import 'core/utils/media_upload_limits.dart';
-import 'core/utils/upload_stall_guard.dart';
-import 'core/services/safebox/safebox_models.dart';
 import 'api/socket_auth_recovery.dart';
 
 part 'api/auth_api.dart';
@@ -51,7 +50,7 @@ part 'api/alanya_phone_api.dart';
 part 'api/safebox_api.dart';
 part 'api/documents_sensibles_api.dart';
 
-class TalkyApiClient {
+class TalkyApiClient with SafeboxCalls {
   // ** Remplace par ton IP/domaine de production
   static const String baseUrl   = 'https://www.alanya237.com/api';
   static const String socketUrl = 'https://www.alanya237.com/';
@@ -65,6 +64,11 @@ class TalkyApiClient {
   /// Modifiable par les tests seulement.
   @visibleForTesting
   Duration uploadStallTimeout = kUploadStallTimeout;
+
+  /// Le coffre-fort (paquet alanya_safebox) passe par ce client : jeton,
+  /// renouvellement et erreurs de l'application (api/safebox_api.dart).
+  @override
+  SafeboxHttp get safeboxHttp => _TalkySafeboxHttp(this);
 
   /// Seuil au-delà duquel un envoi de média attend son tour (voir
   /// [kHeavyUploadBytes]). Modifiable par les tests seulement.
@@ -662,7 +666,7 @@ class TalkyApiClient {
   }
 }
 
-class TalkyException implements Exception {
+class TalkyException implements SafeboxHttpException {
   /// Texte renvoyé par le serveur, ou message de repli.
   ///
   /// **Ne pas afficher.** C'est de la prose libre, écrite en français côté
@@ -670,8 +674,10 @@ class TalkyException implements Exception {
   /// français, et parfois un identifiant de table. Passer par
   /// `presenterErreur` (lib/core/errors/error_presenter.dart), qui choisit un
   /// texte à partir de [code]. Ce champ reste pour les journaux.
+  @override
   final String message;
 
+  @override
   final int statusCode;
 
   /// Code machine stable du backend (`TRUST_LIST_EMPTY`, `SESSION_BUSY`…).
@@ -679,6 +685,7 @@ class TalkyException implements Exception {
   /// Nul tant que la route n'a pas été migrée côté serveur : la présentation
   /// retombe alors sur le statut HTTP. C'est ce qui permet de livrer l'app sans
   /// attendre le backend.
+  @override
   final String? code;
 
   /// Exception d'origine, quand la requête n'a jamais abouti.
@@ -686,6 +693,7 @@ class TalkyException implements Exception {
   /// Sans elle, `statusCode == 0` confond une coupure réseau, un délai dépassé
   /// et un refus TLS — trois pannes dont on ne dit pas la même chose à
   /// l'utilisateur.
+  @override
   final Object? cause;
 
   /// Corps JSON de la réponse d'erreur, quand il y en a un.
