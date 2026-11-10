@@ -2282,6 +2282,11 @@ class SocketEvents {
   /// seulement — les autres membres ne voient rien.
   static const conversationCleared = 'conversation:cleared';
 
+  /// La conversation vient de passer en chiffré de bout en bout :
+  /// { conversationID, e2eeSince }. Émis une fois, vers les deux comptes,
+  /// au moment où le serveur pose `conversation.e2ee_since`.
+  static const conversationE2ee = 'conversation:e2ee';
+
   /// Un membre a quitté ou a été retiré. Indispensable en plus de
   /// `conversation:updated` : l'exclu n'est plus dans la liste de diffusion de
   /// ce dernier et n'apprendrait jamais son exclusion.

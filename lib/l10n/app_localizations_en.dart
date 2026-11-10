@@ -10448,4 +10448,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get e2eeMediaNonChiffre =>
       'In this conversation, texts are end-to-end encrypted; photos and files are not yet.';
+
+  @override
+  String get e2eeBanniereDebut =>
+      'From here on, messages in this chat are end-to-end encrypted. Photos and files are not yet.';
 }

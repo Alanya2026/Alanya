@@ -21,6 +21,12 @@ String e2eeLibelleAttente(AppLocalizations l10n) =>
 bool e2eeEstTexteReel(String? contenu) =>
     contenu != null && contenu.isNotEmpty && !contenu.startsWith(kE2eePrefixeAttente);
 
+/// Ce contenu est-il le libellé « en attente » d'un message chiffré que cet
+/// appareil n'a pas (encore) déchiffré ? Un tel message ne se transfère, ne
+/// se copie ni ne se modifie : il n'a pas de texte ici.
+bool estEnAttenteE2ee(String? contenu) =>
+    contenu != null && contenu.startsWith(kE2eePrefixeAttente);
+
 /// La ligne du serveur décrit-elle un message chiffré ?
 bool e2eeEstChiffre(Map<String, dynamic> json) {
   final v = json['enc_version'] ?? json['encVersion'];

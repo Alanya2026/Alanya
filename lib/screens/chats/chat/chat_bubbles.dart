@@ -27,6 +27,14 @@ const Duration _kBurstWindow = Duration(minutes: 3);
 /// sous le pixel : il sépare sans dessiner de cadre.
 const double _kHairline = 0.6;
 
+/// Élément du fil : le moment où la conversation est passée en chiffré de
+/// bout en bout. Trié avec les messages et les appels, il s'intercale entre
+/// le dernier message écrit en clair et le premier message chiffré.
+class _DebutChiffrement {
+  const _DebutChiffrement(this.depuis);
+  final DateTime depuis;
+}
+
 /// Hauteur réservée à l'horodatage en fin de ligne. Ne rallonge pas une
 /// ligne de texte (plus basse que son interligne), mais garantit qu'une
 /// réserve renvoyée à la ligne peut accueillir l'heure sans la recouvrir.
@@ -1009,7 +1017,58 @@ extension _ChatBubbles on _ChatDetailScreenState {
     if (item is LocalCall) return item.createdAt;
     if (item is ChatListSingle) return item.message.sendAt;
     if (item is ChatListAlbum) return item.messages.first.sendAt;
+    if (item is _DebutChiffrement) return item.depuis;
     return DateTime.now();
+  }
+
+  /// Ordre du fil, du plus ancien au plus récent. À égalité, le repère du
+  /// passage en chiffré passe AVANT : le serveur date le passage à la
+  /// seconde, et le premier message chiffré tombe souvent dans la même.
+  int _compareFeed(Object a, Object b) {
+    final parDate = _feedTime(a).compareTo(_feedTime(b));
+    if (parDate != 0) return parDate;
+    if (a is _DebutChiffrement && b is! _DebutChiffrement) return -1;
+    if (b is _DebutChiffrement && a is! _DebutChiffrement) return 1;
+    return 0;
+  }
+
+  /// Repère « chiffré à partir d'ici ». Même surface que les événements de
+  /// groupe : c'est une trace dans le fil, pas un message.
+  Widget _buildE2eeBanner() {
+    final couleur = context.colors.onSurfaceVariant;
+    return Align(
+      alignment: Alignment.center,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
+        ),
+        decoration: BoxDecoration(
+          color: context.semantic.surfaceMuted,
+          borderRadius: AppRadius.brSm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: Icon(Icons.lock_outline, size: 14, color: couleur),
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                context.l10n.e2eeBanniereDebut,
+                textAlign: TextAlign.center,
+                style: context.text.labelSmall?.copyWith(color: couleur),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _fmtCallDuration(int? seconds) {

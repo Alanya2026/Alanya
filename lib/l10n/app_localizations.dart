@@ -17475,6 +17475,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Dans cette conversation, les textes sont chiffrés de bout en bout ; les photos et fichiers ne le sont pas encore.'**
   String get e2eeMediaNonChiffre;
+
+  /// Repère posé dans le fil au moment où la conversation passe en chiffré : les messages au-dessus ont été écrits en clair.
+  ///
+  /// In fr, this message translates to:
+  /// **'À partir d\'ici, les messages de cette discussion sont chiffrés de bout en bout. Les photos et les fichiers ne le sont pas encore.'**
+  String get e2eeBanniereDebut;
 }
 
 class _AppLocalizationsDelegate

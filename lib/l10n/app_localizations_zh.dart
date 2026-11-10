@@ -9844,4 +9844,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get e2eeMediaNonChiffre => '在此对话中，文字已端到端加密；照片和文件暂未加密。';
+
+  @override
+  String get e2eeBanniereDebut => '从这里开始，此对话中的消息已端到端加密。照片和文件暂未加密。';
 }

@@ -6,6 +6,7 @@ library;
 
 import '../../db/app_database.dart';
 import '../../utils/media_album.dart';
+import '../../e2ee/e2ee_affichage.dart';
 
 /// Types dont le contenu est de la prose.
 ///
@@ -37,6 +38,10 @@ String? translatableTextOf(LocalMessage m) {
   // Vue unique non consultée : la légende n'apparaît que dans la visionneuse,
   // et le média peut disparaître avant d'être ouvert.
   if (m.isViewOnce && m.viewedAt == null) return null;
+
+  // Message chiffré pas encore déchiffré ici : `content` est le libellé
+  // « en attente », pas le texte de l'expéditeur.
+  if (estEnAttenteE2ee(m.content)) return null;
 
   final raw = m.content?.trim();
   if (raw == null || raw.isEmpty) return null;

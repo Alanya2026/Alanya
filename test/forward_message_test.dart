@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/db/app_database.dart';
 import 'package:talky_flutter/core/utils/forward_message.dart';
+import 'package:talky_flutter/core/e2ee/e2ee_affichage.dart';
 import 'package:talky_flutter/core/services/media_expiry_policy.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
@@ -52,6 +53,15 @@ void main() {
 
     test('texte vide refusé', () {
       expect(canForwardMessage(_msg(content: '   ')), isFalse);
+    });
+
+    test('message chiffré pas encore déchiffré : le libellé ne se transfère pas', () {
+      final attente = '${kE2eePrefixeAttente}🔒 En attente de ce message…';
+      expect(canForwardMessage(_msg(content: attente)), isFalse);
+      expect(
+        resolveForwardCaption(_msg(type: 1, content: attente, mediaUrl: 'https://x/y.webp'), null),
+        isNull,
+      );
     });
 
     test('document sensible refusé, même avec son fichier', () {

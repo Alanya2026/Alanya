@@ -267,18 +267,40 @@ class E2eeService {
         await _db.toutEffacer();
         await _coffre.detruire();
         _inscritEnMemoire = false;
-        _chiffreesEnMemoire.clear();
+        conversationsChiffrees.value = const {};
       });
 
   // ── Conversations chiffrées ────────────────────────────────────────────
 
+  /// Date de passage en chiffré de chaque conversation que CET appareil sait
+  /// chiffrée. L'écran de discussion s'y abonne pour poser la bannière
+  /// « chiffré à partir d'ici » ; l'envoi la lit sans attendre de base.
+  final ValueNotifier<Map<int, DateTime>> conversationsChiffrees = ValueNotifier(const {});
+
   /// Note qu'une conversation est chiffrée. À sens unique : rien ne la
   /// ramène en clair, et un « non » du serveur après un « oui » est ignoré
   /// (docs/e2ee, chapitre 21).
-  Future<void> noterConversationChiffree(int conversationID, DateTime depuis) {
-    _chiffreesEnMemoire.add(conversationID);
+  ///
+  /// [dateDuServeur] : [depuis] est `conversation.e2ee_since` lui-même
+  /// (réponse de `/api/e2ee/devices`, événement `conversation:e2ee`). Elle
+  /// remplace alors la date notée. Sinon — date d'un premier message chiffré
+  /// reçu, heure d'un refus —, [depuis] est postérieure ou égale à la vraie,
+  /// et seule la première notée est gardée.
+  Future<void> noterConversationChiffree(
+    int conversationID,
+    DateTime depuis, {
+    bool dateDuServeur = false,
+  }) {
+    final connue = conversationsChiffrees.value[conversationID];
+    final aEcrire = connue == null ||
+        (dateDuServeur && connue.millisecondsSinceEpoch != depuis.millisecondsSinceEpoch);
+    if (!aEcrire) return Future<void>.value();
+    conversationsChiffrees.value = {...conversationsChiffrees.value, conversationID: depuis};
     return _verrou.executer(() => _db.customStatement(
-          'INSERT OR IGNORE INTO e2ee_conversations (conv, depuis) VALUES (?, ?)',
+          dateDuServeur
+              ? 'INSERT INTO e2ee_conversations (conv, depuis) VALUES (?, ?) '
+                  'ON CONFLICT(conv) DO UPDATE SET depuis = excluded.depuis'
+              : 'INSERT OR IGNORE INTO e2ee_conversations (conv, depuis) VALUES (?, ?)',
           [conversationID, depuis.millisecondsSinceEpoch],
         ));
   }
@@ -296,26 +318,37 @@ class E2eeService {
   //
   // L'envoi d'un message est un chemin critique : son émission ne doit pas
   // attendre une lecture de base quand le chiffrement ne le concerne pas. Ces
-  // deux valeurs, chargées au démarrage et tenues à jour, permettent à
-  // l'envoi de décider SANS attendre : compte non inscrit, ou conversation
-  // non chiffrée → émission immédiate, comme avant le chiffrement.
+  // deux valeurs (`_inscritEnMemoire`, `conversationsChiffrees`), chargées au
+  // démarrage et tenues à jour, permettent à l'envoi de décider SANS
+  // attendre : compte non inscrit, ou conversation non chiffrée → émission
+  // immédiate, comme avant le chiffrement.
 
   bool _inscritEnMemoire = false;
-  final Set<int> _chiffreesEnMemoire = {};
 
   /// Inscrit, d'après la dernière lecture ou synchronisation.
   bool get inscritEnMemoire => _inscritEnMemoire;
 
   /// Conversation connue chiffrée, sans lecture de base.
-  bool estChiffreeEnMemoire(int conversationID) => _chiffreesEnMemoire.contains(conversationID);
+  bool estChiffreeEnMemoire(int conversationID) =>
+      conversationsChiffrees.value.containsKey(conversationID);
 
   /// Charge l'état en mémoire. À appeler au démarrage ; sans effet si rien
   /// n'existe encore.
+  ///
+  /// La lecture passe sous le verrou : une conversation notée pendant le
+  /// démarrage est écrite APRÈS elle, et ce qui a été noté en mémoire
+  /// entre-temps l'emporte sur la base.
   Future<void> prechargerEtat() async {
     try {
       await estInscrit();
-      final rows = await _db.customSelect('SELECT conv FROM e2ee_conversations').get();
-      _chiffreesEnMemoire.addAll(rows.map((r) => r.read<int>('conv')));
+      final rows = await _verrou.executer(
+        () => _db.customSelect('SELECT conv, depuis FROM e2ee_conversations').get(),
+      );
+      conversationsChiffrees.value = {
+        for (final r in rows)
+          r.read<int>('conv'): DateTime.fromMillisecondsSinceEpoch(r.read<int>('depuis')),
+        ...conversationsChiffrees.value,
+      };
     } catch (e) {
       debugPrint('[E2EE] préchargement de l\'état impossible : $e');
     }
@@ -365,7 +398,9 @@ class E2eeService {
     }
     final depuis = _date(reponse['e2eeSince']);
     if (depuis == null && !await estChiffree(conversationID)) return null;
-    if (depuis != null) await noterConversationChiffree(conversationID, depuis);
+    if (depuis != null) {
+      await noterConversationChiffree(conversationID, depuis, dateDuServeur: true);
+    }
 
     final cibles = [
       for (final c in (reponse['cibles'] as List? ?? const []))
@@ -647,7 +682,7 @@ class E2eeService {
       debugPrint('[E2EE] coffre écrit pour $actuel, session $attendu : remis à zéro');
       await _db.toutEffacer();
     }
-    if (actuel != null && actuel != attendu) _chiffreesEnMemoire.clear();
+    if (actuel != null && actuel != attendu) conversationsChiffrees.value = const {};
     if (actuel != attendu) {
       await _db.ecrireMeta(_metaProprietaire, attendu);
     }

@@ -547,6 +547,10 @@ extension _ChatActions on _ChatDetailScreenState {
       );
 
   bool _canEditMessage(LocalMessage msg) {
+    // Fil chiffré : le serveur refuse toute modification, même d'un ancien
+    // message écrit en clair (le texte modifié y entrerait lisible). Le
+    // proposer finirait en échec silencieux.
+    if (_e2eeDepuis != null) return false;
     final sent = msg.sendAt.toUtc();
     return DateTime.now().toUtc().difference(sent) <= _messageEditWindow;
   }
@@ -706,7 +710,7 @@ extension _ChatActions on _ChatDetailScreenState {
                   _togglePin(msg);
                 },
               ),
-            if (isText && msg.content != null)
+            if (isText && msg.content != null && !estEnAttenteE2ee(msg.content))
               ListTile(
                 leading: Icon(Icons.copy, color: primary),
                 title: Text(context.l10n.copy),

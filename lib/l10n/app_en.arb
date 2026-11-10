@@ -4155,5 +4155,6 @@
   "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing.",
   "e2eeMessageEnAttente": "🔒 Waiting for this message…",
   "e2eeApercuChiffre": "🔒 Encrypted message",
-  "e2eeMediaNonChiffre": "In this conversation, texts are end-to-end encrypted; photos and files are not yet."
+  "e2eeMediaNonChiffre": "In this conversation, texts are end-to-end encrypted; photos and files are not yet.",
+  "e2eeBanniereDebut": "From here on, messages in this chat are end-to-end encrypted. Photos and files are not yet."
 }

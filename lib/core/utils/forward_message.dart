@@ -8,6 +8,7 @@ import 'media_album.dart';
 import 'sticker_payload.dart';
 import '../theme/locale_controller.dart';
 import '../services/media_expiry_policy.dart';
+import '../e2ee/e2ee_affichage.dart';
 
 /// Bilan d'un transfert vers plusieurs conversations.
 ///
@@ -34,6 +35,9 @@ bool canForwardMessage(LocalMessage message) {
   // Un document sensible non plus, ni partagé : seule une copie signée sort,
   // par « Enregistrer ». Le serveur refuse aussi (`SENSITIVE_NO_FORWARD`).
   if (message.isSensitive) return false;
+  // Message chiffré pas encore déchiffré ici : son `content` est le libellé
+  // « en attente », pas le texte. Le transférer enverrait ce libellé.
+  if (estEnAttenteE2ee(message.content)) return false;
 
   if (message.type == 0) {
     return message.content != null && message.content!.trim().isNotEmpty;
@@ -104,6 +108,7 @@ String? resolveForwardCaption(LocalMessage source, String? userCaption) {
   // Le content d'un sticker est du JSON : jamais une légende.
   if (source.type == kStickerMessageType) return null;
   if (isAlbumMarkerContent(source.content)) return null;
+  if (estEnAttenteE2ee(source.content)) return null;
   final original = source.content?.trim();
   if (original != null && original.isNotEmpty) return original;
   return null;

@@ -10563,4 +10563,8 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get e2eeMediaNonChiffre =>
       'Dans cette conversation, les textes sont chiffrés de bout en bout ; les photos et fichiers ne le sont pas encore.';
+
+  @override
+  String get e2eeBanniereDebut =>
+      'À partir d\'ici, les messages de cette discussion sont chiffrés de bout en bout. Les photos et les fichiers ne le sont pas encore.';
 }

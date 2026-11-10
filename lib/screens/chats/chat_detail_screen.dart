@@ -15,6 +15,8 @@ import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
+import '../../core/e2ee/e2ee_affichage.dart';
+import '../../core/e2ee/e2ee_service.dart';
 import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants, mentionsUser;
 import '../../core/navigation/app_navigator.dart';
@@ -425,6 +427,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   /// extensions de cette librairie puissent déclencher un rebuild.
   void rebuild(VoidCallback fn) => setState(fn);
 
+  /// Date à partir de laquelle ce fil est chiffré de bout en bout, d'après cet
+  /// appareil ; `null` tant qu'il est en clair. Pose la bannière « chiffré à
+  /// partir d'ici » et retire « Modifier » (le serveur la refuserait).
+  DateTime? get _e2eeDepuis {
+    final convId = _convId;
+    if (convId == null) return null;
+    return E2eeService.maybeInstance?.conversationsChiffrees.value[convId];
+  }
+
+  /// Une conversation vient de passer en chiffré (ici ou ailleurs) : rare, un
+  /// rebuild suffit — la bannière apparaît sans rouvrir le fil.
+  void _onE2eeChange() {
+    if (mounted) setState(() {});
+  }
+
   final ScreenshotWatcher _screenshotWatcher = ScreenshotWatcher();
   final ScreenshotAlertGate _screenshotGate = ScreenshotAlertGate();
   final ScreenshotAlertGate _screenRecordingGate = ScreenshotAlertGate();
@@ -468,6 +485,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _screenshotWatcher.start(_onScreenshotDetected,
         onScreenRecording: _onScreenRecordingDetected);
     WidgetsBinding.instance.addObserver(this);
+    E2eeService.maybeInstance?.conversationsChiffrees.addListener(_onE2eeChange);
     _init();
   }
 
@@ -1157,6 +1175,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
   void dispose() {
     _screenshotWatcher.stop();
     WidgetsBinding.instance.removeObserver(this);
+    E2eeService.maybeInstance?.conversationsChiffrees.removeListener(_onE2eeChange);
     if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
     _recordTimer?.cancel();
@@ -1311,11 +1330,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                         _scrollToBottom();
                                       });
                                     }
-                                    // Fil unifié : messages/albums + appels, triés par date.
+                                    // Fil unifié : messages/albums + appels, triés par date,
+                                    // et le repère du passage en chiffré.
+                                    final e2eeDepuis = _e2eeDepuis;
                                     final feed = <Object>[
                                       ...groupMessagesForDisplay(messages),
                                       ...calls,
-                                    ]..sort((a, b) => _feedTime(a).compareTo(_feedTime(b)));
+                                      if (e2eeDepuis != null) _DebutChiffrement(e2eeDepuis),
+                                    ]..sort(_compareFeed);
                                     // reverse: true → index 0 en bas ; on inverse pour afficher
                                     // les récents près de la zone de saisie.
                                     final reversedFeed = feed.reversed.toList();
@@ -1345,6 +1367,15 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                                               children: [
                                                 if (showDate) _buildDateSeparator(itemTime.toLocal()),
                                                 _buildCallBubble(item),
+                                              ],
+                                            );
+                                          }
+
+                                          if (item is _DebutChiffrement) {
+                                            return Column(
+                                              children: [
+                                                if (showDate) _buildDateSeparator(itemTime.toLocal()),
+                                                _buildE2eeBanner(),
                                               ],
                                             );
                                           }

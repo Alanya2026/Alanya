@@ -348,6 +348,7 @@ class ChatRepository {
       _api.onSocketEvent(SocketEvents.conversationCreated, _onConversationCreated);
       _api.onSocketEvent(SocketEvents.conversationUpdated, _onConversationUpdated);
       _api.onSocketEvent(SocketEvents.conversationCleared, _onConversationCleared);
+      _api.onSocketEvent(SocketEvents.conversationE2ee, _onConversationE2ee);
       _api.onSocketEvent(
           SocketEvents.groupParticipantRemoved, _onGroupParticipantRemoved);
       _api.onSocketEvent(SocketEvents.authVerified, _onAuthVerified);
@@ -398,6 +399,7 @@ class ChatRepository {
         SocketEvents.conversationUpdated, _onConversationUpdated);
     _api.removeSocketListener(
         SocketEvents.conversationCleared, _onConversationCleared);
+    _api.removeSocketListener(SocketEvents.conversationE2ee, _onConversationE2ee);
     _api.removeSocketListener(
         SocketEvents.groupParticipantRemoved, _onGroupParticipantRemoved);
     _api.removeSocketListener(SocketEvents.authVerified, _onAuthVerified);
@@ -635,6 +637,22 @@ class ChatRepository {
     final cutoff = _parseDate(data['historyCutoffAt']);
     if (conversID <= 0 || cutoff == null) return;
     await _applyClear(conversID, cutoff);
+  }
+
+  /// `conversation:e2ee` : le serveur vient de chiffrer cette conversation.
+  /// Le prochain message part chiffré, et la bannière « chiffré à partir
+  /// d'ici » se pose à la date du serveur, sans attendre le premier message.
+  Future<void> _onConversationE2ee(dynamic data) async {
+    if (data is! Map) return;
+    final conversID = _toInt(data['conversationID']);
+    final depuis = _parseDate(data['e2eeSince']);
+    final e2ee = E2eeService.maybeInstance;
+    if (conversID <= 0 || depuis == null || e2ee == null) return;
+    try {
+      await e2ee.noterConversationChiffree(conversID, depuis, dateDuServeur: true);
+    } catch (e) {
+      debugPrint('[ChatRepo] conversation:e2ee $conversID : $e');
+    }
   }
 
   /// True si le dernier sync liste est plus vieux que [fullListSyncInterval]

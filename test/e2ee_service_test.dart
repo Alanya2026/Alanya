@@ -408,6 +408,49 @@ void main() {
     });
   });
 
+  group('Date de passage en chiffré', () {
+    test('la date du serveur fait foi ; sinon la première notée est gardée', () async {
+      final a = Appareil();
+      final premierMessage = DateTime.utc(2026, 11, 10, 12, 0, 9);
+      final serveur = DateTime.utc(2026, 11, 10, 12, 0, 5);
+      final notifications = <Map<int, DateTime>>[];
+      a.service.conversationsChiffrees.addListener(
+        () => notifications.add(a.service.conversationsChiffrees.value),
+      );
+
+      // Premier message chiffré reçu : sa date, postérieure ou égale à la vraie.
+      await a.service.noterConversationChiffree(5, premierMessage);
+      expect(a.service.estChiffreeEnMemoire(5), isTrue);
+      expect(a.service.conversationsChiffrees.value[5], premierMessage);
+
+      // Un refus plus tardif ne la déplace pas.
+      await a.service.noterConversationChiffree(5, premierMessage.add(const Duration(minutes: 3)));
+      expect(a.service.conversationsChiffrees.value[5], premierMessage);
+
+      // `e2ee_since` du serveur : la remplace, en mémoire et en base.
+      await a.service.noterConversationChiffree(5, serveur, dateDuServeur: true);
+      expect(a.service.conversationsChiffrees.value[5], serveur);
+      // Redite du serveur (réponse en cache, événement rejoué) : rien ne bouge.
+      await a.service.noterConversationChiffree(5, serveur.toLocal(), dateDuServeur: true);
+      expect(notifications, hasLength(2), reason: 'premier message, puis date du serveur');
+
+      // Un service neuf sur la même base relit la date du serveur.
+      final relu = a.creerService();
+      await relu.prechargerEtat();
+      expect(relu.conversationsChiffrees.value[5]?.millisecondsSinceEpoch, serveur.millisecondsSinceEpoch);
+      expect(await relu.estChiffree(5), isTrue);
+      expect(relu.estChiffreeEnMemoire(6), isFalse);
+    });
+
+    test('oublier efface aussi les conversations chiffrées en mémoire', () async {
+      final a = Appareil();
+      await a.service.noterConversationChiffree(5, DateTime.utc(2026, 11, 10));
+      await a.service.oublier();
+      expect(a.service.conversationsChiffrees.value, isEmpty);
+      expect(await a.service.estChiffree(5), isFalse);
+    });
+  });
+
   group('Coffre', () {
     test('la clé privée n\'apparaît nulle part en clair dans la base', () async {
       final a = Appareil();
