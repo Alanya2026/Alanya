@@ -167,6 +167,117 @@ void main() {
     });
   });
 
+  // Mesuré sur un Xiaomi sous Android 16 : le haut-parleur posé par le chemin
+  // WebRTC, Telecom encore sur l'écouteur. La relecture périmée passait pour un
+  // arbitrage : l'icône annonçait l'écouteur et le son sortait du haut-parleur.
+  group('la sortie que tenait Telecom', () {
+    test('reconnaît une relecture périmée quand l\'application croit autre chose',
+        () {
+      expect(
+        routeApresDemande(
+          precedente: CallAudioRoute.speaker,
+          demandee: CallAudioRoute.speaker,
+          rapportee: 'earpiece',
+          avantTelecom: 'earpiece',
+        ),
+        CallAudioRoute.speaker,
+      );
+    });
+
+    test('laisse passer un vrai arbitrage', () {
+      expect(
+        routeApresDemande(
+          precedente: CallAudioRoute.speaker,
+          demandee: CallAudioRoute.speaker,
+          rapportee: 'wired',
+          avantTelecom: 'earpiece',
+        ),
+        CallAudioRoute.wired,
+      );
+    });
+
+    test('à défaut, on compare à ce que croyait l\'application', () {
+      expect(
+        routeApresDemande(
+          precedente: CallAudioRoute.earpiece,
+          demandee: CallAudioRoute.speaker,
+          rapportee: 'earpiece',
+        ),
+        CallAudioRoute.speaker,
+      );
+    });
+  });
+
+  // Appel vidéo reçu : Telecom crée sa connexion après la demande et prend
+  // l'écouteur. Sans cette vérification, le son restait à l'écouteur.
+  group('convergerRouteTelecom', () {
+    Future<(CallAudioRoute?, int)> converger(
+      List<CallAudioRoute?> lectures, {
+      CallAudioRoute voulue = CallAudioRoute.speaker,
+      bool Function()? valable,
+    }) async {
+      var demandes = 0;
+      var i = 0;
+      final tenue = await convergerRouteTelecom(
+        voulue: voulue,
+        redemander: () async => demandes++,
+        lire: () async => lectures[i++],
+        valable: valable ?? () => true,
+        battement: Duration.zero,
+      );
+      return (tenue, demandes);
+    }
+
+    test('ne redemande rien quand Telecom a déjà pris la sortie', () async {
+      final (tenue, demandes) = await converger([CallAudioRoute.speaker]);
+      expect(tenue, CallAudioRoute.speaker);
+      expect(demandes, 0);
+    });
+
+    test('redemande tant que Telecom reste sur l\'écouteur', () async {
+      final (tenue, demandes) = await converger([
+        CallAudioRoute.earpiece,
+        CallAudioRoute.speaker,
+      ]);
+      expect(tenue, CallAudioRoute.speaker);
+      expect(demandes, 1);
+    });
+
+    test('rend la sortie réelle quand Telecom refuse jusqu\'au bout', () async {
+      final (tenue, demandes) = await converger([
+        CallAudioRoute.earpiece,
+        CallAudioRoute.earpiece,
+        CallAudioRoute.earpiece,
+      ]);
+      expect(tenue, CallAudioRoute.earpiece,
+          reason: 'l\'icône doit dire la vérité');
+      expect(demandes, 2);
+    });
+
+    test('ne combat jamais un casque', () async {
+      for (final casque in [CallAudioRoute.wired, CallAudioRoute.bluetooth]) {
+        final (tenue, demandes) = await converger([casque]);
+        expect(tenue, casque);
+        expect(demandes, 0);
+      }
+    });
+
+    test('s\'arrête dès que l\'appel ou la demande a changé', () async {
+      final (tenue, demandes) = await converger(
+        [CallAudioRoute.earpiece],
+        valable: () => false,
+      );
+      expect(tenue, isNull);
+      expect(demandes, 0);
+    });
+
+    test('sans lecture, rien à corriger', () async {
+      final (tenue, demandes) = await converger([null]);
+      expect(tenue, isNull);
+      expect(demandes, 0);
+    });
+  });
+
   // Le test qui tient la régression : il compose les deux fonctions exactement
   // comme le fait `setAudioRoute`, face à un natif systématiquement en retard.
   group('le bouton face à un natif en retard', () {

@@ -3,6 +3,16 @@ bool shouldTurnLocalCameraOffForRemoteUpgrade({
   required bool alreadyInVideoMode,
 }) => !alreadyInVideoMode;
 
+/// La caméra s'ouvre dès la sonnerie pour un appel vidéo individuel, sauf si
+/// l'utilisateur l'a coupée. Un groupe ou une conférence ouvre la sienne en
+/// rejoignant la salle, avec son propre profil de capture.
+bool shouldOpenCameraWhileRinging({
+  required bool isVideo,
+  required bool isGroup,
+  required bool isConference,
+  required bool cameraTurnedOff,
+}) => isVideo && !isGroup && !isConference && !cameraTurnedOff;
+
 bool isCurrentVideoUpgradeSession({
   required String? activeCallId,
   required String? operationCallId,

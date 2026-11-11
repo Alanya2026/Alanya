@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../../core/services/call/call_conf_routing.dart';
+import '../../core/services/call/session_video_renderers.dart';
 import '../../core/services/call_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
@@ -320,7 +321,7 @@ class CallGroupGrid extends StatelessWidget {
                 isSpeaking: localSpeaking,
                 isMuted: localMuted,
                 isVideoOn: localVideoOn,
-                mirror: true,
+                mirror: SessionVideoRenderers.instance.mirrorLocal,
                 onTap: onParticipantTap == null
                     ? null
                     : () => onParticipantTap!(id),

@@ -78,6 +78,67 @@ void main() {
     );
   });
 
+  test('la sortie tenue avant la demande est transmise', () async {
+    reponse = {'route': 'earpiece', 'available': 1 | 8, 'before': 'earpiece'};
+
+    final applique = await AudioHelper.applyAudioRoute(
+      CallAudioRoute.speaker,
+      telecomCallId: '42',
+    );
+
+    expect(applique.routeBeforeName, 'earpiece');
+  });
+
+  group('attente de la connexion Telecom', () {
+    test('rend vrai dès que Telecom tient l\'appel', () async {
+      reponse = {'route': 'earpiece', 'available': 1 | 8};
+
+      expect(await AudioHelper.waitForTelecomConnection('42'), isTrue);
+      expect(appels.single.method, 'readRoute');
+    });
+
+    test('réessaie tant que la connexion n\'existe pas', () async {
+      var lectures = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(canal, (call) async {
+        lectures++;
+        return lectures < 3 ? null : {'route': 'earpiece'};
+      });
+
+      expect(
+        await AudioHelper.waitForTelecomConnection(
+          '42',
+          interval: Duration.zero,
+        ),
+        isTrue,
+      );
+      expect(lectures, 3);
+    });
+
+    test('abandonne à l\'échéance', () async {
+      expect(
+        await AudioHelper.waitForTelecomConnection(
+          '42',
+          timeout: Duration.zero,
+          interval: Duration.zero,
+        ),
+        isFalse,
+      );
+    });
+
+    test('sans identifiant, ne dérange pas Telecom', () async {
+      expect(await AudioHelper.waitForTelecomConnection(null), isFalse);
+      expect(appels, isEmpty);
+    });
+
+    test('sans pont natif, rend faux sans attendre', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(canal, null);
+
+      expect(await AudioHelper.waitForTelecomConnection('42'), isFalse);
+    });
+  });
+
   test('sans connexion Telecom, on retombe sur le chemin WebRTC', () async {
     reponse = null; // le natif répond « je ne tiens pas cet appel »
 

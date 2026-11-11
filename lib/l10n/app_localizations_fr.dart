@@ -4495,6 +4495,76 @@ class AppLocalizationsFr extends AppLocalizations {
       'Réduit la qualité et les téléchargements automatiques';
 
   @override
+  String get callVideoQualitySection => 'Appels vidéo';
+
+  @override
+  String get callVideoQualityLow => 'Basse résolution';
+
+  @override
+  String get callVideoQualityLowSubtitle =>
+      '360p — réseau faible, moins de données';
+
+  @override
+  String get callVideoQualityStandard => 'Qualité standard';
+
+  @override
+  String get callVideoQualityStandardSubtitle => '480p — recommandé';
+
+  @override
+  String get callVideoQualityHd => 'Haute définition';
+
+  @override
+  String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
+
+  @override
+  String get callVideoQualityFullHd => 'Full HD';
+
+  @override
+  String get callVideoQualityFullHdSubtitle => '1080p — Alanya Plus';
+
+  @override
+  String get callVideoQualityNote =>
+      'S\'applique au prochain appel. La qualité s\'adapte toujours à la connexion.';
+
+  @override
+  String get plusFeatureVideoHd => 'Appels vidéo HD';
+
+  @override
+  String get paywallVideoHdTitle => 'Les appels vidéo en HD';
+
+  @override
+  String get paywallVideoHdBody =>
+      'La haute définition (720p) fait partie d\'Alanya Plus : votre correspondant vous voit plus net quand la connexion le permet.';
+
+  @override
+  String get plusFeatureCallFilter => 'Filtre d\'appels';
+
+  @override
+  String get paywallCallFilterTitle => 'Le filtre d\'appels';
+
+  @override
+  String get paywallCallFilterBody =>
+      'Le filtre d\'appels fait partie d\'Alanya Plus : seules les personnes de vos contacts peuvent vous appeler, les autres appels ne passent pas.';
+
+  @override
+  String get plusLockedCallFilter =>
+      'Le filtre d\'appels est réservé à Alanya Plus. Votre réglage est conservé et reprendra dès l\'abonnement ; en attendant, tout le monde peut vous appeler.';
+
+  @override
+  String get plusFeatureVoicemail => 'Répondeur';
+
+  @override
+  String get paywallVoicemailTitle => 'Le répondeur';
+
+  @override
+  String get paywallVoicemailBody =>
+      'Le répondeur fait partie d\'Alanya Plus : sur vos créneaux, le téléphone reste silencieux et vos correspondants vous laissent un message.';
+
+  @override
+  String get plusLockedVoicemail =>
+      'Le répondeur est réservé à Alanya Plus. Vos réglages sont conservés et reprendront dès l\'abonnement ; en attendant, votre téléphone sonne normalement.';
+
+  @override
   String get settingsSectionCommunication => 'Communication';
 
   @override
@@ -4800,6 +4870,20 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get privacySectionMessages => 'Messages';
+
+  @override
+  String get privacySectionCalls => 'Appels';
+
+  @override
+  String get privacyCallFilter => 'Seuls mes contacts peuvent m\'appeler';
+
+  @override
+  String get privacyCallFilterSubtitle =>
+      'Les personnes absentes de vos contacts ne pourront ni vous appeler, ni vous inviter à un appel de groupe.';
+
+  @override
+  String get privacyCallFilterLockedSubtitle =>
+      'Alanya Plus — les personnes absentes de vos contacts ne pourront plus vous appeler.';
 
   @override
   String get privacySectionLists => 'Listes et groupes';

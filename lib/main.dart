@@ -42,6 +42,7 @@ import 'core/theme/locale_controller.dart';
 import 'core/services/chat/message_sound_service.dart';
 import 'core/services/incoming_share_service.dart';
 import 'core/services/media_download_preferences.dart';
+import 'core/services/call/video_capture_profile.dart';
 import 'core/services/media_expiry_policy.dart';
 import 'core/services/video_codec_policy.dart';
 import 'core/services/playback_speed_preferences.dart';
@@ -181,6 +182,8 @@ void main() async {
 
   // Charger avant runApp : le prefetch socket/sync lit ce flag de façon sync.
   await MediaDownloadPreferences.preload();
+  // Un appel décroché depuis une notification ouvre la caméra au bon niveau.
+  await CallVideoQualityPreferences.preload();
   // Rétention des médias apprise du serveur : permet de savoir qu'un média
   // est expiré sans lancer une requête vouée au 410.
   await MediaExpiryPolicy.preload();
@@ -386,6 +389,8 @@ class _TalkyAppState extends State<TalkyApp> {
         Provider<MessageTranslationService>.value(value: _translation),
         ChangeNotifierProvider(
             create: (_) => MediaDownloadPreferences()..load()),
+        ChangeNotifierProvider(
+            create: (_) => CallVideoQualityPreferences()..load()),
         Provider<TalkyApiClient>.value(value: _apiClient),
         ChangeNotifierProvider<EntitlementService>.value(value: _entitlements),
         // Au niveau de l'application : un envoi vers le coffre-fort continue

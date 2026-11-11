@@ -42,6 +42,11 @@ object CallAudioBridge {
                         result.success(null)
                         return@setMethodCallHandler
                     }
+                    // Lue avant la demande : c'est la seule façon de reconnaître
+                    // une relecture périmée. Ce que l'application croit ne suffit
+                    // pas — elle peut croire le haut-parleur, posé par le chemin
+                    // WebRTC, quand Telecom tient encore l'écouteur.
+                    val avant = TelecomAudioRouter.read(callId)?.get("route")
                     if (!TelecomAudioRouter.apply(callId, route)) {
                         // Pas de connexion Telecom : `null` dit à Dart de
                         // retomber sur le chemin WebRTC.
@@ -49,7 +54,9 @@ object CallAudioBridge {
                         return@setMethodCallHandler
                     }
                     Handler(Looper.getMainLooper()).postDelayed({
-                        result.success(TelecomAudioRouter.read(callId))
+                        result.success(
+                            TelecomAudioRouter.read(callId)?.plus("before" to avant),
+                        )
                     }, RELECTURE_MS)
                 }
 

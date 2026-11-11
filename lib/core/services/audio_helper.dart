@@ -14,10 +14,17 @@ import 'call/call_audio_routes.dart';
 /// connaît ; [supportedMask] la liste des sorties qu'il déclare atteignables.
 /// Les deux sont nuls quand aucune connexion Telecom ne tient l'appel.
 class AppliedAudioRoute {
-  const AppliedAudioRoute({this.routeName, this.supportedMask});
+  const AppliedAudioRoute({
+    this.routeName,
+    this.supportedMask,
+    this.routeBeforeName,
+  });
 
   final String? routeName;
   final int? supportedMask;
+
+  /// Sortie que Telecom tenait juste avant la demande.
+  final String? routeBeforeName;
 }
 
 /// Routage audio WebRTC et session audio « appel » (voiceChat / videoChat).
@@ -211,6 +218,7 @@ class AudioHelper {
       return AppliedAudioRoute(
         routeName: reponse['route'] as String?,
         supportedMask: (reponse['available'] as num?)?.toInt(),
+        routeBeforeName: reponse['before'] as String?,
       );
     } on MissingPluginException {
       // Build sans le pont natif (tests, ancienne version) : le repli suffit.
@@ -243,6 +251,35 @@ class AudioHelper {
     } catch (e) {
       debugPrint('[AudioHelper] ** lecture de la route Telecom: $e');
       return null;
+    }
+  }
+
+  /// Attend que Telecom tienne l'appel [callId] et connaisse sa sortie audio.
+  ///
+  /// Telecom crée sa connexion après coup : mesuré à 500 ms après `startCall`
+  /// sur un Xiaomi sous Android 16. Rend `false` sans attendre s'il n'y a pas de
+  /// pont natif, et à l'échéance si la connexion ne vient pas.
+  static Future<bool> waitForTelecomConnection(
+    String? callId, {
+    Duration timeout = const Duration(seconds: 3),
+    Duration interval = const Duration(milliseconds: 150),
+  }) async {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty || !_isAndroid) return false;
+    final echeance = DateTime.now().add(timeout);
+    while (true) {
+      try {
+        final reponse = await _callAudioChannel
+            .invokeMapMethod<String, dynamic>('readRoute', {'callId': id});
+        if (reponse != null) return true;
+      } on MissingPluginException {
+        return false;
+      } catch (e) {
+        debugPrint('[AudioHelper] ** attente de la connexion Telecom: $e');
+        return false;
+      }
+      if (!DateTime.now().isBefore(echeance)) return false;
+      await Future<void>.delayed(interval);
     }
   }
 

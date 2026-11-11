@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/errors/afficher_erreur.dart';
+import '../../core/errors/app_error.dart';
+import '../../core/services/billing/entitlement_service.dart';
+import '../../core/services/billing/entitlements.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/privacy_prefs_service.dart';
 import '../../talky_api_client.dart';
 import '../../talky_models.dart';
+import '../../widgets/billing/paywall_sheet.dart';
 import '../../widgets/profile/settings_group.dart';
 import 'blocked_contacts_screen.dart';
 
@@ -65,6 +70,24 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
           SnackBar(content: Text(context.l10n.privacySaveFailed)),
         );
       }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Allumer le filtre d'appels demande Alanya Plus ; l'éteindre, jamais.
+  Future<void> _setCallFilter(bool value) async {
+    if (_saving) return;
+    if (value && !guardPlus(context, PlusFeature.callFilter)) return;
+    setState(() => _saving = true);
+    try {
+      await context.read<PrivacyPrefsService>().patchField(
+            'callsFromContactsOnly',
+            value,
+          );
+    } catch (e) {
+      // Droits en cache périmés : le refus du serveur ouvre le panneau de l'offre.
+      if (mounted) afficherErreur(context, e, domaine: ErrorDomain.appel);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -161,6 +184,8 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
       builder: (context, privacyService, _) {
         final prefs = privacyService.prefs;
         final loading = _loadingBlocked && !privacyService.isLoaded;
+        final callFilterAllowed =
+            context.watch<EntitlementService>().has(PlusFeature.callFilter);
 
         return Scaffold(
           backgroundColor: context.semantic.surfaceMuted,
@@ -227,6 +252,32 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                         ],
                       ),
                     ),
+                    AppSpacing.vGapXxl,
+                    SettingsGroup(
+                      title: l10n.privacySectionCalls,
+                      child: SettingsBoolTile(
+                        title: l10n.privacyCallFilter,
+                        subtitle: callFilterAllowed
+                            ? l10n.privacyCallFilterSubtitle
+                            : l10n.privacyCallFilterLockedSubtitle,
+                        // Sans le droit, le serveur ne filtre pas : l'interrupteur
+                        // dit ce qui se passe vraiment, pas le réglage conservé.
+                        value: prefs.callsFromContactsOnly && callFilterAllowed,
+                        onChanged: _setCallFilter,
+                      ),
+                    ),
+                    if (prefs.callsFromContactsOnly && !callFilterAllowed) ...[
+                      AppSpacing.vGapLg,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        child: PlusLockedBanner(
+                          feature: PlusFeature.callFilter,
+                          text: l10n.plusLockedCallFilter,
+                        ),
+                      ),
+                    ],
                     AppSpacing.vGapXxl,
                     SettingsGroup(
                       title: l10n.privacySectionLists,

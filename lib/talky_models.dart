@@ -344,6 +344,10 @@ class PrivacyPrefs {
   final String addMePolicy;
   final String previewMode;
 
+  /// Filtre d'appels : seuls mes contacts peuvent m'appeler. C'est le réglage
+  /// enregistré ; le serveur ne l'applique que si le compte y a droit.
+  final bool callsFromContactsOnly;
+
   const PrivacyPrefs({
     this.lastSeenVisibility = PrivacyVisibility.everyone,
     this.onlineVisibility = PrivacyVisibility.everyone,
@@ -351,6 +355,7 @@ class PrivacyPrefs {
     this.profilePhotoVisibility = PrivacyVisibility.everyone,
     this.addMePolicy = PrivacyVisibility.everyone,
     this.previewMode = NotificationPreviewMode.full,
+    this.callsFromContactsOnly = false,
   });
 
   factory PrivacyPrefs.fromJson(Map<String, dynamic> json) => PrivacyPrefs(
@@ -366,6 +371,9 @@ class PrivacyPrefs {
     addMePolicy: json['addMePolicy']?.toString() ?? PrivacyVisibility.everyone,
     previewMode:
         json['previewMode']?.toString() ?? NotificationPreviewMode.full,
+    callsFromContactsOnly:
+        json['callsFromContactsOnly'] == true ||
+        json['callsFromContactsOnly'] == 1,
   );
 
   Map<String, dynamic> toJson() => {
@@ -375,6 +383,7 @@ class PrivacyPrefs {
     'profilePhotoVisibility': profilePhotoVisibility,
     'addMePolicy': addMePolicy,
     'previewMode': previewMode,
+    'callsFromContactsOnly': callsFromContactsOnly,
   };
 
   PrivacyPrefs copyWith({
@@ -384,6 +393,7 @@ class PrivacyPrefs {
     String? profilePhotoVisibility,
     String? addMePolicy,
     String? previewMode,
+    bool? callsFromContactsOnly,
   }) => PrivacyPrefs(
     lastSeenVisibility: lastSeenVisibility ?? this.lastSeenVisibility,
     onlineVisibility: onlineVisibility ?? this.onlineVisibility,
@@ -392,6 +402,7 @@ class PrivacyPrefs {
         profilePhotoVisibility ?? this.profilePhotoVisibility,
     addMePolicy: addMePolicy ?? this.addMePolicy,
     previewMode: previewMode ?? this.previewMode,
+    callsFromContactsOnly: callsFromContactsOnly ?? this.callsFromContactsOnly,
   );
 }
 

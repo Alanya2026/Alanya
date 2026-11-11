@@ -388,7 +388,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                   isVideoOff: meetingService.isVideoOff,
                                   isMuted: meetingService.isMuted,
                                   isSpeaking: meetingService.amISpeaking,
-                                  mirror: true,
+                                  mirror: _renderers.mirrorLocal,
                                   onTap: () => _focusParticipant(localId),
                                 )
                               : GridView.count(
@@ -407,7 +407,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
                                       isVideoOff: meetingService.isVideoOff,
                                       isMuted: meetingService.isMuted,
                                       isSpeaking: meetingService.amISpeaking,
-                                      mirror: true,
+                                      mirror: _renderers.mirrorLocal,
                                       onTap: () => _focusParticipant(localId),
                                     ),
                                     ..._remoteRenderers.entries.map((entry) {
@@ -567,7 +567,7 @@ class _OngoingMeetScreenState extends State<OngoingMeetScreen> {
       isSpeaking: isLocal
           ? meetingService.amISpeaking
           : meetingService.isUserSpeaking(focusedId),
-      mirror: isLocal,
+      mirror: isLocal && _renderers.mirrorLocal,
       onDismiss: _dismissFocus,
     );
   }

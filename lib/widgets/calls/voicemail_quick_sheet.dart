@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../core/errors/afficher_erreur.dart';
 import '../../core/errors/app_error.dart';
+import '../../core/services/billing/entitlements.dart';
 import '../../core/services/call/voicemail_provider.dart';
 import '../../core/services/call/voicemail_rules.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../screens/profile/voicemail_schedule_screen.dart';
+import '../billing/paywall_sheet.dart';
 import '../common/app_bottom_sheet.dart';
 
 /// Activation rapide du répondeur, depuis l'onglet Appels.
@@ -142,6 +144,7 @@ class _VoicemailQuickSheet extends StatelessWidget {
     VoicemailProvider vm,
     VoicemailQuickDuration d,
   ) async {
+    if (!guardPlus(context, PlusFeature.voicemail)) return;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
@@ -167,6 +170,7 @@ class _VoicemailQuickSheet extends StatelessWidget {
   /// précisément ce que cette feuille refuse de proposer.
   Future<void> _armerSurMesure(
       BuildContext context, VoicemailProvider vm) async {
+    if (!guardPlus(context, PlusFeature.voicemail)) return;
     final maintenant = DateTime.now();
     final jour = await showDatePicker(
       context: context,

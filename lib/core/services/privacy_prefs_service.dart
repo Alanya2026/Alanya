@@ -103,6 +103,9 @@ class PrivacyPrefsService extends ChangeNotifier {
     if (current.previewMode != next.previewMode) {
       patch['previewMode'] = next.previewMode;
     }
+    if (current.callsFromContactsOnly != next.callsFromContactsOnly) {
+      patch['callsFromContactsOnly'] = next.callsFromContactsOnly;
+    }
     return patch;
   }
 }

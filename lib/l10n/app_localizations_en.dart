@@ -4453,6 +4453,75 @@ class AppLocalizationsEn extends AppLocalizations {
       'Reduces quality and automatic downloads';
 
   @override
+  String get callVideoQualitySection => 'Video calls';
+
+  @override
+  String get callVideoQualityLow => 'Low resolution';
+
+  @override
+  String get callVideoQualityLowSubtitle => '360p — weak network, less data';
+
+  @override
+  String get callVideoQualityStandard => 'Standard quality';
+
+  @override
+  String get callVideoQualityStandardSubtitle => '480p — recommended';
+
+  @override
+  String get callVideoQualityHd => 'High definition';
+
+  @override
+  String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
+
+  @override
+  String get callVideoQualityFullHd => 'Full HD';
+
+  @override
+  String get callVideoQualityFullHdSubtitle => '1080p — Alanya Plus';
+
+  @override
+  String get callVideoQualityNote =>
+      'Applies from the next call. Quality always adapts to your connection.';
+
+  @override
+  String get plusFeatureVideoHd => 'HD video calls';
+
+  @override
+  String get paywallVideoHdTitle => 'HD video calls';
+
+  @override
+  String get paywallVideoHdBody =>
+      'High definition (720p) is part of Alanya Plus: the person you call sees you more sharply when the connection allows.';
+
+  @override
+  String get plusFeatureCallFilter => 'Call filter';
+
+  @override
+  String get paywallCallFilterTitle => 'Call filter';
+
+  @override
+  String get paywallCallFilterBody =>
+      'Call filter is part of Alanya Plus: only people in your contacts can call you, other calls don\'t go through.';
+
+  @override
+  String get plusLockedCallFilter =>
+      'Call filter is part of Alanya Plus. Your setting is kept and will come back when you subscribe; until then, anyone can call you.';
+
+  @override
+  String get plusFeatureVoicemail => 'Voicemail';
+
+  @override
+  String get paywallVoicemailTitle => 'Voicemail';
+
+  @override
+  String get paywallVoicemailBody =>
+      'Voicemail is part of Alanya Plus: during your chosen hours, your phone stays silent and callers leave you a message.';
+
+  @override
+  String get plusLockedVoicemail =>
+      'Voicemail is part of Alanya Plus. Your settings are kept and will come back when you subscribe; until then, your phone rings as usual.';
+
+  @override
   String get settingsSectionCommunication => 'Communication';
 
   @override
@@ -4753,6 +4822,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacySectionMessages => 'Messages';
+
+  @override
+  String get privacySectionCalls => 'Calls';
+
+  @override
+  String get privacyCallFilter => 'Only my contacts can call me';
+
+  @override
+  String get privacyCallFilterSubtitle =>
+      'People who aren\'t in your contacts can\'t call you or invite you to a group call.';
+
+  @override
+  String get privacyCallFilterLockedSubtitle =>
+      'Alanya Plus — people who aren\'t in your contacts will no longer be able to call you.';
 
   @override
   String get privacySectionLists => 'Lists & groups';

@@ -2,6 +2,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/services/call/session_video_renderers.dart';
 
 void main() {
+  group('miroir de la vue locale', () {
+    final renderers = SessionVideoRenderers.instance;
+
+    tearDown(() => renderers.setLocalCameraFront(true));
+
+    test('en miroir sur la caméra avant, pas sur la caméra arrière', () {
+      expect(renderers.mirrorLocal, isTrue);
+      renderers.setLocalCameraFront(false);
+      expect(renderers.mirrorLocal, isFalse);
+    });
+
+    test('la bascule prévient les écrans qui affichent la vue', () {
+      var notifications = 0;
+      void listener() => notifications++;
+      renderers.addListener(listener);
+      addTearDown(() => renderers.removeListener(listener));
+
+      renderers.setLocalCameraFront(false);
+      renderers.setLocalCameraFront(false);
+
+      expect(notifications, 1);
+    });
+
+    test('la session suivante repart en miroir', () async {
+      renderers.setLocalCameraFront(false);
+      await renderers.release();
+      expect(renderers.mirrorLocal, isTrue);
+    });
+  });
+
   group('alignement des rendus de groupe', () {
     test('un participant qui arrive obtient un rendu', () {
       final diff = diffGroupRenderers(

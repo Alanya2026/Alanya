@@ -9,8 +9,9 @@ import '../../core/theme/app_theme.dart';
 
 /// Barre de contrôle flottante pour les appels.
 ///
-/// Primaire : mute + (caméra | speaker) + overflow éventuel, puis raccrocher.
-/// Add / transfer / switch cam → menu overflow pour limiter le nombre de boutons.
+/// Primaire : mute + caméra éventuelle + sortie audio + overflow éventuel, puis
+/// raccrocher. Add / transfer / switch cam → menu overflow pour limiter le
+/// nombre de boutons.
 class CallControlBar extends StatelessWidget {
   const CallControlBar({
     super.key,
@@ -94,7 +95,6 @@ class CallControlBar extends StatelessWidget {
 
   bool get _hasOverflow =>
       isVideo ||
-      showCameraInAudio ||
       (canAddParticipant &&
           (onAddParticipant != null || onTransferParticipant != null));
 
@@ -142,32 +142,6 @@ class CallControlBar extends StatelessWidget {
                       Navigator.pop(ctx);
                       HapticFeedback.selectionClick();
                       onSwitchCam();
-                    },
-                  ),
-                // En vidéo, le bouton de la barre est la caméra : sans cette
-                // entrée, la sortie audio — haut-parleur à l'init vidéo — ne
-                // pouvait plus jamais être changée pendant l'appel.
-                if (isVideo || showCameraInAudio)
-                  ListTile(
-                    leading: Icon(_routeIcon, color: callUi.onControlSurface),
-                    title: Text(
-                      _routeAction(ctx),
-                      style: TextStyle(color: callUi.onControlSurface),
-                    ),
-                    subtitle: audioRoutes.length > 2
-                        ? Text(
-                            _routeLabel(ctx),
-                            style: TextStyle(
-                              color: callUi.onControlSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                            ),
-                          )
-                        : null,
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      HapticFeedback.selectionClick();
-                      onSpeaker();
                     },
                   ),
                 if (canAddParticipant && onAddParticipant != null)
@@ -277,7 +251,7 @@ class CallControlBar extends StatelessWidget {
                   },
                 ),
                 AppSpacing.hGapMd,
-                if (isVideo || showCameraInAudio)
+                if (isVideo || showCameraInAudio) ...[
                   _ControlButton(
                     icon: isVideo && !isVideoOn
                         ? Icons.videocam_off
@@ -293,20 +267,23 @@ class CallControlBar extends StatelessWidget {
                       HapticFeedback.selectionClick();
                       onCamera();
                     },
-                  )
-                else
-                  _ControlButton(
-                    icon: _routeIcon,
-                    // Mis en avant dès que le son ne sort plus par l'oreille —
-                    // haut-parleur, casque filaire ou Bluetooth.
-                    active: audioRoute != CallAudioRoute.earpiece,
-                    useVideoChrome: useVideoChrome,
-                    semanticsLabel: _routeAction(context),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onSpeaker();
-                    },
                   ),
+                  AppSpacing.hGapMd,
+                ],
+                // Toujours dans la barre, vidéo comprise : si le son est trop
+                // bas ou trop fort au décrochage, on le change d'un geste.
+                _ControlButton(
+                  icon: _routeIcon,
+                  // Mis en avant dès que le son ne sort plus par l'oreille —
+                  // haut-parleur, casque filaire ou Bluetooth.
+                  active: audioRoute != CallAudioRoute.earpiece,
+                  useVideoChrome: useVideoChrome,
+                  semanticsLabel: _routeAction(context),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onSpeaker();
+                  },
+                ),
                 if (_hasOverflow) ...[
                   AppSpacing.hGapMd,
                   _ControlButton(

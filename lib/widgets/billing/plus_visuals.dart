@@ -53,6 +53,9 @@ IconData plusFeatureIcon(PlusFeature feature) => switch (feature) {
       PlusFeature.style => Icons.palette_outlined,
       PlusFeature.verifiedBadge => Icons.verified_outlined,
       PlusFeature.stickersPremium => Icons.emoji_emotions_outlined,
+      PlusFeature.videoHd => Icons.hd_outlined,
+      PlusFeature.voicemail => Icons.voicemail_outlined,
+      PlusFeature.callFilter => Icons.phone_locked_outlined,
     };
 
 /// Nom court, pour les pastilles de la carte et les listes.
@@ -65,6 +68,9 @@ String plusFeatureName(AppLocalizations l10n, PlusFeature feature) =>
       PlusFeature.style => l10n.plusFeatureStyle,
       PlusFeature.verifiedBadge => l10n.plusFeatureBadge,
       PlusFeature.stickersPremium => l10n.plusFeatureStickers,
+      PlusFeature.videoHd => l10n.plusFeatureVideoHd,
+      PlusFeature.voicemail => l10n.plusFeatureVoicemail,
+      PlusFeature.callFilter => l10n.plusFeatureCallFilter,
     };
 
 /// Les fonctionnalités livrées, dans l'ordre où l'offre les présente.
@@ -73,6 +79,9 @@ const List<PlusFeature> kPlusShowcase = [
   PlusFeature.backup,
   PlusFeature.trustedTrips,
   PlusFeature.listRingtones,
+  PlusFeature.videoHd,
+  PlusFeature.voicemail,
+  PlusFeature.callFilter,
   PlusFeature.verifiedBadge,
 ];
 

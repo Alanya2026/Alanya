@@ -1414,6 +1414,7 @@ extension CallSignaling on CallService {
     )) {
       return;
     }
+    await _routeAudioForVideoUpgrade(wasAlreadyVideo: wasAlreadyVideo);
     await _bindSessionRenderers();
     if (!_isCurrentRemoteVideoUpgrade(
       callId: operationCallId,

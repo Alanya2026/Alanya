@@ -4315,6 +4315,73 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkDataSaverSubtitle => '降低画质并减少自动下载';
 
   @override
+  String get callVideoQualitySection => '视频通话';
+
+  @override
+  String get callVideoQualityLow => '低分辨率';
+
+  @override
+  String get callVideoQualityLowSubtitle => '360p — 网络较差，节省流量';
+
+  @override
+  String get callVideoQualityStandard => '标准画质';
+
+  @override
+  String get callVideoQualityStandardSubtitle => '480p — 推荐';
+
+  @override
+  String get callVideoQualityHd => '高清';
+
+  @override
+  String get callVideoQualityHdSubtitle => '720p — Alanya Plus';
+
+  @override
+  String get callVideoQualityFullHd => '全高清';
+
+  @override
+  String get callVideoQualityFullHdSubtitle => '1080p — Alanya Plus';
+
+  @override
+  String get callVideoQualityNote => '下次通话生效。画质始终会根据网络自动调整。';
+
+  @override
+  String get plusFeatureVideoHd => '高清视频通话';
+
+  @override
+  String get paywallVideoHdTitle => '高清视频通话';
+
+  @override
+  String get paywallVideoHdBody => '高清（720p）属于 Alanya Plus：网络允许时，对方能更清晰地看到您。';
+
+  @override
+  String get plusFeatureCallFilter => '来电过滤';
+
+  @override
+  String get paywallCallFilterTitle => '来电过滤';
+
+  @override
+  String get paywallCallFilterBody =>
+      '来电过滤属于 Alanya Plus：只有您的联系人才能给您打电话，其他来电无法接通。';
+
+  @override
+  String get plusLockedCallFilter =>
+      '来电过滤为 Alanya Plus 专享功能。您的设置已保留，订阅后即可恢复；在此之前，任何人都可以给您打电话。';
+
+  @override
+  String get plusFeatureVoicemail => '语音信箱';
+
+  @override
+  String get paywallVoicemailTitle => '语音信箱';
+
+  @override
+  String get paywallVoicemailBody =>
+      '语音信箱属于 Alanya Plus：在您选择的时段内手机保持安静，来电者可给您留言。';
+
+  @override
+  String get plusLockedVoicemail =>
+      '语音信箱为 Alanya Plus 专享功能。您的设置已保留，订阅后即可恢复；在此之前，手机会正常响铃。';
+
+  @override
   String get settingsSectionCommunication => '通讯';
 
   @override
@@ -4605,6 +4672,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacySectionMessages => '消息';
+
+  @override
+  String get privacySectionCalls => '通话';
+
+  @override
+  String get privacyCallFilter => '仅我的联系人可以给我打电话';
+
+  @override
+  String get privacyCallFilterSubtitle => '不在您联系人中的人无法给您打电话，也无法邀请您加入群组通话。';
+
+  @override
+  String get privacyCallFilterLockedSubtitle =>
+      'Alanya Plus — 不在您联系人中的人将无法再给您打电话。';
 
   @override
   String get privacySectionLists => '名单与群组';

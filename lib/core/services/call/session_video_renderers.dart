@@ -30,6 +30,23 @@ class SessionVideoRenderers extends ChangeNotifier {
   ChangeNotifier? _source;
   VoidCallback? _onSourceChanged;
 
+  bool _localCameraFront = true;
+
+  /// La vue locale n'est en miroir que devant la caméra avant, où l'on se
+  /// regarde comme dans une glace. Sur la caméra arrière, une image inversée
+  /// part à l'opposé du geste de celui qui tient le téléphone.
+  ///
+  /// Ne concerne que l'affichage local : la vidéo envoyée n'est jamais inversée.
+  bool get mirrorLocal => _localCameraFront;
+
+  /// À appeler après une bascule, et à chaque nouvelle capture, qui part
+  /// toujours sur la caméra avant.
+  void setLocalCameraFront(bool isFront) {
+    if (_localCameraFront == isFront) return;
+    _localCameraFront = isFront;
+    notifyListeners();
+  }
+
   /// True quand `local` et `remote` sont initialisés et affichables.
   bool get isReady => _ready;
 
@@ -211,6 +228,7 @@ class SessionVideoRenderers extends ChangeNotifier {
   /// Libère tout. Appelée à la fin de session, jamais depuis un écran.
   Future<void> release() async {
     unbind();
+    _localCameraFront = true;
     if (!_ready && _group.isEmpty) return;
 
     for (final renderer in _group.values) {

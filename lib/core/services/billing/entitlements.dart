@@ -19,7 +19,19 @@ enum PlusFeature {
 
   /// Pack Royal (stickers Plus). Le verrou est imposé par le serveur ; le
   /// catalogue dit lequel (`locked`).
-  stickersPremium('stickers_premium');
+  stickersPremium('stickers_premium'),
+
+  /// Appels vidéo en 720p. Sans ce droit, l'appel part en qualité standard.
+  videoHd('video_hd'),
+
+  /// Répondeur. Sans ce droit, le serveur n'intercepte plus les appels et
+  /// refuse de l'allumer ; l'éteindre reste toujours permis.
+  voicemail('voicemail'),
+
+  /// Filtre d'appels (seuls mes contacts peuvent m'appeler). Sans ce droit, le
+  /// serveur ne filtre plus les appels et refuse de l'allumer ; l'éteindre
+  /// reste toujours permis.
+  callFilter('call_filter');
 
   const PlusFeature(this.code);
   final String code;

@@ -50,6 +50,17 @@ class CallPermissionsHelper {
   /// @return false si le MICRO est refusé — l'appel n'a alors pas lieu d'être.
   ///         Une caméra refusée n'est pas bloquante : l'appel se dégrade en
   ///         audio, comme il le faisait déjà.
+  /// La caméra est-elle déjà autorisée ? Ne demande rien.
+  static Future<bool> isCameraGranted() async {
+    if (kIsWeb) return false;
+    try {
+      return await Permission.camera.isGranted;
+    } catch (e) {
+      debugPrint('[CallPermissions] ** lecture permission caméra: $e');
+      return false;
+    }
+  }
+
   static Future<bool> ensureCallMediaPermissions({required bool isVideo}) async {
     if (kIsWeb) return true;
 

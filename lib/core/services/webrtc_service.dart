@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../theme/locale_controller.dart';
 import 'call/call_permissions_helper.dart';
+import 'call/session_video_renderers.dart';
 import 'call/video_capture_profile.dart';
 
 enum CallType { audio, video }
@@ -25,6 +26,89 @@ class WebRTCService {
   final List<_BufferedIce> _pendingIceCandidates = [];
   bool _remoteDescriptionSet = false;
   int _iceGeneration = 0;
+
+  /// Qualité de la caméra ouverte pour cet appel : l'encodeur suit la même.
+  CallVideoQuality _videoQuality = CallVideoQuality.standard;
+
+  /// Caméra ouverte pendant la sonnerie d'un appel vidéo entrant.
+  ///
+  /// Rien ne peut en sortir : aucune PeerConnection n'existe avant le décrochage.
+  MediaStream? _ringPreviewStream;
+  MediaStream? get ringPreviewStream => _ringPreviewStream;
+
+  /// Ouvrir, fermer et reprendre s'exécutent l'un après l'autre : ouvrir deux
+  /// fois la même caméra évincerait la capture qui sert à l'appel.
+  Future<void> _ringPreviewOps = Future<void>.value();
+
+  Future<void> _enqueueRingPreview(Future<void> Function() op) {
+    return _ringPreviewOps = _ringPreviewOps
+        .then((_) => op())
+        .catchError((Object e) {
+          debugPrint('[WebRTC] ** caméra de sonnerie: $e');
+        });
+  }
+
+  Future<void> openRingPreview() => _enqueueRingPreview(() async {
+    if (_ringPreviewStream != null) return;
+    _ringPreviewStream = await navigator.mediaDevices.getUserMedia({
+      'audio': false,
+      'video': videoCaptureConstraints(
+        quality: CallVideoQualityPreferences.effective,
+      ),
+    });
+  });
+
+  Future<void> closeRingPreview() => _enqueueRingPreview(() async {
+    final stream = _ringPreviewStream;
+    if (stream == null) return;
+    _ringPreviewStream = null;
+    for (final track in stream.getTracks()) {
+      await track.stop();
+    }
+  });
+
+  /// Reprend la piste de la caméra de sonnerie, ou `null` s'il n'y en a pas.
+  Future<MediaStreamTrack?> _takeRingPreviewTrack() async {
+    await _ringPreviewOps;
+    final tracks =
+        _ringPreviewStream?.getVideoTracks() ?? const <MediaStreamTrack>[];
+    _ringPreviewStream = null;
+    return tracks.isEmpty ? null : tracks.first;
+  }
+
+  /// Ouvre le micro et la caméra, en reprenant la caméra déjà ouverte pendant
+  /// la sonnerie : c'est ce qui évite de la rallumer au décrochage. Le micro,
+  /// lui, ne s'ouvre qu'ici : `getUserMedia` audio prend le focus audio et
+  /// couperait la sonnerie.
+  Future<MediaStream> _captureLocalMedia(
+    CallType type, {
+    CallVideoQuality? videoQuality,
+    int? captureFps,
+  }) async {
+    if (type != CallType.video) await closeRingPreview();
+    final previewTrack = type == CallType.video
+        ? await _takeRingPreviewTrack()
+        : null;
+    if (previewTrack == null) {
+      return _getUserMedia(
+        type,
+        videoQuality: videoQuality,
+        captureFps: captureFps,
+      );
+    }
+    try {
+      final stream = await _getUserMedia(
+        CallType.audio,
+        videoQuality: videoQuality,
+      );
+      await stream.addTrack(previewTrack);
+      return stream;
+    } catch (_) {
+      await previewTrack.stop();
+      rethrow;
+    }
+  }
+
   static const int _maxPendingIce = 64;
   static const Duration _pendingIceTtl = Duration(seconds: 30);
   bool _replaceAudioLock = false;
@@ -122,11 +206,20 @@ class WebRTCService {
   /// phases (conférence, restauration d'un sortant, réunions). Le décrochage
   /// 1-à-1, lui, appelle [acquireLocalMedia] et [buildPeerConnection]
   /// séparément afin de lancer la capture sans attendre le réseau.
+  ///
+  /// [videoQuality] impose un niveau (conférence : standard) ; sinon, le
+  /// réglage de l'utilisateur. [captureFps] remplace la cadence du niveau.
   Future<void> init(
     CallType type, {
     List<Map<String, dynamic>>? iceServers,
+    CallVideoQuality? videoQuality,
+    int? captureFps,
   }) async {
-    await acquireLocalMedia(type);
+    await acquireLocalMedia(
+      type,
+      videoQuality: videoQuality,
+      captureFps: captureFps,
+    );
     await buildPeerConnection(type, iceServers: iceServers);
   }
 
@@ -137,7 +230,11 @@ class WebRTCService {
   /// `PeerConnection` : les enchaîner plaçait l'ouverture du micro derrière un
   /// aller-retour HTTPS vers `/turn/credentials` et une construction native,
   /// d'où les quelques secondes de décalage après le décrochage.
-  Future<MediaStream> acquireLocalMedia(CallType type) async {
+  Future<MediaStream> acquireLocalMedia(
+    CallType type, {
+    CallVideoQuality? videoQuality,
+    int? captureFps,
+  }) async {
     try {
       debugPrint('[WebRTC] ========== Acquisition média ==========');
       debugPrint(
@@ -170,7 +267,12 @@ class WebRTCService {
       }
 
       debugPrint('[WebRTC] Appel à _getUserMedia...');
-      _localStream = await _getUserMedia(type);
+      _localStream = await _captureLocalMedia(
+        type,
+        videoQuality: videoQuality,
+        captureFps: captureFps,
+      );
+      SessionVideoRenderers.instance.setLocalCameraFront(true);
       debugPrint(
         '[WebRTC] !! Local stream obtenu: ${_localStream?.getTracks().length} track(s), ID=${_localStream?.id}',
       );
@@ -195,9 +297,10 @@ class WebRTCService {
 
     MediaStream? videoOnlyStream;
     try {
+      _videoQuality = CallVideoQualityPreferences.effective;
       videoOnlyStream = await navigator.mediaDevices.getUserMedia({
         'audio': false,
-        'video': videoCaptureConstraints(),
+        'video': videoCaptureConstraints(quality: _videoQuality),
       });
       final tracks = videoOnlyStream.getVideoTracks();
       if (tracks.isEmpty) {
@@ -206,6 +309,7 @@ class WebRTCService {
       final track = tracks.first;
       await stream.addTrack(track);
       await pc.addTrack(track, stream);
+      SessionVideoRenderers.instance.setLocalCameraFront(true);
       onLocalStream?.call(stream);
       return track;
     } catch (error) {
@@ -441,13 +545,18 @@ class WebRTCService {
     }
   }
 
-  Future<MediaStream> _getUserMedia(CallType type) async {
+  Future<MediaStream> _getUserMedia(
+    CallType type, {
+    CallVideoQuality? videoQuality,
+    int? captureFps,
+  }) async {
     try {
       debugPrint(
         '[WebRTC] _getUserMedia - Type: $type, isWeb: $kIsWeb, Platform: ${_isAndroid ? "ANDROID" : "iOS/WEB"}',
       );
 
       final dynamic audioConstraints;
+      _videoQuality = videoQuality ?? CallVideoQualityPreferences.effective;
 
       if (_isAndroid) {
         // Format compatible avec Android et flutter_webrtc
@@ -472,7 +581,12 @@ class WebRTCService {
 
       final constraints = <String, dynamic>{
         'audio': audioConstraints,
-        'video': type == CallType.video ? videoCaptureConstraints() : false,
+        'video': type == CallType.video
+            ? videoCaptureConstraints(
+                quality: _videoQuality,
+                frameRate: captureFps,
+              )
+            : false,
       };
 
       debugPrint('[WebRTC] Contraintes: $constraints');
@@ -487,13 +601,11 @@ class WebRTCService {
           debugPrint(
             '[WebRTC] 📍 Tentative fallback Android avec contraintes minimales...',
           );
+          _videoQuality = CallVideoQuality.low;
           final fallbackConstraints = <String, dynamic>{
             'audio': true,
             'video': type == CallType.video
-                ? {
-                    'width': {'ideal': 720},
-                    'height': {'ideal': 480},
-                  }
+                ? videoCaptureConstraints(quality: _videoQuality)
                 : false,
           };
           debugPrint('[WebRTC] Contraintes fallback: $fallbackConstraints');
@@ -557,6 +669,7 @@ class WebRTCService {
 
       await _peerConnection!.setLocalDescription(offer);
       debugPrint('[WebRTC] !! LocalDescription définie');
+      await _applyVideoSendParameters();
       return offer;
     } catch (e) {
       debugPrint('[WebRTC] ** Erreur createOffer: $e');
@@ -604,11 +717,46 @@ class WebRTCService {
 
       await _peerConnection!.setLocalDescription(answer);
       debugPrint('[WebRTC] !! LocalDescription définie');
+      await _applyVideoSendParameters();
       return answer;
     } catch (e) {
       debugPrint('[WebRTC] ** Erreur createAnswer: $e');
       debugPrint('[WebRTC] Stack trace: ${StackTrace.current}');
       rethrow;
+    }
+  }
+
+  /// Plafonne l'encodeur de la piste vidéo locale selon [_videoQuality].
+  ///
+  /// Rejoué après chaque description locale (offre, réponse, relance ICE,
+  /// bascule audio → vidéo) : une renégociation peut recréer les encodages.
+  /// `maintain-framerate` : quand le débit manque, l'encodeur baisse la
+  /// résolution plutôt que la cadence — des gestes fluides, une image plus
+  /// floue. Un échec ne coupe jamais l'appel : l'encodeur garde ses défauts.
+  Future<void> _applyVideoSendParameters() async {
+    final pc = _peerConnection;
+    if (pc == null || !hasLocalVideoTrack) return;
+    try {
+      for (final sender in await pc.getSenders()) {
+        if (sender.track?.kind != 'video') continue;
+        final parameters = sender.parameters;
+        final encodings = parameters.encodings;
+        if (encodings == null || encodings.isEmpty) continue;
+        for (final encoding in encodings) {
+          encoding.maxBitrate = _videoQuality.maxBitrate;
+          encoding.maxFramerate = _videoQuality.frameRate;
+        }
+        parameters.degradationPreference =
+            RTCDegradationPreference.MAINTAIN_FRAMERATE;
+        final applied = await sender.setParameters(parameters);
+        debugPrint(
+          '[WebRTC] 🎚 Encodeur vidéo ${_videoQuality.code}: '
+          '${_videoQuality.maxBitrate} bit/s, ${_videoQuality.frameRate} i/s max, '
+          'appliqué=$applied',
+        );
+      }
+    } catch (e) {
+      debugPrint('[WebRTC] ** Paramètres d\'encodeur vidéo non appliqués: $e');
     }
   }
 
@@ -877,7 +1025,8 @@ class WebRTCService {
       return;
     }
     try {
-      await Helper.switchCamera(tracks.first);
+      final isFront = await Helper.switchCamera(tracks.first);
+      SessionVideoRenderers.instance.setLocalCameraFront(isFront);
     } catch (e) {
       debugPrint('[WebRTC] ** switchCamera: $e');
     }
@@ -886,6 +1035,7 @@ class WebRTCService {
   Future<void> dispose() async {
     try {
       debugPrint('[WebRTC] == Nettoyage WebRTC...');
+      await closeRingPreview();
       clearPendingIce();
       _remoteDescriptionSet = false;
       _iceGeneration = 0;

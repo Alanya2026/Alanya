@@ -2,6 +2,38 @@ import 'package:talky_flutter/core/services/call/call_audio_routes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('passage en vidéo', () {
+    test('l\'écouteur cède la place au haut-parleur', () {
+      expect(
+        routeForVideoUpgrade(
+          current: CallAudioRoute.earpiece,
+          wasAlreadyVideo: false,
+        ),
+        CallAudioRoute.speaker,
+      );
+    });
+
+    test('un casque reste en place', () {
+      for (final route in [CallAudioRoute.wired, CallAudioRoute.bluetooth]) {
+        expect(
+          routeForVideoUpgrade(current: route, wasAlreadyVideo: false),
+          isNull,
+          reason: route.name,
+        );
+      }
+    });
+
+    test('rallumer sa caméra dans un appel vidéo garde le choix fait', () {
+      expect(
+        routeForVideoUpgrade(
+          current: CallAudioRoute.earpiece,
+          wasAlreadyVideo: true,
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('familles d\'appareils', () {
     test('les types Bluetooth sont reconnus, profil compris', () {
       for (final t in ['bluetoothSco', 'bluetoothA2dp', 'bluetoothLe']) {
