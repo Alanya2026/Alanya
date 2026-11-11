@@ -9262,6 +9262,38 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get safeboxBackupSearching => 'Recherche des fichiers du téléphone…';
+
+  @override
+  String safeboxBackupProgressCount(int done, int total) {
+    return '$done sur $total sauvegardés';
+  }
+
+  @override
+  String safeboxBackupAnalysing(int checked, int toCheck) {
+    return 'Préparation des fichiers : $checked sur $toCheck';
+  }
+
+  @override
+  String safeboxBackupEtaMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'environ $count min restantes',
+      one: 'environ 1 min restante',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupEtaSoon => 'moins d\'une minute restante';
+
+  @override
+  String safeboxBackupNotifText(int done, int total, int percent) {
+    return '$done sur $total sauvegardés · $percent %';
+  }
+
+  @override
   String safeboxBackupWaitingWifi(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

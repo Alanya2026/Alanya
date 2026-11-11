@@ -392,30 +392,72 @@ class _LigneSauvegarde extends StatelessWidget {
     final dernier = c.lastBackup;
     final wifi = c.backupWaitingWifi;
     final enRoute = c.backupUploading;
-    final restants = c.backupRemaining;
+    final p = c.backupProgress;
+    final fraction = c.backupFraction;
+    // Avant le premier compte, ou pendant la recherche des fichiers : rien
+    // n'est encore « à jour » (11/11/2026 : l'accueil le disait à tort).
+    final cherche = p == null || p.listing;
+    final restants = p?.remaining ?? c.backupRemaining;
+    final eta = c.backupEta;
     final (IconData icone, Color couleur, String detail, (String, VoidCallback)? action) =
         c.mediaAccess == SafeboxMediaAccess.denied && r.documentFolders.isEmpty
             ? (Icons.block, context.colors.error, l10n.safeboxBackupNoAccess,
                 (l10n.safeboxBackupAllow, () => showSafeboxBackupSetup(context)))
-            : dernier?.stop == SafeboxBackupStop.spaceFull
-                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom), null)
-                : wifi > 0
-                    ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
-                        (l10n.safeboxBackupUseMobile, c.allowMobileData))
-                    : enRoute + restants > 0
-                        ? (Icons.cloud_upload_outlined, context.colors.primary,
-                            l10n.safeboxBackupRemaining(enRoute + restants), null)
-                        : (dernier?.waitingCharge ?? 0) > 0
-                            ? (Icons.battery_charging_full, context.semantic.warning,
-                                l10n.safeboxBackupWaitingCharge(dernier!.waitingCharge), null)
-                            : c.mediaAccess == SafeboxMediaAccess.limited
-                                ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
-                                    (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
-                                : (Icons.check, context.semantic.success, l10n.safeboxBackupUpToDate, null);
+            : cherche
+                ? (Icons.manage_search, context.colors.primary, l10n.safeboxBackupSearching, null)
+                : dernier?.stop == SafeboxBackupStop.spaceFull
+                    ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom), null)
+                    : wifi > 0
+                        ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
+                            (l10n.safeboxBackupUseMobile, c.allowMobileData))
+                        : p.analysing
+                            ? (Icons.cloud_upload_outlined, context.colors.primary,
+                                l10n.safeboxBackupAnalysing(p.checked, p.toCheck), null)
+                            : enRoute == 0 && (dernier?.waitingCharge ?? 0) > 0
+                                ? (Icons.battery_charging_full, context.semantic.warning,
+                                    l10n.safeboxBackupWaitingCharge(dernier!.waitingCharge), null)
+                                : restants > 0
+                                    ? (Icons.cloud_upload_outlined, context.colors.primary,
+                                        [
+                                          l10n.safeboxBackupRemaining(restants),
+                                          if (eta != null)
+                                            eta.inSeconds < 60
+                                                ? l10n.safeboxBackupEtaSoon
+                                                : l10n.safeboxBackupEtaMinutes((eta.inSeconds / 60).ceil()),
+                                        ].join(' · '),
+                                        null)
+                                    : c.mediaAccess == SafeboxMediaAccess.limited
+                                        ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
+                                            (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
+                                        : (Icons.check, context.semantic.success, l10n.safeboxBackupUpToDate, null);
+    // La barre : animée pendant la recherche, sinon sur tous les fichiers
+    // retenus (elle n'avance que dans un sens).
+    final barre = !(c.mediaAccess == SafeboxMediaAccess.denied && r.documentFolders.isEmpty) && (cherche || restants > 0);
     return ListTile(
       leading: CircleAvatar(backgroundColor: couleur.withValues(alpha: 0.12), child: Icon(icone, color: couleur)),
       title: Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
-      subtitle: Text(detail, style: TextStyle(color: couleur)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(detail, style: TextStyle(color: couleur)),
+          if (barre) ...[
+            AppSpacing.vGapSm,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                key: const ValueKey('safebox-backup-progress'),
+                value: cherche ? null : fraction,
+                minHeight: 6,
+              ),
+            ),
+            if (!cherche && p.total > 0) ...[
+              const SizedBox(height: 4),
+              Text(l10n.safeboxBackupProgressCount(p.done, p.total), style: context.text.bodySmall),
+            ],
+          ],
+        ],
+      ),
       trailing: action != null ? petitBouton(action.$1, action.$2) : const Icon(Icons.chevron_right),
       onTap: () => showSafeboxBackupSetup(context),
     );

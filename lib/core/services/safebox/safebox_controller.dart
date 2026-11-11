@@ -168,6 +168,8 @@ class SafeboxController extends ChangeNotifier {
       freeSpace: _espaceLibre,
       maxFileBytes: () => _overview?.limits.maxFileBytes ?? (1 << 30),
       charging: _enCharge,
+      jobAlive: _envoiEnRoute,
+      discardJob: _abandonnerEnvoi,
       store: backupStore,
     );
     _abonnementPartages = uploads.completedJobs.listen((e) {
@@ -186,6 +188,8 @@ class SafeboxController extends ChangeNotifier {
       unawaited(groupe == null ? _partagerApresEnvoi(e.file, conv) : _ajouterAuGroupe(groupe, e.file, conv));
     });
     uploads.addListener(_surveillerGroupes);
+    backup.progress.addListener(notifyListeners);
+    backup.progress.addListener(_suivrePremierPlan);
   }
 
   late final StreamSubscription<({SafeboxUploadJob job, SafeboxFile file})> _abonnementPartages;
@@ -240,10 +244,24 @@ class SafeboxController extends ChangeNotifier {
       unawaited(_premierPlan.stop());
       return;
     }
+    final l10n = resolveL10n();
+    // Seule la sauvegarde envoie : son avancement sur tous les fichiers
+    // retenus, qui ne recule pas quand un nouveau lot arrive (11/11/2026).
+    final p = backup.progress.value;
+    final fraction = backupFraction;
+    if (p != null && fraction != null && actifs.every((j) => j.backupKey != null)) {
+      final pct = (fraction * 100).floor().clamp(0, 100);
+      unawaited(_premierPlan.show(
+        channelName: l10n.safeboxNotifChannel,
+        title: l10n.safeboxBackupTitle,
+        text: l10n.safeboxBackupNotifText(p.done, p.total, pct),
+        percent: pct,
+      ));
+      return;
+    }
     final total = actifs.fold<int>(0, (s, j) => s + j.storedSize);
     final envoye = actifs.fold<int>(0, (s, j) => s + j.sentBytes);
     final pct = total <= 0 ? 0 : (envoye * 100 ~/ total).clamp(0, 100);
-    final l10n = resolveL10n();
     unawaited(_premierPlan.show(
       channelName: l10n.safeboxNotifChannel,
       title: l10n.safeboxTransfersCount(actifs.length),
@@ -712,6 +730,9 @@ class SafeboxController extends ChangeNotifier {
     try {
       _acces = await device.access();
       if (_overview == null) await refreshOverview();
+      // Les envois gardés d'abord (tâche de fond, démarrage) : sans eux, un
+      // envoi en attente passerait pour perdu et repartirait en double.
+      await uploads.reload();
       final r = await backup.run(_reglages);
       if (r.stop == SafeboxBackupStop.busy) return r;
       _dernierPassage = r;
@@ -722,6 +743,47 @@ class SafeboxController extends ChangeNotifier {
       debugPrint('[Sauvegarde] passage impossible : $e');
       return null;
     }
+  }
+
+  /// Un envoi de la sauvegarde encore en route : ni terminé, ni en échec,
+  /// ni disparu (11/11/2026).
+  Future<bool> _envoiEnRoute(String jobId) async => uploads.jobs.any((j) =>
+      j.id == jobId && j.state != SafeboxUploadState.completed && j.state != SafeboxUploadState.failed);
+
+  /// La sauvegarde relance ce fichier : l'envoi en échec quitte la liste des
+  /// transferts et rend sa réservation.
+  Future<void> _abandonnerEnvoi(String jobId) async {
+    final j = uploads.jobs.where((x) => x.id == jobId).firstOrNull;
+    if (j != null && j.state == SafeboxUploadState.failed) await uploads.cancel(jobId);
+  }
+
+  /// Où en est la sauvegarde ; null avant le premier passage (11/11/2026).
+  SafeboxBackupProgress? get backupProgress => backup.progress.value;
+
+  /// La barre de la sauvegarde, de 0 à 1 : les fichiers finis, plus la part
+  /// déjà envoyée de ceux en route. Null tant que le compte n'est pas connu.
+  double? get backupFraction {
+    final p = backup.progress.value;
+    if (p == null || p.listing || p.total <= 0) return null;
+    final enVol = uploads.jobs
+        .where((j) => j.backupKey != null && _envoiActif(j))
+        .fold<double>(0, (s, j) => s + j.progress);
+    return ((p.done + enVol) / p.total).clamp(0.0, 1.0);
+  }
+
+  /// Temps restant, seulement quand tout ce qui reste est déjà en route et
+  /// que la vitesse est mesurée ; null sinon (une estimation fausse égare
+  /// plus qu'elle n'aide).
+  Duration? get backupEta {
+    final p = backup.progress.value;
+    if (p == null || p.listing || p.analysing || p.remaining == 0) return null;
+    final enRoute = uploads.jobs.where((j) =>
+        j.backupKey != null && (j.state == SafeboxUploadState.running || j.state == SafeboxUploadState.queued)).toList();
+    if (enRoute.length < p.remaining) return null;
+    final vitesse = enRoute.fold<double>(0, (s, j) => s + (j.state == SafeboxUploadState.running ? j.bytesPerSecond ?? 0 : 0));
+    if (vitesse <= 0) return null;
+    final reste = enRoute.fold<int>(0, (s, j) => s + (j.storedSize - j.sentBytes));
+    return Duration(seconds: (reste / vitesse).ceil());
   }
 
   /// Envois de la sauvegarde qui attendent le Wi-Fi.
@@ -751,7 +813,9 @@ class SafeboxController extends ChangeNotifier {
     final maxApercu = (_overview?.limits.maxPreviewBytes ?? 256 * 1024) - kSafeboxTagBytes;
     final hevc = u.quality == SafeboxQuality.original ? false : await _hevcPermis(dossier, null);
     return _preparerUn(
-      SafeboxPick(path: u.file.path, name: u.item.name, size: u.item.size),
+      // Un document part d'une copie temporaire (safebox_device_media.dart) :
+      // effacée après l'envoi. Une photo de la galerie part de l'original.
+      SafeboxPick(path: u.file.path, name: u.item.name, size: u.item.size, temporary: !u.item.fromGallery),
       dossier,
       prep,
       quality: u.quality,
@@ -1221,6 +1285,8 @@ class SafeboxController extends ChangeNotifier {
     _minuterie?.cancel();
     _battement?.cancel();
     uploads.removeListener(_surveillerGroupes);
+    backup.progress.removeListener(notifyListeners);
+    backup.progress.removeListener(_suivrePremierPlan);
     _abonnementPartages.cancel();
     _abonnement.cancel();
     uploads.removeListener(notifyListeners);

@@ -384,6 +384,7 @@ class SafeboxBackupRecord {
     this.fp,
     this.quality,
     this.jobId,
+    this.attempts = 0,
   });
 
   static SafeboxBackupRecord? fromJson(dynamic j) {
@@ -397,6 +398,7 @@ class SafeboxBackupRecord {
       fp: j['fp'] as String?,
       quality: j['q'] is String ? SafeboxQuality.fromName(j['q'] as String) : null,
       jobId: j['j'] as String?,
+      attempts: (j['a'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -412,6 +414,10 @@ class SafeboxBackupRecord {
   final SafeboxQuality? quality;
   final String? jobId;
 
+  /// Envois lancés pour cette version du fichier (11/11/2026) : un envoi
+  /// perdu ou en échec est relancé, jusqu'à [SafeboxBackupEngine.maxAttempts].
+  final int attempts;
+
   /// Le même fichier qu'à son dernier passage : même date et, s'il est
   /// mesuré, même taille.
   bool matches(SafeboxDeviceItem it) =>
@@ -424,6 +430,7 @@ class SafeboxBackupRecord {
         fp: fp,
         quality: quality ?? this.quality,
         jobId: jobId,
+        attempts: attempts,
       );
 
   Map<String, dynamic> toJson() => {
@@ -433,6 +440,7 @@ class SafeboxBackupRecord {
         'fp': ?fp,
         'q': ?quality?.name,
         'j': ?jobId,
+        if (attempts > 0) 'a': attempts,
       };
 }
 
@@ -493,6 +501,46 @@ class SafeboxBackupUpload {
   final String fp;
 }
 
+/// Où en est la sauvegarde (11/11/2026) : de quoi dessiner une barre qui
+/// n'avance que dans un sens, sur tous les fichiers retenus.
+class SafeboxBackupProgress {
+  const SafeboxBackupProgress({
+    this.total = 0,
+    this.done = 0,
+    this.listing = false,
+    this.checked = 0,
+    this.toCheck = 0,
+  });
+
+  /// Fichiers du téléphone retenus par les réglages.
+  final int total;
+
+  /// Ceux qui n'ont plus rien à faire : dans le coffre, ou supprimés du
+  /// coffre par l'inscrit.
+  final int done;
+
+  /// Le passage cherche les fichiers du téléphone (galerie, dossiers).
+  final bool listing;
+
+  /// Pendant un passage : fichiers examinés (lus, empreinte, compression)
+  /// sur ceux à examiner.
+  final int checked;
+  final int toCheck;
+
+  int get remaining => total > done ? total - done : 0;
+  bool get analysing => toCheck > 0 && checked < toCheck;
+  bool get complete => !listing && remaining == 0;
+
+  SafeboxBackupProgress copyWith({int? total, int? done, bool? listing, int? checked, int? toCheck}) =>
+      SafeboxBackupProgress(
+        total: total ?? this.total,
+        done: done ?? this.done,
+        listing: listing ?? this.listing,
+        checked: checked ?? this.checked,
+        toCheck: toCheck ?? this.toCheck,
+      );
+}
+
 /// Pourquoi un passage s'est arrêté avant la fin.
 enum SafeboxBackupStop { none, disabled, noAccess, spaceFull, busy }
 
@@ -535,9 +583,15 @@ class SafeboxBackupEngine {
     required this.freeSpace,
     required this.maxFileBytes,
     required this.charging,
+    this.jobAlive,
+    this.discardJob,
     SafeboxBackupStore? store,
     this.batchSize = 100,
   }) : _store = store ?? PrefsSafeboxBackupStore();
+
+  /// Un fichier dont l'envoi s'est perdu ou a échoué repart au plus ce
+  /// nombre de fois ; au-delà, il attend qu'il change sur le téléphone.
+  static const int maxAttempts = 3;
 
   final SafeboxDeviceSource device;
   final SafeboxBackupApi api;
@@ -552,13 +606,63 @@ class SafeboxBackupEngine {
 
   /// Le téléphone est-il en charge ?
   final Future<bool> Function() charging;
+  /// L'envoi [jobId] est-il encore en route (en attente, en cours, en pause,
+  /// en attente du Wi-Fi) ? Null : on le suppose (tests, anciens appels).
+  final Future<bool> Function(String jobId)? jobAlive;
+
+  /// Retire un envoi en échec avant de relancer son fichier (sa réservation
+  /// côté serveur avec) : pas de doublon si l'inscrit le relançait aussi.
+  final Future<void> Function(String jobId)? discardJob;
   final SafeboxBackupStore _store;
   final int batchSize;
 
   bool _enCours = false;
   bool get running => _enCours;
 
+  /// Où en est la sauvegarde ; null avant le premier passage.
+  final ValueNotifier<SafeboxBackupProgress?> progress = ValueNotifier(null);
+
+  /// Les fichiers retenus au dernier passage, et ceux qui n'ont plus rien à faire.
+  Set<String> _retenus = {};
+  Set<String> _finis = {};
+
+  void _publier({bool? listing, int? checked, int? toCheck}) {
+    progress.value = (progress.value ?? const SafeboxBackupProgress()).copyWith(
+      total: _retenus.length,
+      done: _finis.length,
+      listing: listing,
+      checked: checked,
+      toCheck: toCheck,
+    );
+  }
+
+  /// Les écritures des fiches, une à la fois (11/11/2026) : un passage qui
+  /// enregistrait sa copie de la liste effaçait les « arrivé dans le coffre »
+  /// notés entre-temps, et ces fichiers restaient « en cours » pour toujours.
+  Future<void> _file = Future<void>.value();
+
+  Future<T> _exclusif<T>(Future<T> Function() action) {
+    final r = _file.then((_) => action());
+    _file = r.then((_) {}, onError: (_) {});
+    return r;
+  }
+
+  /// Arrivés ou abandonnés pendant un passage, avant que leur fiche soit
+  /// enregistrée : appliqués à l'enregistrement du lot.
+  final Set<String> _arrives = {};
+  final Set<String> _abandonnes = {};
+
   Future<Map<String, SafeboxBackupRecord>> records() => _store.load();
+
+  /// À reprendre : neuf, changé, ou parti dans un envoi qui n'est plus en
+  /// route (perdu, en échec) sans avoir épuisé ses essais.
+  Future<bool> _aReprendre(SafeboxBackupRecord? r, SafeboxDeviceItem it) async {
+    if (r == null || !r.matches(it)) return true;
+    if (r.state != SafeboxBackupState.queued || jobAlive == null) return false;
+    final id = r.jobId;
+    if (id != null && await jobAlive!(id)) return false;
+    return r.attempts < maxAttempts;
+  }
 
   /// Les fichiers du téléphone retenus par ces réglages ; mesurés avec
   /// [withSizes] (estimations, « Libérer la mémoire »).
@@ -575,28 +679,40 @@ class SafeboxBackupEngine {
     }
     if (s.families.contains(SafeboxFamily.documents)) {
       for (final d in s.documentFolders) {
-        out.addAll(await device.documentItems(d, since: s.since));
+        // Un dossier illisible (droit retiré, ou tâche de fond : le canal des
+        // documents n'existe qu'avec l'application ouverte) ne doit pas
+        // arrêter la sauvegarde des photos et vidéos (11/11/2026).
+        try {
+          out.addAll(await device.documentItems(d, since: s.since));
+        } catch (e) {
+          debugPrint('[Sauvegarde] dossier ${d.name} illisible : $e');
+        }
       }
     }
     return out;
   }
 
   /// Ce qui reste à sauvegarder, pour l'accueil : les fichiers retenus que la
-  /// sauvegarde n'a pas encore vus partir.
+  /// sauvegarde n'a pas encore vus partir, ou dont l'envoi s'est perdu.
   Future<List<SafeboxDeviceItem>> pending(SafeboxBackupSettings s) async {
     final faits = await _store.load();
     return [
       for (final it in await selection(s))
-        if (!(faits[it.key]?.matches(it) ?? false)) it,
+        if (await _aReprendre(faits[it.key], it)) it,
     ];
   }
 
   /// Un passage complet.
   Future<SafeboxBackupReport> run(SafeboxBackupSettings s) async {
-    if (!s.enabled) return const SafeboxBackupReport(stop: SafeboxBackupStop.disabled);
+    if (!s.enabled) {
+      progress.value = null;
+      return const SafeboxBackupReport(stop: SafeboxBackupStop.disabled);
+    }
     if (_enCours) return const SafeboxBackupReport(stop: SafeboxBackupStop.busy);
     _enCours = true;
+    var vus = 0;
     try {
+      progress.value = (progress.value ?? const SafeboxBackupProgress()).copyWith(listing: true, checked: 0, toCheck: 0);
       if (await device.access() == SafeboxMediaAccess.denied && s.documentFolders.isEmpty) {
         return const SafeboxBackupReport(stop: SafeboxBackupStop.noAccess);
       }
@@ -604,8 +720,14 @@ class SafeboxBackupEngine {
       final items = await selection(s);
       // Du plus récent au plus ancien, toutes sources confondues : quand la
       // place manque, ce sont les plus anciens qui attendent.
-      final neufs = [for (final it in items) if (!(faits[it.key]?.matches(it) ?? false)) it]
+      final neufs = [for (final it in items) if (await _aReprendre(faits[it.key], it)) it]
         ..sort((a, b) => b.modified.compareTo(a.modified));
+      _retenus = {for (final it in items) it.key};
+      _finis = {
+        for (final it in items)
+          if (faits[it.key] case final r? when r.matches(it) && r.state != SafeboxBackupState.queued) it.key,
+      };
+      _publier(listing: false, checked: 0, toCheck: neufs.length);
       var dejaLa = 0, sautes = 0, partis = 0, attenteCharge = 0, sansPlace = 0;
       var libre = await freeSpace();
       final enCharge = await charging();
@@ -615,7 +737,13 @@ class SafeboxBackupEngine {
         // de chacun est retenue à l'ouverture et rendue s'il ne part pas.
         final ouverts = <({SafeboxDeviceItem item, File file, String fp, SafeboxQuality q, int poids})>[];
         for (final it in lot) {
+          vus += 1;
+          _publier(checked: vus);
           try {
+            final ancien = faits[it.key];
+            if (ancien != null && ancien.state == SafeboxBackupState.queued && ancien.jobId != null) {
+              await discardJob?.call(ancien.jobId!);
+            }
             final f = await device.open(it);
             if (f == null) continue;
             final mesure = it.size >= 0 ? it : it.withSize(await f.length());
@@ -642,8 +770,12 @@ class SafeboxBackupEngine {
         }
         if (ouverts.isEmpty) continue;
         final etats = await api.check([for (final o in ouverts) o.fp]);
+        // Les fiches de ce lot seulement : enregistrées par-dessus la liste
+        // relue, jamais par-dessus ce qui a été noté entre-temps.
+        final notes = <String, SafeboxBackupRecord>{};
         for (final o in ouverts) {
           final it = o.item;
+          final avant = faits[it.key];
           SafeboxBackupRecord note(SafeboxBackupState etat, {SafeboxQuality? q, String? job}) => SafeboxBackupRecord(
                 state: etat,
                 size: it.size,
@@ -651,15 +783,19 @@ class SafeboxBackupEngine {
                 fp: o.fp,
                 quality: q,
                 jobId: job,
+                // Un envoi de plus pour la même version du fichier.
+                attempts: job == null
+                    ? 0
+                    : (avant != null && avant.state == SafeboxBackupState.queued && avant.matches(it) ? avant.attempts : 0) + 1,
               );
           var parti = false;
           switch (etats[o.fp] ?? SafeboxBackupCheck.unknown) {
             case SafeboxBackupCheck.saved || SafeboxBackupCheck.elsewhere:
-              faits[it.key] = note(SafeboxBackupState.saved);
+              notes[it.key] = note(SafeboxBackupState.saved);
               dejaLa += 1;
               _jeter(o.file, it);
             case SafeboxBackupCheck.skip:
-              faits[it.key] = note(SafeboxBackupState.skip);
+              notes[it.key] = note(SafeboxBackupState.skip);
               sautes += 1;
               _jeter(o.file, it);
             case SafeboxBackupCheck.uploading:
@@ -673,13 +809,27 @@ class SafeboxBackupEngine {
               }
               final job = await enqueue(SafeboxBackupUpload(item: it, file: o.file, quality: o.q, fp: o.fp));
               if (job == null) break;
-              faits[it.key] = note(SafeboxBackupState.queued, q: o.q, job: job);
+              notes[it.key] = note(SafeboxBackupState.queued, q: o.q, job: job);
               partis += 1;
               parti = true;
           }
           if (!parti && libre != null) libre += o.poids;
         }
-        await _store.save(faits);
+        faits.addAll(notes);
+        for (final e in notes.entries) {
+          if (e.value.state != SafeboxBackupState.queued || _arrives.contains(e.key)) _finis.add(e.key);
+        }
+        await _exclusif(() async {
+          final frais = await _store.load();
+          for (final e in notes.entries) {
+            if (_abandonnes.remove(e.key)) {
+              frais.remove(e.key);
+            } else {
+              frais[e.key] = _arrives.remove(e.key) ? e.value.copyWith(state: SafeboxBackupState.saved) : e.value;
+            }
+          }
+          await _store.save(frais);
+        });
       }
       return SafeboxBackupReport(
         seen: items.length,
@@ -694,6 +844,9 @@ class SafeboxBackupEngine {
       );
     } finally {
       _enCours = false;
+      if (progress.value != null) _publier(listing: false, checked: 0, toCheck: 0);
+      _arrives.clear();
+      _abandonnes.clear();
     }
   }
 
@@ -704,21 +857,27 @@ class SafeboxBackupEngine {
   }
 
   /// Un envoi de la sauvegarde est arrivé dans le coffre.
-  Future<void> markSaved(String key) => _changer(key, SafeboxBackupState.saved);
+  Future<void> markSaved(String key) {
+    if (_retenus.contains(key) && _finis.add(key)) _publier();
+    return _marquerArrive(key);
+  }
+
+  Future<void> _marquerArrive(String key) => _exclusif(() async {
+        // Pendant un passage, sa fiche n'est peut-être pas encore enregistrée.
+        if (_enCours) _arrives.add(key);
+        final faits = await _store.load();
+        final r = faits[key];
+        if (r == null) return;
+        faits[key] = r.copyWith(state: SafeboxBackupState.saved);
+        await _store.save(faits);
+      });
 
   /// Un envoi a échoué ou a été annulé : le fichier sera repris au passage suivant.
-  Future<void> forget(String key) async {
-    final faits = await _store.load();
-    if (faits.remove(key) != null) await _store.save(faits);
-  }
-
-  Future<void> _changer(String key, SafeboxBackupState etat) async {
-    final faits = await _store.load();
-    final r = faits[key];
-    if (r == null) return;
-    faits[key] = r.copyWith(state: etat);
-    await _store.save(faits);
-  }
+  Future<void> forget(String key) => _exclusif(() async {
+        if (_enCours) _abandonnes.add(key);
+        final faits = await _store.load();
+        if (faits.remove(key) != null) await _store.save(faits);
+      });
 
   /// « Libérer la mémoire du téléphone » : les fichiers de la galerie déjà
   /// dans le coffre en Original (retirer un original gardé en HD ferait

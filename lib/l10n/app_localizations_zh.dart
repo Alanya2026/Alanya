@@ -8720,6 +8720,32 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get safeboxBackupSearching => '正在查找手机上的文件…';
+
+  @override
+  String safeboxBackupProgressCount(int done, int total) {
+    return '已备份 $done/$total';
+  }
+
+  @override
+  String safeboxBackupAnalysing(int checked, int toCheck) {
+    return '正在准备文件：$checked/$toCheck';
+  }
+
+  @override
+  String safeboxBackupEtaMinutes(int count) {
+    return '约剩 $count 分钟';
+  }
+
+  @override
+  String get safeboxBackupEtaSoon => '不到一分钟';
+
+  @override
+  String safeboxBackupNotifText(int done, int total, int percent) {
+    return '已备份 $done/$total · $percent%';
+  }
+
+  @override
   String safeboxBackupWaitingWifi(int count) {
     return '$count 个文件等待 Wi-Fi';
   }

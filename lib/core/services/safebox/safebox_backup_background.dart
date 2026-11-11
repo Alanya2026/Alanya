@@ -18,11 +18,14 @@ import 'dart:ui';
 import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../talky_api_client.dart';
+import '../local_notification_helper.dart' show kNotificationIcon;
 import 'safebox_controller.dart';
+import 'safebox_foreground.dart';
 
 const String kSafeboxBackupTask = 'alanya.coffre.sauvegarde';
 
@@ -50,6 +53,79 @@ class SafeboxRunLock {
     final t = prefs.getInt(who);
     if (t == null) return false;
     return (now ?? DateTime.now()).millisecondsSinceEpoch - t < fresh.inMilliseconds;
+  }
+}
+
+/// La notification de la tâche de fond (11/11/2026) : le service de premier
+/// plan de l'application n'existe qu'avec elle ouverte, et l'inscrit ne
+/// voyait rien pendant que la sauvegarde tournait. Même canal que ce service
+/// (`alanya_safebox`, discret). Retirée à la fin du passage ; si Android
+/// coupe le passage, elle s'efface seule au bout de 12 minutes.
+class SafeboxBackgroundNotice extends SafeboxForeground {
+  SafeboxBackgroundNotice({FlutterLocalNotificationsPlugin? plugin})
+      : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+
+  static const int _id = 7311;
+  final FlutterLocalNotificationsPlugin _plugin;
+  bool _pret = false;
+  bool _affichee = false;
+  String? _dernier;
+
+  @override
+  Future<void> show({
+    required String channelName,
+    required String title,
+    required String text,
+    required int percent,
+  }) async {
+    final cle = '$title|$text|$percent';
+    if (_affichee && cle == _dernier) return;
+    _dernier = cle;
+    try {
+      if (!_pret) {
+        await _plugin.initialize(const InitializationSettings(android: AndroidInitializationSettings(kNotificationIcon)));
+        _pret = true;
+      }
+      await _plugin.show(
+        _id,
+        title,
+        text,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'alanya_safebox',
+            channelName,
+            importance: Importance.low,
+            priority: Priority.low,
+            icon: kNotificationIcon,
+            ongoing: true,
+            autoCancel: false,
+            onlyAlertOnce: true,
+            silent: true,
+            playSound: false,
+            enableVibration: false,
+            showProgress: true,
+            maxProgress: 100,
+            progress: percent.clamp(0, 100),
+            indeterminate: percent < 0,
+            timeoutAfter: const Duration(minutes: 12).inMilliseconds,
+          ),
+        ),
+      );
+      _affichee = true;
+    } catch (e) {
+      debugPrint('[Sauvegarde] notification de fond impossible : $e');
+    }
+  }
+
+  Future<void>? _retrait;
+
+  /// Rend le retrait en cours s'il y en a un : la fin du passage l'attend.
+  @override
+  Future<void> stop() {
+    if (!_affichee) return _retrait ?? Future<void>.value();
+    _affichee = false;
+    _dernier = null;
+    return _retrait = _plugin.cancel(_id).catchError((Object _) {});
   }
 }
 
@@ -116,10 +192,13 @@ Future<void> runSafeboxBackgroundPass({Duration budget = const Duration(minutes:
   final battement = Timer.periodic(const Duration(minutes: 1), (_) {
     unawaited(SafeboxRunLock.beat(SafeboxRunLock.background));
   });
-  final c = SafeboxController(api: api);
+  final avis = SafeboxBackgroundNotice();
+  final c = SafeboxController(api: api, foreground: avis);
   try {
     await c.loadBackupSettings();
     await c.refreshOverview();
+    // Les envois gardés chargés avant le passage, qui les consulte.
+    await c.uploads.reload();
     unawaited(c.uploads.resumeAll());
     // WorkManager ne lance ce passage que sur un réseau permis par les réglages.
     unawaited(c.uploads.resumeWaitingWifi());
@@ -138,5 +217,7 @@ Future<void> runSafeboxBackgroundPass({Duration budget = const Duration(minutes:
     battement.cancel();
     await SafeboxRunLock.release(SafeboxRunLock.background);
     c.dispose();
+    // Retirée avant que le processus s'arrête (dispose ne l'attend pas).
+    await avis.stop();
   }
 }

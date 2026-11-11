@@ -15646,6 +15646,42 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 fichier à sauvegarder} other{{count} fichiers à sauvegarder}}'**
   String safeboxBackupRemaining(int count);
 
+  /// No description provided for @safeboxBackupSearching.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche des fichiers du téléphone…'**
+  String get safeboxBackupSearching;
+
+  /// No description provided for @safeboxBackupProgressCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{done} sur {total} sauvegardés'**
+  String safeboxBackupProgressCount(int done, int total);
+
+  /// No description provided for @safeboxBackupAnalysing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation des fichiers : {checked} sur {toCheck}'**
+  String safeboxBackupAnalysing(int checked, int toCheck);
+
+  /// No description provided for @safeboxBackupEtaMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{environ 1 min restante} other{environ {count} min restantes}}'**
+  String safeboxBackupEtaMinutes(int count);
+
+  /// No description provided for @safeboxBackupEtaSoon.
+  ///
+  /// In fr, this message translates to:
+  /// **'moins d\'une minute restante'**
+  String get safeboxBackupEtaSoon;
+
+  /// No description provided for @safeboxBackupNotifText.
+  ///
+  /// In fr, this message translates to:
+  /// **'{done} sur {total} sauvegardés · {percent} %'**
+  String safeboxBackupNotifText(int done, int total, int percent);
+
   /// No description provided for @safeboxBackupWaitingWifi.
   ///
   /// In fr, this message translates to:

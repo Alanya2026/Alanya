@@ -9157,6 +9157,38 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get safeboxBackupSearching => 'Looking for files on your phone…';
+
+  @override
+  String safeboxBackupProgressCount(int done, int total) {
+    return '$done of $total backed up';
+  }
+
+  @override
+  String safeboxBackupAnalysing(int checked, int toCheck) {
+    return 'Preparing files: $checked of $toCheck';
+  }
+
+  @override
+  String safeboxBackupEtaMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'about $count min left',
+      one: 'about 1 min left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupEtaSoon => 'less than a minute left';
+
+  @override
+  String safeboxBackupNotifText(int done, int total, int percent) {
+    return '$done of $total backed up · $percent%';
+  }
+
+  @override
   String safeboxBackupWaitingWifi(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
