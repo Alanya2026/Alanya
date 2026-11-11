@@ -352,4 +352,229 @@ class AppLocalizationsFr extends AppLocalizations {
   String settingsKeptFilesSize(String size) {
     return '$size · se retéléchargent au besoin';
   }
+
+  @override
+  String get add => 'Ajouter';
+
+  @override
+  String get addFiles => 'Des fichiers…';
+
+  @override
+  String get addFolder => 'Un dossier…';
+
+  @override
+  String dropHere(String folder) {
+    return 'Déposer ici pour ajouter à $folder';
+  }
+
+  @override
+  String importScanning(int n) {
+    return 'Analyse des fichiers… $n';
+  }
+
+  @override
+  String importChecking(int done, int total) {
+    return 'Comparaison avec le coffre… $done / $total';
+  }
+
+  @override
+  String importPreparing(int done, int total) {
+    return 'Préparation des envois… $done / $total';
+  }
+
+  @override
+  String importTitle(String folder) {
+    return 'Ajouter à $folder';
+  }
+
+  @override
+  String importSend(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers à envoyer',
+      one: '1 fichier à envoyer',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String importLink(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other:
+          '$n fichiers déjà dans le coffre, ajoutés à l\'album sans nouvel envoi',
+      one: '1 fichier déjà dans le coffre, ajouté à l\'album sans nouvel envoi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAlready(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers déjà dans le coffre, pas renvoyés',
+      one: '1 fichier déjà dans le coffre, pas renvoyé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importDiverted(int n, String root) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers iront dans $root, le dossier de leur type',
+      one: '1 fichier ira dans $root, le dossier de son type',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importTooLarge(int n, String max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers dépassent $max et ne partiront pas',
+      one: '1 fichier dépasse $max et ne partira pas',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importIgnored(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers cachés, vides ou raccourcis laissés de côté',
+      one: '1 fichier caché, vide ou raccourci laissé de côté',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importFree(String size) {
+    return 'Place libre dans le coffre : $size';
+  }
+
+  @override
+  String importNoRoom(String size) {
+    return 'Pas assez de place : il manque $size. Videz la corbeille ou ajoutez moins de fichiers.';
+  }
+
+  @override
+  String get importOriginal =>
+      'Les fichiers partent en Original, tels qu\'ils sont sur l\'ordinateur. Ils restent sur l\'ordinateur.';
+
+  @override
+  String get importNothing => 'Rien à envoyer : tout est déjà dans le coffre.';
+
+  @override
+  String get importStart => 'Envoyer';
+
+  @override
+  String get importFailed => 'Les fichiers n\'ont pas pu être lus.';
+
+  @override
+  String get importBusy => 'Un ajout est déjà en préparation.';
+
+  @override
+  String get uploadsTitle => 'Envois vers le coffre';
+
+  @override
+  String uploadsRunning(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Envoi de $n fichiers',
+      one: 'Envoi d\'1 fichier',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String uploadsDone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers ajoutés au coffre',
+      one: '1 fichier ajouté au coffre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String uploadsFailed(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n envois n\'ont pas abouti',
+      one: '1 envoi n\'a pas abouti',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String uploadsPaused(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n envois en pause',
+      one: '1 envoi en pause',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get uploadsWaitingNetwork => 'En attente du réseau';
+
+  @override
+  String get pauseAll => 'Tout mettre en pause';
+
+  @override
+  String get resumeAll => 'Tout reprendre';
+
+  @override
+  String get details => 'Détails';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get resume => 'Reprendre';
+
+  @override
+  String get clearFinished => 'Effacer les terminés';
+
+  @override
+  String speed(String size) {
+    return '$size/s';
+  }
+
+  @override
+  String get uploadQueued => 'En attente';
+
+  @override
+  String get uploadPaused => 'En pause';
+
+  @override
+  String get uploadDone => 'Dans le coffre';
+
+  @override
+  String get uploadErrorQuota => 'Plus assez de place dans le coffre';
+
+  @override
+  String get uploadErrorChanged =>
+      'Le fichier a changé sur l\'ordinateur pendant l\'envoi';
+
+  @override
+  String get uploadErrorMissing => 'Le fichier n\'est plus sur l\'ordinateur';
+
+  @override
+  String get uploadErrorGeneric => 'L\'envoi n\'a pas abouti';
+
+  @override
+  String get change => 'Changer';
 }

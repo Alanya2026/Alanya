@@ -42,12 +42,14 @@ class _CoffreAppState extends State<CoffreApp> {
   void initState() {
     super.initState();
     widget.session.addListener(_session);
+    widget.session.beforeWipe = () async => _vault?.close();
     _session();
   }
 
   @override
   void dispose() {
     widget.session.removeListener(_session);
+    widget.session.beforeWipe = null;
     _vault?.dispose();
     super.dispose();
   }

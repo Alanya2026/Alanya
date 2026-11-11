@@ -63,10 +63,15 @@ class Session extends ChangeNotifier {
 
   /// [remote] : prévenir le serveur (clic sur « Se déconnecter »). Faux quand
   /// c'est le serveur qui a mis fin à la session.
+  /// Appelé avant d'effacer la session : le coffre ouvert arrête d'écrire
+  /// (envois en cours) dans ce qui va être effacé.
+  Future<void> Function()? beforeWipe;
+
   Future<void> signOut({bool remote = true}) async {
     if (_phase == SessionPhase.signedOut) return;
     if (remote) await api.logout();
     api.clearTokens();
+    await beforeWipe?.call();
     await store.wipe();
     _user = const {};
     _connectedAt = null;

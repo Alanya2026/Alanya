@@ -8,6 +8,7 @@ import '../browse/home_view.dart';
 import '../settings/settings_view.dart';
 import '../ui/common.dart';
 import 'export_bar.dart';
+import 'transfer_bar.dart';
 
 /// Ce que montre la partie droite.
 sealed class Destination {
@@ -102,6 +103,7 @@ class _ShellState extends State<Shell> {
             SettingsDestination() => const SettingsView(),
               },
             ),
+            const TransferBar(),
             const ExportBar(),
           ]),
         ),

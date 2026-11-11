@@ -344,4 +344,231 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsKeptFilesSize(String size) {
     return '$size · downloaded again when needed';
   }
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get addFiles => 'Files…';
+
+  @override
+  String get addFolder => 'A folder…';
+
+  @override
+  String dropHere(String folder) {
+    return 'Drop here to add to $folder';
+  }
+
+  @override
+  String importScanning(int n) {
+    return 'Looking at the files… $n';
+  }
+
+  @override
+  String importChecking(int done, int total) {
+    return 'Comparing with your SafeBox… $done / $total';
+  }
+
+  @override
+  String importPreparing(int done, int total) {
+    return 'Preparing uploads… $done / $total';
+  }
+
+  @override
+  String importTitle(String folder) {
+    return 'Add to $folder';
+  }
+
+  @override
+  String importSend(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files to upload',
+      one: '1 file to upload',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String importLink(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other:
+          '$n files already in your SafeBox, added to the album without uploading them again',
+      one:
+          '1 file already in your SafeBox, added to the album without uploading it again',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importAlready(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files already in your SafeBox, not uploaded again',
+      one: '1 file already in your SafeBox, not uploaded again',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importDiverted(int n, String root) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files will go to $root, the folder for their type',
+      one: '1 file will go to $root, the folder for its type',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importTooLarge(int n, String max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files are over $max and won\'t be uploaded',
+      one: '1 file is over $max and won\'t be uploaded',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importIgnored(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hidden, empty or shortcut files left out',
+      one: '1 hidden, empty or shortcut file left out',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String importFree(String size) {
+    return 'Free space in your SafeBox: $size';
+  }
+
+  @override
+  String importNoRoom(String size) {
+    return 'Not enough space: $size short. Empty the trash or add fewer files.';
+  }
+
+  @override
+  String get importOriginal =>
+      'Files are uploaded in Original quality, exactly as they are on the computer. They stay on the computer.';
+
+  @override
+  String get importNothing =>
+      'Nothing to upload: everything is already in your SafeBox.';
+
+  @override
+  String get importStart => 'Upload';
+
+  @override
+  String get importFailed => 'The files couldn\'t be read.';
+
+  @override
+  String get importBusy => 'Files are already being prepared.';
+
+  @override
+  String get uploadsTitle => 'Uploads to your SafeBox';
+
+  @override
+  String uploadsRunning(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Uploading $n files',
+      one: 'Uploading 1 file',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String uploadsDone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files added to your SafeBox',
+      one: '1 file added to your SafeBox',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String uploadsFailed(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n uploads didn\'t finish',
+      one: '1 upload didn\'t finish',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String uploadsPaused(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n uploads paused',
+      one: '1 upload paused',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get uploadsWaitingNetwork => 'Waiting for the network';
+
+  @override
+  String get pauseAll => 'Pause all';
+
+  @override
+  String get resumeAll => 'Resume all';
+
+  @override
+  String get details => 'Details';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get resume => 'Resume';
+
+  @override
+  String get clearFinished => 'Clear finished';
+
+  @override
+  String speed(String size) {
+    return '$size/s';
+  }
+
+  @override
+  String get uploadQueued => 'Waiting';
+
+  @override
+  String get uploadPaused => 'Paused';
+
+  @override
+  String get uploadDone => 'In your SafeBox';
+
+  @override
+  String get uploadErrorQuota => 'Not enough space in your SafeBox';
+
+  @override
+  String get uploadErrorChanged =>
+      'The file changed on the computer during the upload';
+
+  @override
+  String get uploadErrorMissing => 'The file is no longer on the computer';
+
+  @override
+  String get uploadErrorGeneric => 'The upload didn\'t finish';
+
+  @override
+  String get change => 'Change';
 }

@@ -1,15 +1,19 @@
 // Écrans 3 et 4 : un dossier du coffre. Fil d'Ariane, sous-dossiers, puis
-// les fichiers par jour d'ajout. Lecture seule (lot D2) ; la visionneuse et
-// les actions arrivent avec les lots suivants.
+// les fichiers par jour d'ajout. Un clic ouvre la visionneuse (D3) ; on y
+// ajoute des fichiers par « Ajouter » ou en les déposant (D4).
+
+import 'dart:async';
 
 import 'package:alanya_safebox/alanya_safebox.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../core/exporter.dart';
-
+import '../l10n/app_localizations.dart';
 import '../ui/common.dart';
 import '../viewer/viewer_screen.dart';
+import 'import_flow.dart';
 import 'thumbnail.dart';
 
 class FolderView extends StatefulWidget {
@@ -31,6 +35,9 @@ class _FolderViewState extends State<FolderView> {
   bool _charge = false;
   Object? _erreur;
   final _defilement = ScrollController();
+  bool _survol = false;
+  StreamSubscription<int>? _arrivees;
+  Timer? _recharge;
 
   @override
   void initState() {
@@ -43,19 +50,29 @@ class _FolderViewState extends State<FolderView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _arrivees ??= context.vault.folderChanges.listen((id) {
+      if (id != widget.folderId) return;
+      // Une rafale d'envois terminés : un seul rechargement.
+      _recharge?.cancel();
+      _recharge = Timer(const Duration(milliseconds: 800), () {
+        if (mounted && !_charge) _charger(silencieux: true);
+      });
+    });
     if (_page == null && !_charge) _charger();
   }
 
   @override
   void dispose() {
+    _recharge?.cancel();
+    _arrivees?.cancel();
     _defilement.dispose();
     super.dispose();
   }
 
-  Future<void> _charger() async {
+  Future<void> _charger({bool silencieux = false}) async {
     setState(() {
       _charge = true;
-      _erreur = null;
+      if (!silencieux) _erreur = null;
     });
     try {
       final p = await context.vault.folder(widget.folderId);
@@ -68,7 +85,7 @@ class _FolderViewState extends State<FolderView> {
         _suite = p.nextCursor;
       });
     } catch (e) {
-      if (mounted) setState(() => _erreur = e);
+      if (mounted && !silencieux) setState(() => _erreur = e);
     } finally {
       if (mounted) setState(() => _charge = false);
     }
@@ -101,6 +118,23 @@ class _FolderViewState extends State<FolderView> {
     final l = context.l;
     final t = Theme.of(context).textTheme;
     final jours = _parJour(_fichiers);
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _survol = true),
+      onDragExited: (_) => setState(() => _survol = false),
+      onDragDone: (d) {
+        setState(() => _survol = false);
+        final chemins = [for (final f in d.files) f.path].where((p) => p.isNotEmpty).toList();
+        if (chemins.isNotEmpty) importPaths(context, chemins, page.folder);
+      },
+      child: Stack(children: [
+        _contenu(context, page, l, t, jours),
+        if (_survol) Positioned.fill(child: _Depot(nom: folderName(context, page.folder))),
+      ]),
+    );
+  }
+
+  Widget _contenu(BuildContext context, SafeboxFolderPage page, AppLocalizations l, TextTheme t,
+      List<(DateTime?, List<SafeboxFile>)> jours) {
     return RefreshIndicator(
       onRefresh: _charger,
       child: CustomScrollView(controller: _defilement, slivers: [
@@ -117,6 +151,8 @@ class _FolderViewState extends State<FolderView> {
                   Text(folderName(context, page.folder), style: t.headlineSmall),
                 ]),
               ),
+              _Ajouter(folder: page.folder),
+              const SizedBox(width: 8),
               if (_fichiers.isNotEmpty || page.folders.isNotEmpty)
                 OutlinedButton.icon(
                   onPressed: () => _telechargerDossier(page.folder),
@@ -316,6 +352,62 @@ class _Ligne extends StatelessWidget {
               Text(formatBytes(context, file.plainBytes), style: Theme.of(context).textTheme.bodySmall),
             ]),
           ),
+          ),
+        ),
+      );
+}
+
+/// « Ajouter » : des fichiers ou un dossier du PC.
+class _Ajouter extends StatelessWidget {
+  const _Ajouter({required this.folder});
+  final SafeboxFolder folder;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    return MenuAnchor(
+      menuChildren: [
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.insert_drive_file_outlined, size: 20),
+          onPressed: () => pickFilesAndImport(context, folder),
+          child: Text(l.addFiles),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.folder_outlined, size: 20),
+          onPressed: () => pickFolderAndImport(context, folder),
+          child: Text(l.addFolder),
+        ),
+      ],
+      builder: (context, menu, _) => FilledButton.icon(
+        onPressed: () => menu.isOpen ? menu.close() : menu.open(),
+        icon: const Icon(Icons.add, size: 18),
+        label: Text(l.add),
+      ),
+    );
+  }
+}
+
+/// Le voile pendant qu'on survole le dossier avec des fichiers.
+class _Depot extends StatelessWidget {
+  const _Depot({required this.nom});
+  final String nom;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Palette.brandContainer.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Palette.brand, width: 2),
+          ),
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.file_upload_outlined, size: 48, color: Palette.brandDark),
+              const SizedBox(height: 12),
+              Text(context.l.dropHere(nom),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Palette.brandDark)),
+            ]),
           ),
         ),
       );

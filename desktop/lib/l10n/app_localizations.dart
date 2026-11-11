@@ -667,6 +667,258 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{size} · se retéléchargent au besoin'**
   String settingsKeptFilesSize(String size);
+
+  /// No description provided for @add.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter'**
+  String get add;
+
+  /// No description provided for @addFiles.
+  ///
+  /// In fr, this message translates to:
+  /// **'Des fichiers…'**
+  String get addFiles;
+
+  /// No description provided for @addFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un dossier…'**
+  String get addFolder;
+
+  /// No description provided for @dropHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déposer ici pour ajouter à {folder}'**
+  String dropHere(String folder);
+
+  /// No description provided for @importScanning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Analyse des fichiers… {n}'**
+  String importScanning(int n);
+
+  /// No description provided for @importChecking.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comparaison avec le coffre… {done} / {total}'**
+  String importChecking(int done, int total);
+
+  /// No description provided for @importPreparing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation des envois… {done} / {total}'**
+  String importPreparing(int done, int total);
+
+  /// No description provided for @importTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à {folder}'**
+  String importTitle(String folder);
+
+  /// No description provided for @importSend.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier à envoyer} other{{n} fichiers à envoyer}} · {size}'**
+  String importSend(int n, String size);
+
+  /// No description provided for @importLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier déjà dans le coffre, ajouté à l\'album sans nouvel envoi} other{{n} fichiers déjà dans le coffre, ajoutés à l\'album sans nouvel envoi}}'**
+  String importLink(int n);
+
+  /// No description provided for @importAlready.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier déjà dans le coffre, pas renvoyé} other{{n} fichiers déjà dans le coffre, pas renvoyés}}'**
+  String importAlready(int n);
+
+  /// No description provided for @importDiverted.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier ira dans {root}, le dossier de son type} other{{n} fichiers iront dans {root}, le dossier de leur type}}'**
+  String importDiverted(int n, String root);
+
+  /// No description provided for @importTooLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier dépasse {max} et ne partira pas} other{{n} fichiers dépassent {max} et ne partiront pas}}'**
+  String importTooLarge(int n, String max);
+
+  /// No description provided for @importIgnored.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier caché, vide ou raccourci laissé de côté} other{{n} fichiers cachés, vides ou raccourcis laissés de côté}}'**
+  String importIgnored(int n);
+
+  /// No description provided for @importFree.
+  ///
+  /// In fr, this message translates to:
+  /// **'Place libre dans le coffre : {size}'**
+  String importFree(String size);
+
+  /// No description provided for @importNoRoom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas assez de place : il manque {size}. Videz la corbeille ou ajoutez moins de fichiers.'**
+  String importNoRoom(String size);
+
+  /// No description provided for @importOriginal.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers partent en Original, tels qu\'ils sont sur l\'ordinateur. Ils restent sur l\'ordinateur.'**
+  String get importOriginal;
+
+  /// No description provided for @importNothing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rien à envoyer : tout est déjà dans le coffre.'**
+  String get importNothing;
+
+  /// No description provided for @importStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer'**
+  String get importStart;
+
+  /// No description provided for @importFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers n\'ont pas pu être lus.'**
+  String get importFailed;
+
+  /// No description provided for @importBusy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un ajout est déjà en préparation.'**
+  String get importBusy;
+
+  /// No description provided for @uploadsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envois vers le coffre'**
+  String get uploadsTitle;
+
+  /// No description provided for @uploadsRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{Envoi d\'1 fichier} other{Envoi de {n} fichiers}}'**
+  String uploadsRunning(int n);
+
+  /// No description provided for @uploadsDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier ajouté au coffre} other{{n} fichiers ajoutés au coffre}}'**
+  String uploadsDone(int n);
+
+  /// No description provided for @uploadsFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 envoi n\'a pas abouti} other{{n} envois n\'ont pas abouti}}'**
+  String uploadsFailed(int n);
+
+  /// No description provided for @uploadsPaused.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 envoi en pause} other{{n} envois en pause}}'**
+  String uploadsPaused(int n);
+
+  /// No description provided for @uploadsWaitingNetwork.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente du réseau'**
+  String get uploadsWaitingNetwork;
+
+  /// No description provided for @pauseAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout mettre en pause'**
+  String get pauseAll;
+
+  /// No description provided for @resumeAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout reprendre'**
+  String get resumeAll;
+
+  /// No description provided for @details.
+  ///
+  /// In fr, this message translates to:
+  /// **'Détails'**
+  String get details;
+
+  /// No description provided for @pause.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pause'**
+  String get pause;
+
+  /// No description provided for @resume.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reprendre'**
+  String get resume;
+
+  /// No description provided for @clearFinished.
+  ///
+  /// In fr, this message translates to:
+  /// **'Effacer les terminés'**
+  String get clearFinished;
+
+  /// No description provided for @speed.
+  ///
+  /// In fr, this message translates to:
+  /// **'{size}/s'**
+  String speed(String size);
+
+  /// No description provided for @uploadQueued.
+  ///
+  /// In fr, this message translates to:
+  /// **'En attente'**
+  String get uploadQueued;
+
+  /// No description provided for @uploadPaused.
+  ///
+  /// In fr, this message translates to:
+  /// **'En pause'**
+  String get uploadPaused;
+
+  /// No description provided for @uploadDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans le coffre'**
+  String get uploadDone;
+
+  /// No description provided for @uploadErrorQuota.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus assez de place dans le coffre'**
+  String get uploadErrorQuota;
+
+  /// No description provided for @uploadErrorChanged.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier a changé sur l\'ordinateur pendant l\'envoi'**
+  String get uploadErrorChanged;
+
+  /// No description provided for @uploadErrorMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le fichier n\'est plus sur l\'ordinateur'**
+  String get uploadErrorMissing;
+
+  /// No description provided for @uploadErrorGeneric.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'envoi n\'a pas abouti'**
+  String get uploadErrorGeneric;
+
+  /// No description provided for @change.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer'**
+  String get change;
 }
 
 class _AppLocalizationsDelegate

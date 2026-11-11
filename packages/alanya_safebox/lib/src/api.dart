@@ -247,6 +247,22 @@ mixin SafeboxCalls {
     };
   }
 
+  /// Comme [checkSafeboxBackup], avec le fichier du coffre qui a déjà ce
+  /// contenu (`saved`, `elsewhere`) : l'application de bureau l'ajoute sans
+  /// copie à un album au lieu de le renvoyer.
+  Future<Map<String, ({String state, int? fileId})>> checkSafeboxSources(List<String> fps, {bool link = false}) async {
+    final r = await _json('POST', '/backup/check', body: {'fps': fps, 'link': link});
+    final res = r['results'] is Map ? r['results'] as Map : const {};
+    return {
+      for (final e in res.entries)
+        if (e.value is Map)
+          '${e.key}': (
+            state: '${(e.value as Map)['state']}',
+            fileId: (e.value as Map)['fileId'] is num ? ((e.value as Map)['fileId'] as num).toInt() : null,
+          ),
+    };
+  }
+
   /// « Ne plus sauvegarder » ces originaux.
   Future<void> skipSafeboxBackup(List<String> fps) => _json('POST', '/backup/skip', body: {'fps': fps});
 

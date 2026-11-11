@@ -3,6 +3,7 @@
 
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -199,6 +200,13 @@ class _FichiersOrdinateurState extends State<_FichiersOrdinateur> {
     if (mounted) setState(() => _vidage = false);
   }
 
+  Future<void> _changerDossier() async {
+    final chemin = await getDirectoryPath(initialDirectory: _dossier?.path, confirmButtonText: context.l.change);
+    if (chemin == null) return;
+    await DownloadFolder.set(chemin);
+    await _lire();
+  }
+
   Future<void> _ouvrirDossier() async {
     final d = _dossier;
     if (d == null) return;
@@ -229,7 +237,11 @@ class _FichiersOrdinateurState extends State<_FichiersOrdinateur> {
         ligne(
           l.settingsDownloadFolder,
           _dossier?.path ?? '…',
-          OutlinedButton(onPressed: _dossier == null ? null : _ouvrirDossier, child: Text(l.open)),
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            OutlinedButton(onPressed: _dossier == null ? null : _ouvrirDossier, child: Text(l.open)),
+            const SizedBox(width: 8),
+            OutlinedButton(onPressed: _changerDossier, child: Text(l.change)),
+          ]),
         ),
         const Divider(height: 1, indent: 20, endIndent: 20),
         ligne(
