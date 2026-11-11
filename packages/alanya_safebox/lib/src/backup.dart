@@ -510,6 +510,7 @@ class SafeboxBackupProgress {
     this.listing = false,
     this.checked = 0,
     this.toCheck = 0,
+    this.unreadable = 0,
   });
 
   /// Fichiers du téléphone retenus par les réglages.
@@ -527,17 +528,23 @@ class SafeboxBackupProgress {
   final int checked;
   final int toCheck;
 
+  /// Retenus mais illisibles au dernier essai (fichier dans le cloud,
+  /// supprimé entre-temps, droit retiré) : hors du compte, sinon la barre
+  /// n'atteignait jamais la fin (11/11/2026). Réessayés à chaque passage.
+  final int unreadable;
+
   int get remaining => total > done ? total - done : 0;
   bool get analysing => toCheck > 0 && checked < toCheck;
   bool get complete => !listing && remaining == 0;
 
-  SafeboxBackupProgress copyWith({int? total, int? done, bool? listing, int? checked, int? toCheck}) =>
+  SafeboxBackupProgress copyWith({int? total, int? done, bool? listing, int? checked, int? toCheck, int? unreadable}) =>
       SafeboxBackupProgress(
         total: total ?? this.total,
         done: done ?? this.done,
         listing: listing ?? this.listing,
         checked: checked ?? this.checked,
         toCheck: toCheck ?? this.toCheck,
+        unreadable: unreadable ?? this.unreadable,
       );
 }
 
@@ -626,10 +633,15 @@ class SafeboxBackupEngine {
   Set<String> _retenus = {};
   Set<String> _finis = {};
 
+  /// Retenus mais illisibles : gardés d'un passage à l'autre (la barre ne
+  /// recule pas au début du suivant), oubliés dès qu'ils se lisent.
+  final Set<String> _illisibles = {};
+
   void _publier({bool? listing, int? checked, int? toCheck}) {
     progress.value = (progress.value ?? const SafeboxBackupProgress()).copyWith(
-      total: _retenus.length,
-      done: _finis.length,
+      total: _retenus.length - _illisibles.length,
+      done: _finis.difference(_illisibles).length,
+      unreadable: _illisibles.length,
       listing: listing,
       checked: checked,
       toCheck: toCheck,
@@ -723,6 +735,7 @@ class SafeboxBackupEngine {
       final neufs = [for (final it in items) if (await _aReprendre(faits[it.key], it)) it]
         ..sort((a, b) => b.modified.compareTo(a.modified));
       _retenus = {for (final it in items) it.key};
+      _illisibles.retainAll(_retenus);
       _finis = {
         for (final it in items)
           if (faits[it.key] case final r? when r.matches(it) && r.state != SafeboxBackupState.queued) it.key,
@@ -738,14 +751,20 @@ class SafeboxBackupEngine {
         final ouverts = <({SafeboxDeviceItem item, File file, String fp, SafeboxQuality q, int poids})>[];
         for (final it in lot) {
           vus += 1;
-          _publier(checked: vus);
+          File? f;
           try {
             final ancien = faits[it.key];
             if (ancien != null && ancien.state == SafeboxBackupState.queued && ancien.jobId != null) {
               await discardJob?.call(ancien.jobId!);
             }
-            final f = await device.open(it);
-            if (f == null) continue;
+            f = await device.open(it);
+            if (f == null) {
+              _illisibles.add(it.key);
+              _publier(checked: vus);
+              continue;
+            }
+            _illisibles.remove(it.key);
+            _publier(checked: vus);
             final mesure = it.size >= 0 ? it : it.withSize(await f.length());
             final q = safeboxBackupQualityFor(mesure, s.qualityOf(mesure.family), maxFileBytes());
             final poids = switch (mesure.family) {
@@ -766,6 +785,9 @@ class SafeboxBackupEngine {
             if (libre != null) libre -= poids;
           } catch (e) {
             debugPrint('[Sauvegarde] ${it.name} illisible : $e');
+            if (f != null) _jeter(f, it);
+            _illisibles.add(it.key);
+            _publier(checked: vus);
           }
         }
         if (ouverts.isEmpty) continue;

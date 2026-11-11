@@ -240,23 +240,33 @@ class SafeboxController extends ChangeNotifier {
     final actifs = uploads.jobs
         .where((j) => j.state == SafeboxUploadState.running || j.state == SafeboxUploadState.queued)
         .toList();
-    if (actifs.isEmpty) {
+    final p = backup.progress.value;
+    // La sauvegarde prépare des fichiers neufs (lecture, empreinte,
+    // compression) : déjà de quoi le dire, avant le premier envoi (11/11/2026).
+    // Pas pendant la simple recherche, rapide et refaite toutes les 30 min.
+    final prepare = p != null && p.analysing;
+    if (actifs.isEmpty && !prepare) {
       unawaited(_premierPlan.stop());
       return;
     }
     final l10n = resolveL10n();
-    // Seule la sauvegarde envoie : son avancement sur tous les fichiers
+    // Seule la sauvegarde travaille : son avancement sur tous les fichiers
     // retenus, qui ne recule pas quand un nouveau lot arrive (11/11/2026).
-    final p = backup.progress.value;
     final fraction = backupFraction;
     if (p != null && fraction != null && actifs.every((j) => j.backupKey != null)) {
       final pct = (fraction * 100).floor().clamp(0, 100);
       unawaited(_premierPlan.show(
         channelName: l10n.safeboxNotifChannel,
         title: l10n.safeboxBackupTitle,
-        text: l10n.safeboxBackupNotifText(p.done, p.total, pct),
+        text: actifs.isEmpty
+            ? l10n.safeboxBackupAnalysing(p.checked, p.toCheck)
+            : l10n.safeboxBackupNotifText(p.done, p.total, pct),
         percent: pct,
       ));
+      return;
+    }
+    if (actifs.isEmpty) {
+      unawaited(_premierPlan.stop());
       return;
     }
     final total = actifs.fold<int>(0, (s, j) => s + j.storedSize);

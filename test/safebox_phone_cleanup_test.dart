@@ -150,4 +150,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(reponse, isFalse);
   });
+
+  // 11/11/2026 : celles qui ne peuvent pas quitter le téléphone sont dites.
+  testWidgets('certaines resteront : dit dans la question, ou dans une fenêtre à part', (tester) async {
+    await monter(
+      tester,
+      Builder(
+        builder: (context) => Column(
+          children: [
+            TextButton(
+              onPressed: () => askSafeboxPhoneCleanup(context, count: 2, lighter: false, kept: 3),
+              child: const Text('demander'),
+            ),
+            TextButton(
+              onPressed: () => showSafeboxCleanupNotPossible(context, count: 1),
+              child: const Text('toujours'),
+            ),
+          ],
+        ),
+      ),
+    );
+    await tester.tap(find.text('demander'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining(fr.safeboxCleanupNotPossible(3)), findsOneWidget);
+    expect(find.textContaining(fr.safeboxCleanupNotPossibleWhy), findsOneWidget);
+    await tester.tap(find.text(fr.safeboxCleanupKeep));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('toujours'));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxCleanupNotPossibleTitle), findsOneWidget);
+    expect(find.textContaining(fr.safeboxCleanupNotPossible(1)), findsOneWidget);
+    await tester.tap(find.text(fr.commonOk));
+    await tester.pumpAndSettle();
+    expect(find.text(fr.safeboxCleanupNotPossibleTitle), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -173,6 +173,9 @@ void main() {
     c.backup.progress.value = const SafeboxBackupProgress(total: 850, done: 850);
     await tester.pump();
     expect(find.text(fr.safeboxBackupUpToDate), findsOneWidget);
+    c.backup.progress.value = const SafeboxBackupProgress(total: 850, done: 850, unreadable: 2);
+    await tester.pump();
+    expect(find.text('${fr.safeboxBackupUpToDate} · ${fr.safeboxBackupUnreadable(2)}'), findsOneWidget);
     expect(barre, findsNothing);
     expect(tester.takeException(), isNull);
     await demonter(tester, c);

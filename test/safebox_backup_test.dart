@@ -369,6 +369,24 @@ void main() {
       expect(m.progress.value, isNull);
     });
 
+    test('fichier illisible : hors du compte, la barre va au bout ; lisible, il revient', () async {
+      await ajouter('1', 'a.jpg', SafeboxFamily.photos, 1000, graine: 1);
+      await ajouter('2', 'cloud.jpg', SafeboxFamily.photos, 1000, graine: 2);
+      tel.illisibles.add('g:2');
+      final m = moteur();
+      await m.run(reglages);
+      expect([m.progress.value!.total, m.progress.value!.unreadable], [1, 1]);
+      await m.markSaved('g:1');
+      expect(m.progress.value!.complete, isTrue, reason: 'l\'illisible ne bloque plus la fin');
+      // Au passage suivant, toujours illisible : la barre ne recule pas.
+      await m.run(reglages);
+      expect(m.progress.value!.complete, isTrue);
+      tel.illisibles.clear();
+      await m.run(reglages);
+      expect([m.progress.value!.total, m.progress.value!.unreadable, m.progress.value!.remaining], [2, 0, 1]);
+      expect(envoyes.map((u) => u.item.name), ['a.jpg', 'cloud.jpg']);
+    });
+
     test('dossier de documents illisible : les photos partent quand même', () async {
       await ajouter('1', 'a.jpg', SafeboxFamily.photos, 1000);
       tel.erreurDocuments = MissingPluginException('tâche de fond');
@@ -446,8 +464,12 @@ class _FauxTelephone implements SafeboxDeviceSource {
     if (erreurDocuments != null) throw erreurDocuments!;
     return const [];
   }
+  /// Illisibles (dans le cloud, supprimés entre-temps).
+  final Set<String> illisibles = {};
+
   @override
-  Future<File?> open(SafeboxDeviceItem item) async => _elements.firstWhere((e) => e.item.key == item.key).file;
+  Future<File?> open(SafeboxDeviceItem item) async =>
+      illisibles.contains(item.key) ? null : _elements.firstWhere((e) => e.item.key == item.key).file;
   @override
   Future<Set<String>> delete(List<SafeboxDeviceItem> items) async => {for (final i in items) i.key};
 

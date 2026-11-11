@@ -9962,6 +9962,36 @@ class AppLocalizationsFr extends AppLocalizations {
       'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique ne retire rien du téléphone.';
 
   @override
+  String get safeboxCleanupNotPossibleTitle =>
+      'Retrait du téléphone impossible';
+
+  @override
+  String safeboxCleanupNotPossible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos et vidéos resteront sur le téléphone.',
+      one: '1 photo ou vidéo restera sur le téléphone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxCleanupNotPossibleWhy =>
+      'Alanya ne peut retirer que celles choisies dans la galerie du téléphone (Images, Vidéos ou leurs dossiers), avec l\'accès à toutes les photos autorisé. Celles choisies depuis Google Photos, un autre service ou un dossier de fichiers restent en place ; elles sont tout de même ajoutées au coffre.';
+
+  @override
+  String safeboxBackupUnreadable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count fichiers illisibles ignorés',
+      one: '1 fichier illisible ignoré',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get safeboxCleanupAskTitle => 'Retirer du téléphone ?';
 
   @override

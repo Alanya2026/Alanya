@@ -9854,6 +9854,35 @@ class AppLocalizationsEn extends AppLocalizations {
       'Only photos and videos taken from the gallery are affected, and never before they are fully in SafeBox. Android asks you to confirm, then moves them to its trash, where they can be recovered for 30 days (Android 11 and later; before that, deletion is permanent). In HD or Compressed, the copy kept in SafeBox is less sharp than the original. Automatic backup never removes anything from the phone.';
 
   @override
+  String get safeboxCleanupNotPossibleTitle => 'Can\'t remove from phone';
+
+  @override
+  String safeboxCleanupNotPossible(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos and videos will stay on your phone.',
+      one: '1 photo or video will stay on your phone.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxCleanupNotPossibleWhy =>
+      'Alanya can only remove those picked from your phone\'s gallery (Images, Videos or their folders), with access to all photos allowed. Those picked from Google Photos, another service or a files folder stay in place; they are still added to SafeBox.';
+
+  @override
+  String safeboxBackupUnreadable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unreadable files skipped',
+      one: '1 unreadable file skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get safeboxCleanupAskTitle => 'Remove from the phone?';
 
   @override

@@ -429,7 +429,13 @@ class _LigneSauvegarde extends StatelessWidget {
                                     : c.mediaAccess == SafeboxMediaAccess.limited
                                         ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
                                             (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
-                                        : (Icons.check, context.semantic.success, l10n.safeboxBackupUpToDate, null);
+                                        : (Icons.check, context.semantic.success,
+                                            [
+                                              l10n.safeboxBackupUpToDate,
+                                              // Illisibles (dans le cloud, supprimés…) : hors du compte, mais dits.
+                                              if (p.unreadable > 0) l10n.safeboxBackupUnreadable(p.unreadable),
+                                            ].join(' · '),
+                                            null);
     // La barre : animée pendant la recherche, sinon sur tous les fichiers
     // retenus (elle n'avance que dans un sens).
     final barre = !(c.mediaAccess == SafeboxMediaAccess.denied && r.documentFolders.isEmpty) && (cherche || restants > 0);

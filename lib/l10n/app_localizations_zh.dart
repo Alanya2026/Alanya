@@ -9327,6 +9327,23 @@ class AppLocalizationsZh extends AppLocalizations {
       '仅限从相册选取的照片和视频，并且只在其完全进入 SafeBox 之后。Android 会请您确认，然后将其移入回收站，30 天内可恢复（Android 11 及以上；更早版本为永久删除）。以高清或压缩格式保存时，SafeBox 中的版本不如原件清晰。自动备份不会从手机中移除任何内容。';
 
   @override
+  String get safeboxCleanupNotPossibleTitle => '无法从手机移除';
+
+  @override
+  String safeboxCleanupNotPossible(int count) {
+    return '$count 个照片或视频将保留在手机上。';
+  }
+
+  @override
+  String get safeboxCleanupNotPossibleWhy =>
+      'Alanya 只能移除从手机图库（图片、视频或其文件夹）中选择的文件，并且需要允许访问所有照片。从 Google 相册、其他服务或文件夹中选择的文件会保留在手机上，但仍会添加到保险箱。';
+
+  @override
+  String safeboxBackupUnreadable(int count) {
+    return '已跳过 $count 个无法读取的文件';
+  }
+
+  @override
   String get safeboxCleanupAskTitle => '从手机中移除？';
 
   @override
