@@ -730,6 +730,7 @@ class SafeboxController extends ChangeNotifier {
     _reglages = s;
     await s.save();
     notifyListeners();
+    if (!s.enabled) _retirables = const [];
     unawaited(scheduleSafeboxBackgroundBackup(s));
     unawaited(runBackup());
   }
@@ -748,6 +749,8 @@ class SafeboxController extends ChangeNotifier {
       _dernierPassage = r;
       _restants = (await backup.pending(_reglages)).length;
       notifyListeners();
+      // Ce qui vient d'arriver dans le coffre peut quitter le téléphone.
+      unawaited(refreshPhoneRemovable());
       return r;
     } catch (e) {
       debugPrint('[Sauvegarde] passage impossible : $e');
@@ -794,6 +797,76 @@ class SafeboxController extends ChangeNotifier {
     if (vitesse <= 0) return null;
     final reste = enRoute.fold<int>(0, (s, j) => s + (j.storedSize - j.sentBytes));
     return Duration(seconds: (reste / vitesse).ceil());
+  }
+
+  // ── Retirer du téléphone ce qui est sauvegardé (11/11/2026) ─────────────
+
+  List<SafeboxDeviceItem> _retirables = const [];
+  bool _retraitEnCours = false;
+
+  /// Photos et vidéos sauvegardées en Original qui peuvent quitter le
+  /// téléphone : avec « Retirer du téléphone après la sauvegarde », celles
+  /// plus vieilles que le délai choisi ; sans lui, toutes, seulement quand la
+  /// mémoire du téléphone est presque pleine. Vérifiées auprès du serveur.
+  List<SafeboxDeviceItem> get phoneRemovable => _retirables;
+
+  /// Presque pleine : moins de 2 Gio ou moins de 15 % libres.
+  static bool phoneAlmostFull(({int free, int total}) m) => m.free < 2 * (1 << 30) || m.free < m.total * 0.15;
+
+  Future<void> refreshPhoneRemovable() async {
+    final s = _reglages;
+    var liste = const <SafeboxDeviceItem>[];
+    try {
+      if (s.enabled && s.removeFromPhone) {
+        liste = await backup.confirmInVault(await backup.freeable(s, olderThanDays: s.removeAfterDays));
+      } else if (s.enabled) {
+        final m = await device.storage();
+        if (m != null && phoneAlmostFull(m)) liste = await backup.confirmInVault(await backup.freeable(s));
+      }
+    } catch (e) {
+      // Serveur injoignable : rien n'est proposé (jamais sans vérification).
+      debugPrint('[Sauvegarde] fichiers à retirer du téléphone : $e');
+    }
+    _retirables = liste;
+    notifyListeners();
+  }
+
+  /// Envoie ces fichiers à la corbeille du téléphone (une confirmation
+  /// d'Android) ; rend les clés retirées.
+  Future<Set<String>> removeFromPhone(List<SafeboxDeviceItem> items) async {
+    if (_retraitEnCours || items.isEmpty) return const {};
+    _retraitEnCours = true;
+    try {
+      // Revérifiés à l'instant : rien ne quitte le téléphone sans être dans le coffre.
+      final surs = await backup.confirmInVault(items);
+      final retires = await backup.free(surs);
+      _retirables = [for (final it in _retirables) if (!retires.contains(it.key)) it];
+      notifyListeners();
+      return retires;
+    } finally {
+      _retraitEnCours = false;
+    }
+  }
+
+  static const _clePropose = 'safebox_backup_cleanup_proposed_v1';
+
+  /// À l'ouverture du coffre, avec « Retirer du téléphone après la
+  /// sauvegarde » : Android demande une fois pour les fichiers jamais encore
+  /// proposés. Refusés, ils ne sont plus redemandés d'office : la carte de
+  /// l'accueil les garde (décision du 11/11/2026). Rend le nombre retiré, ou
+  /// null s'il n'y avait rien à proposer.
+  Future<int?> proposeRemovalFromPhone() async {
+    final s = _reglages;
+    if (!s.enabled || !s.removeFromPhone || _retraitEnCours) return null;
+    await refreshPhoneRemovable();
+    final prefs = await SharedPreferences.getInstance();
+    final deja = (prefs.getStringList(_clePropose) ?? const <String>[]).toSet();
+    final nouveaux = [for (final it in _retirables) if (!deja.contains(it.key)) it];
+    if (nouveaux.isEmpty) return null;
+    // Gardés : ceux encore sur le téléphone et retenus (la liste ne grossit pas sans fin).
+    final retenus = {for (final it in _retirables) it.key};
+    await prefs.setStringList(_clePropose, [...deja.where(retenus.contains), ...nouveaux.map((it) => it.key)]);
+    return (await removeFromPhone(nouveaux)).length;
   }
 
   /// Envois de la sauvegarde qui attendent le Wi-Fi.
@@ -1318,17 +1391,20 @@ class _ApiSauvegarde implements SafeboxBackupApi {
   final TalkyApiClient _api;
 
   @override
-  Future<Map<String, SafeboxBackupCheck>> check(List<String> fps, {bool link = true}) async {
-    final r = await _api.checkSafeboxBackup(fps, link: link);
+  Future<Map<String, SafeboxBackupStatus>> check(List<String> fps, {bool link = true}) async {
+    final r = await _api.checkSafeboxBackupQuality(fps, link: link);
     return {
       for (final e in r.entries)
-        e.key: switch (e.value) {
-          'saved' => SafeboxBackupCheck.saved,
-          'elsewhere' => SafeboxBackupCheck.elsewhere,
-          'uploading' => SafeboxBackupCheck.uploading,
-          'skip' => SafeboxBackupCheck.skip,
-          _ => SafeboxBackupCheck.unknown,
-        },
+        e.key: SafeboxBackupStatus(
+          switch (e.value.state) {
+            'saved' => SafeboxBackupCheck.saved,
+            'elsewhere' => SafeboxBackupCheck.elsewhere,
+            'uploading' => SafeboxBackupCheck.uploading,
+            'skip' => SafeboxBackupCheck.skip,
+            _ => SafeboxBackupCheck.unknown,
+          },
+          original: e.value.original,
+        ),
     };
   }
 

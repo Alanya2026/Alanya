@@ -85,6 +85,29 @@ void main() {
     c.dispose();
   });
 
+  // 11/11/2026 : « Retirer du téléphone après la sauvegarde », décoché par défaut.
+  testWidgets('retirer du téléphone : décoché, puis le délai à choisir, gardé', (tester) async {
+    final c = await monter(tester, _Telephone(SafeboxMediaAccess.full));
+    await tester.tap(find.text(fr.safeboxBackupContinue));
+    await tester.pumpAndSettle();
+    final interrupteur = find.byKey(const ValueKey('safebox-backup-remove'));
+    await tester.scrollUntilVisible(interrupteur, 200, scrollable: find.byType(Scrollable).last);
+    expect(tester.widget<SwitchListTile>(interrupteur).value, isFalse);
+    expect(find.text(fr.safeboxBackupRemoveWhen), findsNothing);
+    await tester.tap(interrupteur);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text(fr.safeboxBackupRemoveNow), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text(fr.safeboxBackupRemoveAfter(30)), findsOneWidget);
+    await tester.tap(find.text(fr.safeboxBackupRemoveAfter(7)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(fr.safeboxBackupEnable));
+    await tester.pumpAndSettle();
+    expect([c.backupSettings.removeFromPhone, c.backupSettings.removeAfterDays], [true, 7]);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  });
+
   testWidgets('sans autorisation : l\'écran la demande d\'abord', (tester) async {
     final tel = _Telephone(SafeboxMediaAccess.denied);
     final c = await monter(tester, tel);

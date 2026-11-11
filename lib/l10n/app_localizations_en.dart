@@ -9137,7 +9137,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupPitch =>
-      'Your photos, videos and documents copied to SafeBox automatically. Nothing is deleted from your phone.';
+      'Your photos, videos and documents copied to SafeBox automatically. Nothing is deleted from your phone without your consent.';
 
   @override
   String get safeboxBackupActivate => 'Turn on';
@@ -9243,7 +9243,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupPermissionBody =>
-      'SafeBox copies your files encrypted, one way only: nothing is deleted from your phone, and what you delete from SafeBox doesn\'t come back.';
+      'SafeBox copies your files encrypted, one way only: nothing is deleted from your phone without your consent, and what you delete from SafeBox doesn\'t come back.';
 
   @override
   String get safeboxBackupPermissionDenied =>
@@ -9260,7 +9260,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupGranted =>
-      'Access to photos, videos and music granted. Your files are copied encrypted; nothing is deleted from your phone.';
+      'Access to photos, videos and music granted. Your files are copied encrypted; nothing is deleted from your phone without your consent.';
 
   @override
   String get safeboxBackupWhat => 'What?';
@@ -9369,6 +9369,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxBackupSettings => 'Backup settings';
+
+  @override
+  String get safeboxBackupRemoveTitle => 'Remove from phone after backup';
+
+  @override
+  String get safeboxBackupRemoveHint =>
+      'Photos and videos kept in Original in SafeBox go to the phone\'s trash, recoverable for 30 days (Android 11 and later). Android asks you to confirm when you open SafeBox.';
+
+  @override
+  String get safeboxBackupRemoveWhen => 'When to remove them';
+
+  @override
+  String safeboxBackupRemoveAfter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'After $count days',
+      one: 'After 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupRemoveNow => 'Right away';
+
+  @override
+  String get safeboxBackupRemoveOriginalOnly =>
+      'Your photos or videos are backed up in HD or Compressed: those stay on the phone. Only those kept in Original are removed.';
 
   @override
   String get safeboxBackupScanning => 'Looking for files on your phone…';
@@ -9851,7 +9879,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get safeboxCleanupNote =>
-      'Only photos and videos taken from the gallery are affected, and never before they are fully in SafeBox. Android asks you to confirm, then moves them to its trash, where they can be recovered for 30 days (Android 11 and later; before that, deletion is permanent). In HD or Compressed, the copy kept in SafeBox is less sharp than the original. Automatic backup never removes anything from the phone.';
+      'Only photos and videos taken from the gallery are affected, and never before they are fully in SafeBox. Android asks you to confirm, then moves them to its trash, where they can be recovered for 30 days (Android 11 and later; before that, deletion is permanent). In HD or Compressed, the copy kept in SafeBox is less sharp than the original. Automatic backup has its own setting, in Backup settings.';
 
   @override
   String get safeboxCleanupNotPossibleTitle => 'Can\'t remove from phone';

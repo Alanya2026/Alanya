@@ -185,4 +185,90 @@ void main() {
     expect(find.text(fr.safeboxCleanupNotPossibleTitle), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  // 11/11/2026 : « Retirer du téléphone après la sauvegarde ».
+  test('après la sauvegarde : proposé une fois, refusé il reste sur la carte sans être redemandé', () async {
+    SharedPreferences.setMockInitialValues({
+      'safebox_backup_settings_v1': jsonEncode(const SafeboxBackupSettings(
+        enabled: true, galleryFolders: {'camera'}, removeFromPhone: true, removeAfterDays: 0,
+      ).toJson()),
+    });
+    final tel = _TelephoneGalerie();
+    final store = _Fiches()
+      ..faits = {
+        'g:1': SafeboxBackupRecord(state: SafeboxBackupState.saved, size: 5000, modifiedMs: tel.date.millisecondsSinceEpoch,
+            fp: 'fp1', quality: SafeboxQuality.original),
+        'g:2': SafeboxBackupRecord(state: SafeboxBackupState.saved, size: 7000, modifiedMs: tel.date.millisecondsSinceEpoch,
+            fp: 'fp2', quality: SafeboxQuality.original),
+      };
+    final serveur = MockClient((req) async {
+      if (req.url.path.endsWith('/backup/check')) {
+        final fps = (jsonDecode(req.body) as Map)['fps'] as List;
+        expect((jsonDecode(req.body) as Map)['link'], isFalse);
+        return http.Response(jsonEncode({'results': {for (final f in fps) f: {'state': 'saved', 'original': true}}}), 200,
+            headers: {'content-type': 'application/json'});
+      }
+      return http.Response('{}', 404);
+    });
+    final c = SafeboxController(api: TalkyApiClient(client: serveur), deviceSource: tel, backupStore: store);
+    addTearDown(c.dispose);
+    await c.loadBackupSettings();
+    tel.refus = true;
+    expect(await c.proposeRemovalFromPhone(), 0, reason: 'refusé dans la fenêtre d\'Android');
+    expect(tel.appels.single, unorderedEquals(['1', '2']));
+    expect(c.phoneRemovable.length, 2, reason: 'la carte les garde');
+    expect(await c.proposeRemovalFromPhone(), isNull, reason: 'pas redemandé d\'office');
+    expect(tel.appels.length, 1);
+    // Une nouvelle photo sauvegardée : seule elle est proposée.
+    tel.ids.add('3');
+    store.faits['g:3'] = SafeboxBackupRecord(state: SafeboxBackupState.saved, size: 1, modifiedMs: tel.date.millisecondsSinceEpoch,
+        fp: 'fp3', quality: SafeboxQuality.original);
+    tel.refus = false;
+    expect(await c.proposeRemovalFromPhone(), 1);
+    expect(tel.appels.last, ['3']);
+    // La carte : le reste, d'un appui.
+    expect((await c.removeFromPhone(c.phoneRemovable)).length, 2);
+    expect(c.phoneRemovable, isEmpty);
+  });
+}
+
+class _TelephoneGalerie implements SafeboxDeviceSource {
+  final date = DateTime(2026, 9, 1);
+  final ids = <String>['1', '2'];
+  final appels = <List<String>>[];
+  bool refus = false;
+
+  @override
+  Future<SafeboxMediaAccess> access() async => SafeboxMediaAccess.full;
+
+  @override
+  Future<List<SafeboxDeviceItem>> galleryItems({
+    required Set<String> folderIds,
+    required Set<SafeboxFamily> families,
+    DateTime? since,
+    bool withSizes = false,
+  }) async =>
+      [
+        for (final id in ids)
+          SafeboxDeviceItem(key: 'g:$id', name: 'p$id.jpg', family: SafeboxFamily.photos, size: -1, modified: date, folder: 'Camera'),
+      ];
+
+  @override
+  Future<Set<String>> trashMedia(List<String> mediaIds) async {
+    appels.add(mediaIds);
+    if (refus) return {};
+    ids.removeWhere(mediaIds.contains);
+    return mediaIds.toSet();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+class _Fiches implements SafeboxBackupStore {
+  Map<String, SafeboxBackupRecord> faits = {};
+  @override
+  Future<Map<String, SafeboxBackupRecord>> load() async => Map.of(faits);
+  @override
+  Future<void> save(Map<String, SafeboxBackupRecord> records) async => faits = Map.of(records);
 }

@@ -247,6 +247,22 @@ mixin SafeboxCalls {
     };
   }
 
+  /// Comme [checkSafeboxBackup], avec `original` : une copie du coffre est en
+  /// qualité Original (null : serveur d'avant le 11/11/2026).
+  Future<Map<String, ({String state, bool? original})>> checkSafeboxBackupQuality(List<String> fps,
+      {bool link = true}) async {
+    final r = await _json('POST', '/backup/check', body: {'fps': fps, 'link': link});
+    final res = r['results'] is Map ? r['results'] as Map : const {};
+    return {
+      for (final e in res.entries)
+        if (e.value is Map)
+          '${e.key}': (
+            state: '${(e.value as Map)['state']}',
+            original: (e.value as Map)['original'] is bool ? (e.value as Map)['original'] as bool : null,
+          ),
+    };
+  }
+
   /// Comme [checkSafeboxBackup], avec le fichier du coffre qui a déjà ce
   /// contenu (`saved`, `elsewhere`) : l'application de bureau l'ajoute sans
   /// copie à un album au lieu de le renvoyer.

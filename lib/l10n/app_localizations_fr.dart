@@ -9242,7 +9242,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxBackupPitch =>
-      'Vos photos, vidéos et documents copiés dans le coffre, sans y penser. Rien n\'est supprimé du téléphone.';
+      'Vos photos, vidéos et documents copiés dans le coffre, sans y penser. Rien n\'est supprimé du téléphone sans votre accord.';
 
   @override
   String get safeboxBackupActivate => 'Activer';
@@ -9348,7 +9348,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxBackupPermissionBody =>
-      'Le coffre copie vos fichiers chiffrés, dans un seul sens : rien n\'est supprimé du téléphone, et ce que vous supprimez du coffre n\'y revient pas.';
+      'Le coffre copie vos fichiers chiffrés, dans un seul sens : rien n\'est supprimé du téléphone sans votre accord, et ce que vous supprimez du coffre n\'y revient pas.';
 
   @override
   String get safeboxBackupPermissionDenied =>
@@ -9365,7 +9365,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxBackupGranted =>
-      'Accès aux photos, vidéos et musique autorisé. Vos fichiers sont copiés chiffrés ; rien n\'est supprimé du téléphone.';
+      'Accès aux photos, vidéos et musique autorisé. Vos fichiers sont copiés chiffrés ; rien n\'est supprimé du téléphone sans votre accord.';
 
   @override
   String get safeboxBackupWhat => 'Quoi ?';
@@ -9475,6 +9475,35 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxBackupSettings => 'Réglages de la sauvegarde';
+
+  @override
+  String get safeboxBackupRemoveTitle =>
+      'Retirer du téléphone après la sauvegarde';
+
+  @override
+  String get safeboxBackupRemoveHint =>
+      'Les photos et vidéos gardées en Original dans le coffre vont dans la corbeille du téléphone, récupérables 30 jours (Android 11 et plus). Android vous demande de confirmer à l\'ouverture du coffre.';
+
+  @override
+  String get safeboxBackupRemoveWhen => 'Quand les retirer';
+
+  @override
+  String safeboxBackupRemoveAfter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Après $count jours',
+      one: 'Après 1 jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get safeboxBackupRemoveNow => 'Tout de suite';
+
+  @override
+  String get safeboxBackupRemoveOriginalOnly =>
+      'Vos photos ou vidéos partent en HD ou Compressé : celles-là restent sur le téléphone. Seules celles gardées en Original le quittent.';
 
   @override
   String get safeboxBackupScanning => 'Recherche des fichiers du téléphone…';
@@ -9959,7 +9988,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get safeboxCleanupNote =>
-      'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique ne retire rien du téléphone.';
+      'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique a son propre réglage, dans Réglages de la sauvegarde.';
 
   @override
   String get safeboxCleanupNotPossibleTitle =>

@@ -8706,7 +8706,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxBackupTitle => '自动备份';
 
   @override
-  String get safeboxBackupPitch => '照片、视频和文档自动复制到保险箱。手机上的文件不会被删除。';
+  String get safeboxBackupPitch => '照片、视频和文档自动复制到保险箱。未经您同意，手机上的文件不会被删除。';
 
   @override
   String get safeboxBackupActivate => '开启';
@@ -8786,7 +8786,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxBackupPermissionBody =>
-      '保险箱以加密方式单向复制您的文件：手机上的文件不会被删除，您从保险箱删除的内容也不会再次备份。';
+      '保险箱以加密方式单向复制您的文件：未经您同意，手机上的文件不会被删除，您从保险箱删除的内容也不会再次备份。';
 
   @override
   String get safeboxBackupPermissionDenied =>
@@ -8802,7 +8802,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safeboxBackupStep2 => '第 2 步，共 2 步 · 质量';
 
   @override
-  String get safeboxBackupGranted => '已允许访问照片、视频和音乐。文件以加密方式复制，手机上的文件不会被删除。';
+  String get safeboxBackupGranted =>
+      '已允许访问照片、视频和音乐。文件以加密方式复制，未经您同意，手机上的文件不会被删除。';
 
   @override
   String get safeboxBackupWhat => '备份什么？';
@@ -8909,6 +8910,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxBackupSettings => '备份设置';
+
+  @override
+  String get safeboxBackupRemoveTitle => '备份后从手机移除';
+
+  @override
+  String get safeboxBackupRemoveHint =>
+      '在 SafeBox 中以原始质量保存的照片和视频会移入手机回收站，30 天内可恢复（Android 11 及以上）。打开 SafeBox 时 Android 会请您确认。';
+
+  @override
+  String get safeboxBackupRemoveWhen => '何时移除';
+
+  @override
+  String safeboxBackupRemoveAfter(int count) {
+    return '$count 天后';
+  }
+
+  @override
+  String get safeboxBackupRemoveNow => '立即';
+
+  @override
+  String get safeboxBackupRemoveOriginalOnly =>
+      '您的照片或视频以高清或压缩格式备份：这些会保留在手机上。只有以原始质量保存的才会被移除。';
 
   @override
   String get safeboxBackupScanning => '正在查找手机上的文件…';
@@ -9324,7 +9347,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxCleanupNote =>
-      '仅限从相册选取的照片和视频，并且只在其完全进入 SafeBox 之后。Android 会请您确认，然后将其移入回收站，30 天内可恢复（Android 11 及以上；更早版本为永久删除）。以高清或压缩格式保存时，SafeBox 中的版本不如原件清晰。自动备份不会从手机中移除任何内容。';
+      '仅限从相册选取的照片和视频，并且只在其完全进入 SafeBox 之后。Android 会请您确认，然后将其移入回收站，30 天内可恢复（Android 11 及以上；更早版本为永久删除）。以高清或压缩格式保存时，SafeBox 中的版本不如原件清晰。自动备份有自己的设置，见“备份设置”。';
 
   @override
   String get safeboxCleanupNotPossibleTitle => '无法从手机移除';

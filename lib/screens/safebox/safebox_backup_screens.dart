@@ -529,6 +529,47 @@ class _SafeboxBackupSetupScreenState extends State<SafeboxBackupSetupScreen> {
             title: Text(l10n.safeboxBackupChargingOnly),
           ),
         ]),
+        // « Retirer du téléphone après la sauvegarde » (11/11/2026) : décoché
+        // par défaut, photos et vidéos gardées en Original seulement.
+        if (_r.families.contains(SafeboxFamily.photos) || _r.families.contains(SafeboxFamily.videos)) ...[
+          AppSpacing.vGapMd,
+          _Groupe(children: [
+            SwitchListTile(
+              key: const ValueKey('safebox-backup-remove'),
+              value: _r.removeFromPhone,
+              onChanged: (v) => setState(() => _r = _r.copyWith(removeFromPhone: v)),
+              title: Text(l10n.safeboxBackupRemoveTitle),
+              subtitle: Text(l10n.safeboxBackupRemoveHint),
+            ),
+            if (_r.removeFromPhone)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.safeboxBackupRemoveWhen, style: context.text.bodyMedium),
+                    AppSpacing.vGapSm,
+                    SegmentedButton<int>(
+                      segments: [
+                        ButtonSegment(value: 30, label: Text(l10n.safeboxBackupRemoveAfter(30))),
+                        ButtonSegment(value: 7, label: Text(l10n.safeboxBackupRemoveAfter(7))),
+                        ButtonSegment(value: 0, label: Text(l10n.safeboxBackupRemoveNow)),
+                      ],
+                      selected: {_r.removeAfterDays},
+                      showSelectedIcon: false,
+                      onSelectionChanged: (v) => setState(() => _r = _r.copyWith(removeAfterDays: v.first)),
+                    ),
+                    if ([SafeboxFamily.photos, SafeboxFamily.videos]
+                        .any((f) => _r.families.contains(f) && _r.qualityOf(f) != SafeboxQuality.original)) ...[
+                      AppSpacing.vGapSm,
+                      Text(l10n.safeboxBackupRemoveOriginalOnly,
+                          style: context.text.bodySmall?.copyWith(color: context.semantic.warning)),
+                    ],
+                  ],
+                ),
+              ),
+          ]),
+        ],
         AppSpacing.vGapSm,
         Text(l10n.safeboxBackupRulesNote, style: context.text.bodySmall?.copyWith(color: context.colors.onSurfaceVariant)),
       ],

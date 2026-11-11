@@ -98,6 +98,10 @@ class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> with WidgetsBindi
     if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
     final n = await _c.emptyPhoneTrash();
     if (n != null && n > 0 && mounted) safeboxSnack(context, context.l10n.safeboxCleanupDone(n));
+    // « Retirer du téléphone après la sauvegarde » : ce qui n'a jamais été proposé.
+    if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    final m = await _c.proposeRemovalFromPhone();
+    if (m != null && m > 0 && mounted) safeboxSnack(context, context.l10n.safeboxFreePhoneDone(m));
   }
 
   @override
@@ -470,9 +474,11 @@ class _LigneSauvegarde extends StatelessWidget {
   }
 }
 
-/// « Libérer la mémoire du téléphone » (lot 10) : quand elle est presque
-/// pleine, les photos et vidéos déjà dans le coffre en Original peuvent
-/// quitter le téléphone. Android demande lui-même la confirmation.
+/// « Libérer la mémoire du téléphone » : les photos et vidéos sauvegardées en
+/// Original qui peuvent quitter le téléphone ([SafeboxController.phoneRemovable]).
+/// Avec « Retirer du téléphone après la sauvegarde », elle garde aussi celles
+/// refusées dans la confirmation d'Android, sans la redemander d'office
+/// (11/11/2026). Android demande lui-même la confirmation.
 class _CarteMemoire extends StatefulWidget {
   const _CarteMemoire();
 
@@ -481,38 +487,15 @@ class _CarteMemoire extends StatefulWidget {
 }
 
 class _CarteMemoireState extends State<_CarteMemoire> {
-  List<SafeboxDeviceItem> _liberables = const [];
   bool _occupe = false;
-
-  /// Presque pleine : moins de 15 % ou moins de 2 Go libres.
-  static bool _presquePleine(({int free, int total}) m) => m.free < 2 * (1 << 30) || m.free < m.total * 0.15;
-
-  @override
-  void initState() {
-    super.initState();
-    _charger();
-  }
-
-  Future<void> _charger() async {
-    final c = context.read<SafeboxController>();
-    if (!c.backupSettings.enabled) return;
-    try {
-      final memoire = await c.device.storage();
-      if (memoire == null || !_presquePleine(memoire)) return;
-      final l = await c.backup.freeable(c.backupSettings);
-      if (mounted) setState(() => _liberables = l);
-    } catch (_) {}
-  }
 
   Future<void> _liberer() async {
     final c = context.read<SafeboxController>();
     setState(() => _occupe = true);
     try {
-      final retires = await c.backup.free(_liberables);
+      final retires = await c.removeFromPhone(c.phoneRemovable);
       if (!mounted) return;
       if (retires.isNotEmpty) safeboxSnack(context, context.l10n.safeboxFreePhoneDone(retires.length));
-      await _charger();
-      if (mounted) setState(() => _liberables = _liberables.where((i) => !retires.contains(i.key)).toList());
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
     } finally {
@@ -522,11 +505,12 @@ class _CarteMemoireState extends State<_CarteMemoire> {
 
   @override
   Widget build(BuildContext context) {
-    if (_liberables.isEmpty) return const SizedBox.shrink();
+    final liste = context.select<SafeboxController, List<SafeboxDeviceItem>>((c) => c.phoneRemovable);
+    if (liste.isEmpty) return const SizedBox.shrink();
     final l10n = context.l10n;
-    final photos = _liberables.where((i) => i.family == SafeboxFamily.photos).length;
-    final videos = _liberables.where((i) => i.family == SafeboxFamily.videos).length;
-    final taille = _liberables.fold<int>(0, (s, i) => s + (i.size > 0 ? i.size : 0));
+    final photos = liste.where((i) => i.family == SafeboxFamily.photos).length;
+    final videos = liste.where((i) => i.family == SafeboxFamily.videos).length;
+    final taille = liste.fold<int>(0, (s, i) => s + (i.size > 0 ? i.size : 0));
     return _Carte(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

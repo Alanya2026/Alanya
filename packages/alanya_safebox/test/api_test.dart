@@ -60,6 +60,23 @@ void main() {
     expect(await api.checkSafeboxBackup(['fp1', 'fp2']), {'fp1': 'saved', 'fp2': 'elsewhere'});
   });
 
+  test('checkSafeboxBackupQuality : la qualité, absente d’un ancien serveur', () async {
+    final api = SafeboxClient(_FauxHttp(reponse: {
+      'results': {
+        'fp1': {'state': 'saved', 'original': true},
+        'fp2': {'state': 'elsewhere', 'original': false},
+        'fp3': {'state': 'saved'},
+        'fp4': {'state': 'new'},
+      },
+    }));
+    expect(await api.checkSafeboxBackupQuality(['fp1', 'fp2', 'fp3', 'fp4']), {
+      'fp1': (state: 'saved', original: true),
+      'fp2': (state: 'elsewhere', original: false),
+      'fp3': (state: 'saved', original: null),
+      'fp4': (state: 'new', original: null),
+    });
+  });
+
   test('un bloc refusé par le stockage lève l’erreur de l’application', () async {
     final h = _FauxHttp(transferts: MockClient((_) async => http.Response('', 403)));
     final api = SafeboxClient(h);

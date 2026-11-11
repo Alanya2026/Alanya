@@ -55,6 +55,8 @@ class SafeboxBackupSettings {
     this.quality = const {},
     this.wifiOnly = true,
     this.chargingOnly = true,
+    this.removeFromPhone = false,
+    this.removeAfterDays = 30,
   });
 
   static const _cle = 'safebox_backup_settings_v1';
@@ -85,6 +87,16 @@ class SafeboxBackupSettings {
   /// « Compresser seulement pendant la charge » : cochée par défaut.
   final bool chargingOnly;
 
+  /// « Retirer du téléphone après la sauvegarde » (11/11/2026), décochée par
+  /// défaut : les photos et vidéos gardées en Original dans le coffre vont à
+  /// la corbeille du téléphone, après une confirmation d'Android par lot.
+  final bool removeFromPhone;
+
+  /// Seulement celles plus vieilles que ce nombre de jours (30, 7) ; 0 : dès
+  /// la sauvegarde. Les récentes, qu'on regarde et qu'on montre souvent sans
+  /// réseau, restent sur le téléphone.
+  final int removeAfterDays;
+
   SafeboxQuality qualityOf(SafeboxFamily f) =>
       f == SafeboxFamily.documents ? SafeboxQuality.original : quality[f] ?? SafeboxQuality.original;
 
@@ -98,6 +110,8 @@ class SafeboxBackupSettings {
     Map<SafeboxFamily, SafeboxQuality>? quality,
     bool? wifiOnly,
     bool? chargingOnly,
+    bool? removeFromPhone,
+    int? removeAfterDays,
   }) =>
       SafeboxBackupSettings(
         enabled: enabled ?? this.enabled,
@@ -108,6 +122,8 @@ class SafeboxBackupSettings {
         quality: quality ?? this.quality,
         wifiOnly: wifiOnly ?? this.wifiOnly,
         chargingOnly: chargingOnly ?? this.chargingOnly,
+        removeFromPhone: removeFromPhone ?? this.removeFromPhone,
+        removeAfterDays: removeAfterDays ?? this.removeAfterDays,
       );
 
   Map<String, dynamic> toJson() => {
@@ -119,6 +135,8 @@ class SafeboxBackupSettings {
         'quality': {for (final e in quality.entries) e.key.name: e.value.name},
         'wifiOnly': wifiOnly,
         'chargingOnly': chargingOnly,
+        'removeFromPhone': removeFromPhone,
+        'removeAfterDays': removeAfterDays,
       };
 
   factory SafeboxBackupSettings.fromJson(Map<String, dynamic> j) {
@@ -141,6 +159,8 @@ class SafeboxBackupSettings {
       },
       wifiOnly: j['wifiOnly'] != false,
       chargingOnly: j['chargingOnly'] != false,
+      removeFromPhone: j['removeFromPhone'] == true,
+      removeAfterDays: (j['removeAfterDays'] as num?)?.toInt() ?? 30,
     );
   }
 
@@ -483,10 +503,18 @@ class PrefsSafeboxBackupStore implements SafeboxBackupStore {
 /// Ce que le coffre a d'un original (`POST /api/safebox/backup/check`).
 enum SafeboxBackupCheck { saved, elsewhere, uploading, skip, unknown }
 
+/// La réponse pour une empreinte : son état et, s'il est dans le coffre, si
+/// une copie y est en Original (null : serveur d'avant le 11/11/2026).
+class SafeboxBackupStatus {
+  const SafeboxBackupStatus(this.state, {this.original});
+  final SafeboxBackupCheck state;
+  final bool? original;
+}
+
 abstract class SafeboxBackupApi {
   /// Empreintes → état ; `link` ajoute sans copie au dossier de son type ce
   /// qui n'est qu'ailleurs (un album).
-  Future<Map<String, SafeboxBackupCheck>> check(List<String> fps, {bool link = true});
+  Future<Map<String, SafeboxBackupStatus>> check(List<String> fps, {bool link = true});
   Future<void> skip(List<String> fps);
 }
 
@@ -811,9 +839,17 @@ class SafeboxBackupEngine {
                     : (avant != null && avant.state == SafeboxBackupState.queued && avant.matches(it) ? avant.attempts : 0) + 1,
               );
           var parti = false;
-          switch (etats[o.fp] ?? SafeboxBackupCheck.unknown) {
+          final reponse = etats[o.fp];
+          switch (reponse?.state ?? SafeboxBackupCheck.unknown) {
             case SafeboxBackupCheck.saved || SafeboxBackupCheck.elsewhere:
-              notes[it.key] = note(SafeboxBackupState.saved);
+              // La qualité de la copie du coffre : dite par le serveur, sinon
+              // celle de l'envoi précédent du même fichier, sinon inconnue.
+              notes[it.key] = note(SafeboxBackupState.saved,
+                  q: switch (reponse?.original) {
+                    true => SafeboxQuality.original,
+                    false => SafeboxQuality.hd,
+                    null => avant != null && avant.matches(it) ? avant.quality : null,
+                  });
               dejaLa += 1;
               _jeter(o.file, it);
             case SafeboxBackupCheck.skip:
@@ -901,22 +937,84 @@ class SafeboxBackupEngine {
         if (faits.remove(key) != null) await _store.save(faits);
       });
 
-  /// « Libérer la mémoire du téléphone » : les fichiers de la galerie déjà
-  /// dans le coffre en Original (retirer un original gardé en HD ferait
-  /// perdre la qualité d'origine).
-  Future<List<SafeboxDeviceItem>> freeable(SafeboxBackupSettings s) async {
+  /// Les photos et vidéos de la galerie qui peuvent quitter le téléphone :
+  /// arrivées dans le coffre, pas en HD ni Compressé (retirer un original
+  /// gardé en HD ferait perdre la qualité d'origine), plus vieilles que
+  /// [olderThanDays] jours. Mesurées d'après leur fiche.
+  ///
+  /// Liste locale : [confirmInVault] la vérifie auprès du serveur juste
+  /// avant de retirer quoi que ce soit.
+  Future<List<SafeboxDeviceItem>> freeable(SafeboxBackupSettings s, {int olderThanDays = 0, DateTime? now}) async {
     final faits = await _store.load();
-    bool enOriginal(SafeboxDeviceItem it) {
+    final limite = (now ?? DateTime.now()).subtract(Duration(days: olderThanDays));
+    final out = <SafeboxDeviceItem>[];
+    for (final it in await selection(s)) {
+      if (!it.fromGallery || (it.family != SafeboxFamily.photos && it.family != SafeboxFamily.videos)) continue;
+      if (olderThanDays > 0 && it.modified.isAfter(limite)) continue;
       final r = faits[it.key];
-      return r != null &&
-          r.state == SafeboxBackupState.saved &&
-          r.matches(it) &&
-          (r.quality ?? SafeboxQuality.original) == SafeboxQuality.original;
+      if (r == null || r.state != SafeboxBackupState.saved || !r.matches(it)) continue;
+      // Qualité inconnue (fiche d'avant le 11/11/2026) : le serveur tranchera.
+      if (r.quality != null && r.quality != SafeboxQuality.original) continue;
+      out.add(it.size >= 0 ? it : it.withSize(r.size));
     }
-
-    return [for (final it in await selection(s, withSizes: true)) if (it.fromGallery && enOriginal(it)) it];
+    return out;
   }
 
-  /// Retire ces fichiers du téléphone ; ils restent dans le coffre.
-  Future<Set<String>> free(List<SafeboxDeviceItem> items) => device.delete(items);
+  /// Juste avant de retirer : seulement ceux que le coffre a encore (pas mis
+  /// à la corbeille du coffre entre-temps) et en Original. Ce que le serveur
+  /// apprend est noté dans les fiches. Serveur injoignable : rien.
+  Future<List<SafeboxDeviceItem>> confirmInVault(List<SafeboxDeviceItem> items) async {
+    if (items.isEmpty) return const [];
+    final faits = await _store.load();
+    final parFp = <String, SafeboxDeviceItem>{
+      for (final it in items)
+        if (faits[it.key]?.fp case final fp?) fp: it,
+    };
+    final fps = parFp.keys.toList();
+    final etats = <String, SafeboxBackupStatus>{};
+    for (var i = 0; i < fps.length; i += 500) {
+      etats.addAll(await api.check(fps.sublist(i, i + 500 > fps.length ? fps.length : i + 500), link: false));
+    }
+    final ok = <SafeboxDeviceItem>[];
+    final changes = <String, SafeboxBackupRecord>{};
+    for (final e in parFp.entries) {
+      final r = faits[e.value.key]!;
+      final etat = etats[e.key];
+      switch (etat?.state) {
+        case SafeboxBackupCheck.saved || SafeboxBackupCheck.elsewhere:
+          final q = switch (etat!.original) {
+            true => SafeboxQuality.original,
+            false => SafeboxQuality.hd,
+            null => r.quality,
+          };
+          if (q != r.quality) changes[e.value.key] = r.copyWith(quality: q);
+          if (q == SafeboxQuality.original) ok.add(e.value);
+        case SafeboxBackupCheck.skip:
+          // Supprimé du coffre par l'inscrit : l'original du téléphone reste.
+          changes[e.value.key] = r.copyWith(state: SafeboxBackupState.skip);
+        default:
+          break;
+      }
+    }
+    if (changes.isNotEmpty) {
+      await _exclusif(() async {
+        final frais = await _store.load();
+        for (final c in changes.entries) {
+          final r = frais[c.key];
+          if (r != null && r.fp == c.value.fp) frais[c.key] = c.value;
+        }
+        await _store.save(frais);
+      });
+    }
+    return ok;
+  }
+
+  /// Envoie ces fichiers à la corbeille du téléphone (une confirmation
+  /// d'Android pour le lot, récupérables 30 jours) ; ils restent dans le
+  /// coffre. Rend les clés retirées.
+  Future<Set<String>> free(List<SafeboxDeviceItem> items) async {
+    final ids = [for (final it in items) if (it.fromGallery) it.key.substring(2)];
+    final retires = await device.trashMedia(ids);
+    return {for (final id in retires) 'g:$id'};
+  }
 }
