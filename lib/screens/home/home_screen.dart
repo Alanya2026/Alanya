@@ -185,6 +185,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (callService.status == CallStatus.incoming &&
         !callService.isAutoAnsweringFromPush) {
       unawaited(_reprendreEntrant(callService));
+    } else if (callService.status == CallStatus.idle) {
+      // Entrant que seule la notification connaît (socket tombé pendant
+      // l'arrière-plan) : l'écran d'appel de l'application le reprend.
+      unawaited(callService.adoptNativeIncomingIfAny());
     }
     Provider.of<ChatProvider>(context, listen: false)
         .repository

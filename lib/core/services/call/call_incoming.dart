@@ -154,6 +154,68 @@ extension CallIncoming on CallService {
     return true;
   }
 
+  /// Reprend, au retour au premier plan, un entrant que seule la notification
+  /// connaît.
+  ///
+  /// Moteur vivant mais socket tombé en arrière-plan : le push fait sonner la
+  /// notification native sans que Dart n'en sache rien, le statut reste `idle`.
+  /// Ouvrir l'application — depuis l'icône, ou depuis la notification d'un appel
+  /// vidéo (`IncomingVideoRedirect` côté Android) — montrait alors l'accueil
+  /// pendant que la notification sonnait. Le démarrage à froid relit déjà cette
+  /// entrée (`main.dart`) ; c'est la même reprise, à chaud.
+  ///
+  /// Android seulement : sur iOS, l'acceptation dans l'interface CallKit
+  /// ramène l'application au premier plan avant que l'entrée ne soit marquée
+  /// acceptée, et on retirerait l'appel que l'utilisateur vient de décrocher.
+  /// Sur Android, `MainActivity` l'écrit de façon synchrone depuis son intent
+  /// (`CallAcceptFromIntent`), avant que ce réveil ne soit livré.
+  ///
+  /// Rend `true` si un entrant a été préparé.
+  Future<bool> adoptNativeIncomingIfAny() async {
+    if (kIsWeb || !Platform.isAndroid) return false;
+    if (_status != CallStatus.idle ||
+        _isAutoAnsweringFromPush ||
+        _autoAnswerOnNextIncoming) {
+      return false;
+    }
+    final actif = await _callKit.getActiveCall();
+    if (!shouldAdoptNativeIncoming(
+      statusIsIdle: _status == CallStatus.idle,
+      autoAnswering: _isAutoAnsweringFromPush || _autoAnswerOnNextIncoming,
+      activeCallId: actif?['callId'] as String?,
+      activeAccepted: actif?['isAccepted'] == true,
+      activeOutgoing: actif?['isOutgoing'] == true,
+    )) {
+      return false;
+    }
+    final callId = ((actif!['callId'] as String?) ?? '').trim();
+    final callerId = (actif['callerId'] as String?) ?? '';
+    final callerName = (actif['callerName'] as String?) ?? '';
+    final roomId = actif['roomId'] as String?;
+    // Vérifié AVANT : la reprise au premier plan retire d'abord la
+    // notification, et un appel qu'on ne pourrait pas présenter serait perdu.
+    if (!await canPrepareIncomingFromCallKit(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      roomId: roomId,
+    )) {
+      return false;
+    }
+    debugPrint('[CallService] 📲 entrant natif repris au réveil: $callId');
+    await handleIncomingCallKitPreview(
+      callId: callId,
+      callerId: callerId,
+      callerName: callerName,
+      callerPhoto: actif['callerPhoto'] as String?,
+      isVideo: actif['isVideo'] == true,
+      roomId: roomId,
+      sessionKind: actif['sessionKind'] as String?,
+      mode: actif['mode'] as String?,
+    );
+    return _status == CallStatus.incoming;
+  }
+
   /// Rejoint un appel de groupe accepté depuis une notification.
   ///
   /// `joinGroupCall` n'avait qu'un appelant dans toute l'application — le bouton
@@ -316,11 +378,26 @@ extension CallIncoming on CallService {
     // dit explicitement plutôt que de s'en remettre au cache — au démarrage à
     // froid, `main.dart` vient tout juste de lire cette entrée.
     final presentationId = callId.isNotEmpty ? callId : (_groupRoomId ?? '');
-    _resolveIncomingPresentation(
+    final action = _resolveIncomingPresentation(
       callId: presentationId,
       intent: IncomingPresentationIntent.prepareFromCallKit,
       callKitActive: true,
     );
+    // Flutter présente : retirer la notification et sonner nous-mêmes, comme
+    // les chemins socket. Sans quoi l'écran Flutter s'affichait muet sous une
+    // notification qui sonnait encore, jusqu'à ce que l'accueil fasse la
+    // bascule — s'il la faisait.
+    //
+    // Android seulement : `MainActivity` y écrit un décrochage de façon
+    // synchrone avant que Dart ne lise l'entrée, donc une entrée non acceptée
+    // ici l'est vraiment. Sur iOS, CallKit peut ouvrir l'application avant de
+    // la marquer acceptée ; la retirer couperait l'appel décroché. Là-bas,
+    // l'accueil garde la main (`adoptNativeAcceptIfAny` puis la bascule).
+    if (action == IncomingPresentationAction.showFlutterIncoming &&
+        !kIsWeb &&
+        Platform.isAndroid) {
+      _startFlutterIncomingRinging(presentationId);
+    }
     // Même règle que sur les chemins socket : jamais de statut « entrant »
     // sans horloge locale pour le débloquer.
     _armIncomingRingSafety();
