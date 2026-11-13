@@ -76,8 +76,12 @@ include(flutter/generated_plugins.cmake)
 
 # json.hpp, livré avec flutter_secure_storage_linux, déclare ses opérateurs
 # littéraux avec une espace que les clang récents signalent ; les réglages
-# standard font de tout avertissement une erreur.
-if(TARGET flutter_secure_storage_linux_plugin)
+# standard font de tout avertissement une erreur. Les clang plus anciens
+# (Ubuntu 22.04, où GitHub construit le .deb) ne connaissent pas l'option et
+# ne signalent rien : on ne la passe que si le compilateur la comprend.
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag(-Wno-deprecated-literal-operator ALANYA_OPTION_LITTERAUX)
+if(TARGET flutter_secure_storage_linux_plugin AND ALANYA_OPTION_LITTERAUX)
   target_compile_options(flutter_secure_storage_linux_plugin PRIVATE -Wno-deprecated-literal-operator)
 endif()
 
