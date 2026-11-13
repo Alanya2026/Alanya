@@ -55,10 +55,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.alanya237.alanya"
@@ -171,4 +167,13 @@ dependencies {
     implementation("androidx.annotation:annotation-experimental:1.4.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+}
+
+// Cible Java 17 du code Kotlin. compilerOptions et non kotlinOptions dans
+// android { } : les Flutter récents (Kotlin Gradle Plugin 2.2+) refusent
+// l'ancienne écriture (13/11/2026).
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }

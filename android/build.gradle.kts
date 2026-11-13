@@ -33,9 +33,11 @@ subprojects {
                 }
             }
         }
+        // compilerOptions et non kotlinOptions : les Flutter récents (Kotlin
+        // Gradle Plugin 2.2+) refusent l'ancienne écriture (13/11/2026).
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            kotlinOptions {
-                jvmTarget = JavaVersion.VERSION_17.toString()
+            compilerOptions {
+                jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
             }
         }
     }
