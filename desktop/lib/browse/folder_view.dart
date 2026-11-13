@@ -1,18 +1,24 @@
 // Écrans 3 et 4 : un dossier du coffre. Fil d'Ariane, sous-dossiers, puis
-// les fichiers par jour d'ajout. Un clic ouvre la visionneuse (D3) ; on y
-// ajoute des fichiers par « Ajouter » ou en les déposant (D4).
+// les fichiers par jour d'ajout.
+//  - D3 : visionneuse, téléchargement ;
+//  - D4 : « Ajouter » ou dépôt de fichiers du PC ;
+//  - D5 : ranger, à la souris et au clavier comme dans l'explorateur de
+//    fichiers : clic pour sélectionner, double-clic pour ouvrir, Ctrl ou
+//    Maj + clic, Ctrl+A, Suppr vers la corbeille, F2 pour renommer, Entrée
+//    pour ouvrir, Échap pour désélectionner, clic droit pour le menu.
 
 import 'dart:async';
 
 import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../core/exporter.dart';
-import '../l10n/app_localizations.dart';
 import '../ui/common.dart';
 import '../viewer/viewer_screen.dart';
+import 'actions.dart';
 import 'import_flow.dart';
 import 'thumbnail.dart';
 
@@ -28,6 +34,9 @@ class FolderView extends StatefulWidget {
   State<FolderView> createState() => _FolderViewState();
 }
 
+/// Un élément de la vue : un sous-dossier ou un fichier.
+typedef _Cle = ({bool dossier, int id});
+
 class _FolderViewState extends State<FolderView> {
   SafeboxFolderPage? _page;
   final List<SafeboxFile> _fichiers = [];
@@ -35,9 +44,16 @@ class _FolderViewState extends State<FolderView> {
   bool _charge = false;
   Object? _erreur;
   final _defilement = ScrollController();
+  final _focus = FocusNode(debugLabel: 'dossier');
   bool _survol = false;
   StreamSubscription<int>? _arrivees;
   Timer? _recharge;
+
+  final Set<_Cle> _choix = {};
+  _Cle? _ancre;
+
+  /// Le clic précédent : un second clic rapide sur le même élément l'ouvre.
+  ({_Cle cle, DateTime quand})? _dernierClic;
 
   @override
   void initState() {
@@ -66,6 +82,7 @@ class _FolderViewState extends State<FolderView> {
     _recharge?.cancel();
     _arrivees?.cancel();
     _defilement.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -83,6 +100,8 @@ class _FolderViewState extends State<FolderView> {
           ..clear()
           ..addAll(p.files);
         _suite = p.nextCursor;
+        // Ce qui a disparu (déplacé, à la corbeille) quitte la sélection.
+        _choix.removeWhere((c) => c.dossier ? !p.folders.any((d) => d.id == c.id) : !_fichiers.any((f) => f.id == c.id));
       });
     } catch (e) {
       if (mounted && !silencieux) setState(() => _erreur = e);
@@ -109,96 +128,116 @@ class _FolderViewState extends State<FolderView> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final page = _page;
-    if (page == null) {
-      return _erreur != null ? ErrorPanel(error: _erreur, onRetry: _charger) : const Center(child: CircularProgressIndicator());
+  // ── Sélection ────────────────────────────────────────────────────────────
+
+  /// Dans l'ordre de l'écran : les sous-dossiers, puis les fichiers.
+  List<_Cle> get _ordre => [
+        for (final d in _page?.folders ?? const <SafeboxFolder>[]) (dossier: true, id: d.id),
+        for (final f in _fichiers) (dossier: false, id: f.id),
+      ];
+
+  List<SafeboxFile> get _fichiersChoisis => _fichiers.where((f) => _choix.contains((dossier: false, id: f.id))).toList();
+  List<SafeboxFolder> get _dossiersChoisis =>
+      (_page?.folders ?? const <SafeboxFolder>[]).where((d) => _choix.contains((dossier: true, id: d.id))).toList();
+
+  void _clic(_Cle cle) {
+    _focus.requestFocus();
+    final clavier = HardwareKeyboard.instance;
+    final ctrl = clavier.isControlPressed || clavier.isMetaPressed;
+    final maintenant = DateTime.now();
+    final avant = _dernierClic;
+    _dernierClic = (cle: cle, quand: maintenant);
+    if (!ctrl && !clavier.isShiftPressed && avant != null && avant.cle == cle &&
+        maintenant.difference(avant.quand) < const Duration(milliseconds: 450)) {
+      _dernierClic = null;
+      _ouvrir(cle);
+      return;
     }
-    final l = context.l;
-    final t = Theme.of(context).textTheme;
-    final jours = _parJour(_fichiers);
-    return DropTarget(
-      onDragEntered: (_) => setState(() => _survol = true),
-      onDragExited: (_) => setState(() => _survol = false),
-      onDragDone: (d) {
-        setState(() => _survol = false);
-        final chemins = [for (final f in d.files) f.path].where((p) => p.isNotEmpty).toList();
-        if (chemins.isNotEmpty) importPaths(context, chemins, page.folder);
-      },
-      child: Stack(children: [
-        _contenu(context, page, l, t, jours),
-        if (_survol) Positioned.fill(child: _Depot(nom: folderName(context, page.folder))),
-      ]),
-    );
+    setState(() {
+      if (clavier.isShiftPressed && _ancre != null) {
+        final ordre = _ordre;
+        final a = ordre.indexOf(_ancre!);
+        final b = ordre.indexOf(cle);
+        if (a >= 0 && b >= 0) {
+          if (!ctrl) _choix.clear();
+          _choix.addAll(ordre.sublist(a < b ? a : b, (a < b ? b : a) + 1));
+          return;
+        }
+      }
+      if (ctrl) {
+        if (!_choix.remove(cle)) _choix.add(cle);
+      } else {
+        _choix
+          ..clear()
+          ..add(cle);
+      }
+      _ancre = cle;
+    });
   }
 
-  Widget _contenu(BuildContext context, SafeboxFolderPage page, AppLocalizations l, TextTheme t,
-      List<(DateTime?, List<SafeboxFile>)> jours) {
-    return RefreshIndicator(
-      onRefresh: _charger,
-      child: CustomScrollView(controller: _defilement, slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 32, 0),
-          sliver: SliverToBoxAdapter(
-            child: Row(children: [
-              if (widget.onBack != null)
-                IconButton(tooltip: l.back, onPressed: widget.onBack, icon: const Icon(Icons.arrow_back)),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _Ariane(page: page, onOpen: widget.onOpenFolder),
-                  Text(folderName(context, page.folder), style: t.headlineSmall),
-                ]),
-              ),
-              _Ajouter(folder: page.folder),
-              const SizedBox(width: 8),
-              if (_fichiers.isNotEmpty || page.folders.isNotEmpty)
-                OutlinedButton.icon(
-                  onPressed: () => _telechargerDossier(page.folder),
-                  icon: const Icon(Icons.download_outlined, size: 18),
-                  label: Text(l.downloadFolder),
-                ),
-              const SizedBox(width: 8),
-              IconButton(tooltip: l.refresh, onPressed: _charge ? null : _charger, icon: const Icon(Icons.refresh)),
-            ]),
-          ),
-        ),
-        if (page.folders.isNotEmpty)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(32, 20, 32, 0),
-            sliver: SliverToBoxAdapter(
-              child: Wrap(spacing: 12, runSpacing: 12, children: [
-                for (final f in page.folders) _SousDossier(folder: f, onTap: () => widget.onOpenFolder(f.id)),
-              ]),
-            ),
-          ),
-        if (_fichiers.isEmpty && page.folders.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(rootIcon(widget.root), size: 48, color: Palette.muted),
-                const SizedBox(height: 12),
-                Text(l.folderEmpty, style: t.titleMedium),
-                const SizedBox(height: 4),
-                Text(l.folderEmptyHint, style: t.bodySmall),
-              ]),
-            ),
-          ),
-        for (final (jour, fichiers) in jours) ...[
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(32, 24, 32, 10),
-            sliver: SliverToBoxAdapter(child: Text(_titreJour(context, jour), style: t.titleMedium)),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            sliver: _grille(fichiers),
-          ),
-        ],
-        const SliverToBoxAdapter(child: SizedBox(height: 32)),
-      ]),
-    );
+  void _toutChoisir() => setState(() => _choix
+    ..clear()
+    ..addAll(_ordre));
+
+  void _rienChoisir() => setState(() {
+        _choix.clear();
+        _ancre = null;
+      });
+
+  // ── Actions ──────────────────────────────────────────────────────────────
+
+  void _ouvrir(_Cle cle) {
+    if (cle.dossier) {
+      widget.onOpenFolder(cle.id);
+      return;
+    }
+    final i = _fichiers.indexWhere((x) => x.id == cle.id);
+    if (i >= 0) openViewer(context, _fichiers, i);
+  }
+
+  String get _ici => _page == null ? rootName(context, widget.root) : folderName(context, _page!.folder);
+
+  Future<void> _apres(bool change) async {
+    if (change && mounted) await _charger(silencieux: true);
+  }
+
+  Future<void> _renommer() async {
+    final dossiers = _dossiersChoisis;
+    final fichiers = _fichiersChoisis;
+    if (dossiers.length + fichiers.length != 1) return;
+    final change = dossiers.isNotEmpty ? renameFolder(context, dossiers.single) : renameFile(context, fichiers.single);
+    await _apres(await change);
+  }
+
+  Future<void> _deplacer() async {
+    final dossiers = _dossiersChoisis;
+    final fichiers = _fichiersChoisis;
+    if (dossiers.isEmpty && fichiers.isEmpty) return;
+    await _apres(await moveItems(context, root: widget.root, currentFolderId: widget.folderId, files: fichiers, folders: dossiers));
+  }
+
+  Future<void> _album() => addToAlbum(context, _fichiersChoisis, currentFolderId: widget.folderId);
+
+  Future<void> _corbeille() async {
+    final dossiers = _dossiersChoisis;
+    final fichiers = _fichiersChoisis;
+    if (dossiers.isEmpty && fichiers.isEmpty) return;
+    await _apres(await trashItems(context, files: fichiers, folders: dossiers, here: _ici));
+  }
+
+  Future<void> _nouveauDossier() async {
+    final page = _page;
+    if (page != null) await _apres(await createFolder(context, page.folder));
+  }
+
+  Future<void> _telechargerChoix() async {
+    final exporter = context.vault.exporter;
+    for (final d in _dossiersChoisis) {
+      unawaited(exporter.saveFolder(d.id, folderName(context, d)));
+    }
+    for (final f in _fichiersChoisis) {
+      unawaited(exporter.saveFile(f));
+    }
   }
 
   Future<void> _telechargerDossier(SafeboxFolder dossier) async {
@@ -211,33 +250,250 @@ class _FolderViewState extends State<FolderView> {
     if (t.state == ExportState.failed) messager.showSnackBar(SnackBar(content: Text(l.downloadFailed)));
   }
 
-  void _ouvrir(SafeboxFile f) {
-    final i = _fichiers.indexWhere((x) => x.id == f.id);
-    if (i >= 0) openViewer(context, _fichiers, i);
+  // ── Menus ────────────────────────────────────────────────────────────────
+
+  Future<void> _menu(Offset position, List<(IconData, String, VoidCallback?, bool)> entrees) async {
+    final ecran = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final choisi = await showMenu<int>(
+      context: context,
+      position: RelativeRect.fromRect(position & const Size(1, 1), Offset.zero & ecran.size),
+      items: [
+        for (final (i, (icone, texte, action, danger)) in entrees.indexed)
+          PopupMenuItem<int>(
+            value: i,
+            enabled: action != null,
+            height: 40,
+            child: Row(children: [
+              Icon(icone, size: 20, color: danger ? Palette.danger : null),
+              const SizedBox(width: 12),
+              Text(texte, style: TextStyle(color: danger ? Palette.danger : null)),
+            ]),
+          ),
+      ],
+    );
+    if (choisi != null) entrees[choisi].$3?.call();
+  }
+
+  /// Clic droit sur un élément : il rejoint la sélection s'il n'y est pas.
+  void _menuElement(_Cle cle, Offset position) {
+    if (!_choix.contains(cle)) {
+      setState(() {
+        _choix
+          ..clear()
+          ..add(cle);
+        _ancre = cle;
+      });
+    }
+    final l = context.l;
+    final un = _choix.length == 1;
+    final fichiers = _fichiersChoisis;
+    _menu(position, [
+      if (un) (Icons.open_in_new, l.open, () => _ouvrir(cle), false),
+      (Icons.download_outlined, l.download, _telechargerChoix, false),
+      if (un) (Icons.edit_outlined, l.rename, _renommer, false),
+      (Icons.drive_file_move_outlined, l.move, _deplacer, false),
+      if (fichiers.isNotEmpty && _dossiersChoisis.isEmpty) (Icons.photo_album_outlined, l.addToAlbum, _album, false),
+      (Icons.delete_outline, l.toTrash, _corbeille, true),
+    ]);
+  }
+
+  /// Clic droit dans le vide.
+  void _menuFond(Offset position) {
+    final page = _page;
+    if (page == null) return;
+    final l = context.l;
+    final album = page.folder.root == SafeboxRoot.albums && page.folder.parentId == null;
+    _rienChoisir();
+    _menu(position, [
+      (Icons.create_new_folder_outlined, album ? l.newAlbum : l.newFolder, _nouveauDossier, false),
+      (Icons.insert_drive_file_outlined, l.addFiles, () => pickFilesAndImport(context, page.folder), false),
+      (Icons.folder_outlined, l.addFolder, () => pickFolderAndImport(context, page.folder), false),
+      (Icons.select_all, l.selectAll, _ordre.isEmpty ? null : _toutChoisir, false),
+      (Icons.refresh, l.refresh, _charger, false),
+    ]);
+  }
+
+  // ── Écran ────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final page = _page;
+    if (page == null) {
+      return _erreur != null ? ErrorPanel(error: _erreur, onRetry: _charger) : const Center(child: CircularProgressIndicator());
+    }
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _survol = true),
+      onDragExited: (_) => setState(() => _survol = false),
+      onDragDone: (d) {
+        setState(() => _survol = false);
+        final chemins = [for (final f in d.files) f.path].where((p) => p.isNotEmpty).toList();
+        if (chemins.isNotEmpty) importPaths(context, chemins, page.folder);
+      },
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.keyA, control: true): _toutChoisir,
+          const SingleActivator(LogicalKeyboardKey.keyA, meta: true): _toutChoisir,
+          const SingleActivator(LogicalKeyboardKey.delete): _corbeille,
+          const SingleActivator(LogicalKeyboardKey.f2): _renommer,
+          const SingleActivator(LogicalKeyboardKey.escape): _rienChoisir,
+          const SingleActivator(LogicalKeyboardKey.enter): () {
+            if (_choix.length == 1) _ouvrir(_choix.single);
+          },
+        },
+        child: Focus(
+          focusNode: _focus,
+          autofocus: true,
+          child: Stack(children: [
+            Column(children: [
+              _Entete(
+                page: page,
+                onBack: widget.onBack,
+                onOpenFolder: widget.onOpenFolder,
+                busy: _charge,
+                onRefresh: _charger,
+                onNewFolder: _nouveauDossier,
+                onDownloadFolder: _fichiers.isNotEmpty || page.folders.isNotEmpty ? () => _telechargerDossier(page.folder) : null,
+              ),
+              if (_choix.isNotEmpty)
+                _BarreSelection(
+                  count: _choix.length,
+                  onDownload: _telechargerChoix,
+                  onRename: _choix.length == 1 ? _renommer : null,
+                  onMove: _deplacer,
+                  onAlbum: _fichiersChoisis.isNotEmpty && _dossiersChoisis.isEmpty ? _album : null,
+                  onTrash: _corbeille,
+                  onClear: _rienChoisir,
+                ),
+              Expanded(child: _contenu(context, page)),
+            ]),
+            if (_survol) Positioned.fill(child: _Depot(nom: folderName(context, page.folder))),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _contenu(BuildContext context, SafeboxFolderPage page) {
+    final l = context.l;
+    final t = Theme.of(context).textTheme;
+    final jours = _parJour(_fichiers);
+    return GestureDetector(
+      // Clic dans le vide : on désélectionne ; clic droit : menu du dossier.
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        _focus.requestFocus();
+        if (_choix.isNotEmpty) _rienChoisir();
+      },
+      onSecondaryTapUp: (d) => _menuFond(d.globalPosition),
+      child: RefreshIndicator(
+        onRefresh: _charger,
+        child: CustomScrollView(controller: _defilement, slivers: [
+          if (page.folders.isNotEmpty)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(32, 16, 32, 0),
+              sliver: SliverToBoxAdapter(
+                child: Wrap(spacing: 12, runSpacing: 12, children: [
+                  for (final f in page.folders)
+                    _Element(
+                      cle: (dossier: true, id: f.id),
+                      selected: _choix.contains((dossier: true, id: f.id)),
+                      onTap: _clic,
+                      onMenu: _menuElement,
+                      child: _SousDossier(folder: f, selected: _choix.contains((dossier: true, id: f.id))),
+                    ),
+                ]),
+              ),
+            ),
+          if (_fichiers.isEmpty && page.folders.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(rootIcon(widget.root), size: 48, color: Palette.muted),
+                  const SizedBox(height: 12),
+                  Text(l.folderEmpty, style: t.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(l.folderEmptyHint, style: t.bodySmall),
+                ]),
+              ),
+            ),
+          for (final (jour, fichiers) in jours) ...[
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(32, 24, 32, 10),
+              sliver: SliverToBoxAdapter(child: Text(_titreJour(context, jour), style: t.titleMedium)),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              sliver: _grille(fichiers),
+            ),
+          ],
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
+              child: Text(l.folderKeysHint, style: t.bodySmall?.copyWith(color: Palette.muted)),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   Widget _grille(List<SafeboxFile> fichiers) {
     final visuel = widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos || widget.root == SafeboxRoot.albums;
+    Widget element(SafeboxFile f, Widget enfant) {
+      final cle = (dossier: false, id: f.id);
+      return _Element(
+        cle: cle,
+        selected: _choix.contains(cle),
+        onTap: _clic,
+        onMenu: _menuElement,
+        child: enfant,
+      );
+    }
+
     if (visuel) {
       return SliverGrid(
         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 180, mainAxisSpacing: 6, crossAxisSpacing: 6),
         delegate: SliverChildBuilderDelegate(
-          (context, i) => Tooltip(
-            message: fichiers[i].name,
-            waitDuration: const Duration(milliseconds: 600),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () => _ouvrir(fichiers[i]),
-              child: Thumbnail(file: fichiers[i]),
-            ),
-          ),
+          (context, i) {
+            final f = fichiers[i];
+            final choisi = _choix.contains((dossier: false, id: f.id));
+            return element(
+              f,
+              Tooltip(
+                message: f.name,
+                waitDuration: const Duration(milliseconds: 600),
+                child: Stack(fit: StackFit.expand, children: [
+                  Thumbnail(file: f),
+                  if (choisi)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Palette.brand.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Palette.brand, width: 3),
+                      ),
+                    ),
+                  if (choisi)
+                    const Positioned(
+                      top: 6,
+                      left: 6,
+                      child: CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Palette.brand,
+                        child: Icon(Icons.check, size: 15, color: Colors.white),
+                      ),
+                    ),
+                ]),
+              ),
+            );
+          },
           childCount: fichiers.length,
         ),
       );
     }
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, i) => _Ligne(file: fichiers[i], onTap: () => _ouvrir(fichiers[i])),
+        (context, i) => element(fichiers[i], _Ligne(file: fichiers[i], selected: _choix.contains((dossier: false, id: fichiers[i].id)))),
         childCount: fichiers.length,
       ),
     );
@@ -271,6 +527,140 @@ class _FolderViewState extends State<FolderView> {
   }
 }
 
+/// Un élément cliquable : clic (sélection), double-clic (ouvrir), clic droit (menu).
+class _Element extends StatelessWidget {
+  const _Element({
+    required this.cle,
+    required this.selected,
+    required this.onTap,
+    required this.onMenu,
+    required this.child,
+  });
+  final _Cle cle;
+  final bool selected;
+
+  /// Clic ; un second clic rapide ouvre (voir _clic).
+  final void Function(_Cle) onTap;
+  final void Function(_Cle, Offset) onMenu;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onTap(cle),
+          onSecondaryTapUp: (d) => onMenu(cle, d.globalPosition),
+          child: child,
+        ),
+      );
+}
+
+class _Entete extends StatelessWidget {
+  const _Entete({
+    required this.page,
+    required this.onBack,
+    required this.onOpenFolder,
+    required this.busy,
+    required this.onRefresh,
+    required this.onNewFolder,
+    required this.onDownloadFolder,
+  });
+  final SafeboxFolderPage page;
+  final VoidCallback? onBack;
+  final void Function(int) onOpenFolder;
+  final bool busy;
+  final VoidCallback onRefresh;
+  final VoidCallback onNewFolder;
+  final VoidCallback? onDownloadFolder;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    final t = Theme.of(context).textTheme;
+    final album = page.folder.root == SafeboxRoot.albums && page.folder.parentId == null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 32, 8),
+      child: Row(children: [
+        if (onBack != null) IconButton(tooltip: l.back, onPressed: onBack, icon: const Icon(Icons.arrow_back)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            _Ariane(page: page, onOpen: onOpenFolder),
+            Text(folderName(context, page.folder), style: t.headlineSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+        _Ajouter(folder: page.folder),
+        const SizedBox(width: 8),
+        OutlinedButton.icon(
+          onPressed: onNewFolder,
+          icon: const Icon(Icons.create_new_folder_outlined, size: 18),
+          label: Text(album ? l.newAlbum : l.newFolder),
+        ),
+        const SizedBox(width: 8),
+        if (onDownloadFolder != null)
+          OutlinedButton.icon(
+            onPressed: onDownloadFolder,
+            icon: const Icon(Icons.download_outlined, size: 18),
+            label: Text(l.downloadFolder),
+          ),
+        const SizedBox(width: 8),
+        IconButton(tooltip: l.refresh, onPressed: busy ? null : onRefresh, icon: const Icon(Icons.refresh)),
+      ]),
+    );
+  }
+}
+
+/// La barre des actions sur la sélection.
+class _BarreSelection extends StatelessWidget {
+  const _BarreSelection({
+    required this.count,
+    required this.onDownload,
+    required this.onRename,
+    required this.onMove,
+    required this.onAlbum,
+    required this.onTrash,
+    required this.onClear,
+  });
+  final int count;
+  final VoidCallback onDownload;
+  final VoidCallback? onRename;
+  final VoidCallback onMove;
+  final VoidCallback? onAlbum;
+  final VoidCallback onTrash;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 4, 32, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: Palette.brandContainer, borderRadius: BorderRadius.circular(12)),
+      child: Row(children: [
+        IconButton(tooltip: l.clearSelection, onPressed: onClear, icon: const Icon(Icons.close)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(l.selectedCount(count),
+              style: const TextStyle(fontWeight: FontWeight.w500, color: Palette.brandDark), overflow: TextOverflow.ellipsis),
+        ),
+        TextButton.icon(onPressed: onDownload, icon: const Icon(Icons.download_outlined, size: 18), label: Text(l.download)),
+        if (onRename != null)
+          TextButton.icon(onPressed: onRename, icon: const Icon(Icons.edit_outlined, size: 18), label: Text(l.rename)),
+        TextButton.icon(onPressed: onMove, icon: const Icon(Icons.drive_file_move_outlined, size: 18), label: Text(l.move)),
+        if (onAlbum != null)
+          TextButton.icon(onPressed: onAlbum, icon: const Icon(Icons.photo_album_outlined, size: 18), label: Text(l.addToAlbum)),
+        TextButton.icon(
+          style: TextButton.styleFrom(foregroundColor: Palette.danger),
+          onPressed: onTrash,
+          icon: const Icon(Icons.delete_outline, size: 18),
+          label: Text(l.toTrash),
+        ),
+      ]),
+    );
+  }
+}
+
 class _Ariane extends StatelessWidget {
   const _Ariane({required this.page, required this.onOpen});
   final SafeboxFolderPage page;
@@ -296,9 +686,9 @@ class _Ariane extends StatelessWidget {
 }
 
 class _SousDossier extends StatelessWidget {
-  const _SousDossier({required this.folder, required this.onTap});
+  const _SousDossier({required this.folder, required this.selected});
   final SafeboxFolder folder;
-  final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -306,22 +696,24 @@ class _SousDossier extends StatelessWidget {
     return SizedBox(
       width: 220,
       child: Card(
+        color: selected ? Palette.brandContainer : null,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: selected ? Palette.brand : Palette.border, width: selected ? 2 : 1),
+        ),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(children: [
-              const Icon(Icons.folder_outlined, color: Palette.brand),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(folderName(context, folder), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  if (n != null) Text(context.l.fileCount(n), style: Theme.of(context).textTheme.bodySmall),
-                ]),
-              ),
-            ]),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            const Icon(Icons.folder_outlined, color: Palette.brand),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(folderName(context, folder), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
+                if (n != null) Text(context.l.fileCount(n), style: Theme.of(context).textTheme.bodySmall),
+              ]),
+            ),
+          ]),
         ),
       ),
     );
@@ -329,18 +721,21 @@ class _SousDossier extends StatelessWidget {
 }
 
 class _Ligne extends StatelessWidget {
-  const _Ligne({required this.file, required this.onTap});
+  const _Ligne({required this.file, required this.selected});
   final SafeboxFile file;
-  final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Card(
+          color: selected ? Palette.brandContainer : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: selected ? Palette.brand : Palette.border, width: selected ? 2 : 1),
+          ),
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(children: [
               SizedBox(width: 44, height: 44, child: Thumbnail(file: file)),
@@ -351,7 +746,6 @@ class _Ligne extends StatelessWidget {
               const SizedBox(width: 12),
               Text(formatBytes(context, file.plainBytes), style: Theme.of(context).textTheme.bodySmall),
             ]),
-          ),
           ),
         ),
       );

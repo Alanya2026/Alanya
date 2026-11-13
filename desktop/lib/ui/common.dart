@@ -119,7 +119,29 @@ String folderName(BuildContext context, SafeboxFolder f) => f.name ?? rootName(c
 /// Texte d'une erreur pour l'écran : jamais la prose du serveur.
 String errorText(BuildContext context, Object? e) {
   final l = context.l;
-  if (e is SafeboxHttpException && e.statusCode == 0) return l.errorNetwork;
+  if (e is SafeboxHttpException) {
+    if (e.statusCode == 0) return l.errorNetwork;
+    switch (e.code) {
+      case 'SAFEBOX_NAME_TAKEN':
+        return l.errorNameTaken;
+      case 'SAFEBOX_WRONG_FAMILY':
+        return l.errorWrongFamily;
+      case 'SAFEBOX_INVALID_MOVE':
+        return l.errorInvalidMove;
+      case 'SAFEBOX_TOO_DEEP':
+        return l.errorTooDeep;
+      case 'SAFEBOX_FOLDER_LIMIT':
+        return l.errorFolderLimit;
+      case 'SAFEBOX_INVALID_NAME':
+        return l.errorInvalidName;
+      case 'SAFEBOX_ROOT_LOCKED':
+        return l.errorRootLocked;
+      case 'SAFEBOX_NOT_FOUND':
+        return l.errorNotFound;
+      case 'SAFEBOX_QUOTA_EXCEEDED':
+        return l.uploadErrorQuota;
+    }
+  }
   return l.errorGeneric;
 }
 

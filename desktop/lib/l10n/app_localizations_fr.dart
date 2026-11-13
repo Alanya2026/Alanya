@@ -115,7 +115,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get folderEmpty => 'Vide';
 
   @override
-  String get folderEmptyHint => 'Ajoutez des fichiers depuis votre téléphone.';
+  String get folderEmptyHint =>
+      'Ajoutez des fichiers avec « Ajouter », ou déposez-les ici.';
 
   @override
   String get dateToday => 'Aujourd\'hui';
@@ -577,4 +578,233 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get change => 'Changer';
+
+  @override
+  String get newFolder => 'Nouveau dossier';
+
+  @override
+  String get newAlbum => 'Nouvel album';
+
+  @override
+  String get folderNameLabel => 'Nom du dossier';
+
+  @override
+  String get albumNameLabel => 'Nom de l\'album';
+
+  @override
+  String get fileNameLabel => 'Nom du fichier';
+
+  @override
+  String get create => 'Créer';
+
+  @override
+  String get rename => 'Renommer';
+
+  @override
+  String get move => 'Déplacer…';
+
+  @override
+  String get moveTitle => 'Déplacer vers';
+
+  @override
+  String get moveHere => 'Déplacer ici';
+
+  @override
+  String get addToAlbum => 'Ajouter à un album…';
+
+  @override
+  String get addToAlbumTitle => 'Ajouter à un album';
+
+  @override
+  String get addHere => 'Ajouter ici';
+
+  @override
+  String addedToAlbum(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers ajoutés à l\'album, sans copie',
+      one: '1 fichier ajouté à l\'album, sans copie',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String moved(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n éléments déplacés',
+      one: '1 élément déplacé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get toTrash => 'Mettre à la corbeille';
+
+  @override
+  String movedToTrash(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n éléments mis à la corbeille',
+      one: '1 élément mis à la corbeille',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteWhich(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Certains de ces fichiers sont aussi ailleurs dans le coffre',
+      one: 'Ce fichier est aussi ailleurs dans le coffre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteHereOnly(String place) {
+    return 'Retirer de « $place » seulement';
+  }
+
+  @override
+  String deleteHereOnlyHint(String other) {
+    return 'Il reste dans « $other ». Aucun espace libéré.';
+  }
+
+  @override
+  String get deleteEverywhere => 'Supprimer partout';
+
+  @override
+  String get deleteEverywhereHint =>
+      'Il va à la corbeille ; l\'espace est libéré quand elle est vidée.';
+
+  @override
+  String selectedCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n éléments sélectionnés',
+      one: '1 élément sélectionné',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get selectAll => 'Tout sélectionner';
+
+  @override
+  String get clearSelection => 'Désélectionner';
+
+  @override
+  String get folderKeysHint =>
+      'Double-clic pour ouvrir · Ctrl ou Maj + clic pour sélectionner · Suppr : corbeille · F2 : renommer · clic droit : menu';
+
+  @override
+  String get errorNameTaken => 'Ce nom est déjà pris dans ce dossier.';
+
+  @override
+  String get errorWrongFamily =>
+      'Ce dossier n\'accepte pas ce type de fichier.';
+
+  @override
+  String get errorInvalidMove => 'Un dossier ne se range pas dans lui-même.';
+
+  @override
+  String get errorTooDeep => 'Trop de niveaux de dossiers.';
+
+  @override
+  String get errorFolderLimit => 'Trop de dossiers dans le coffre.';
+
+  @override
+  String get errorInvalidName => 'Ce nom n\'est pas valide.';
+
+  @override
+  String get errorRootLocked =>
+      'Les dossiers principaux ne se renomment, ne se déplacent ni ne se suppriment.';
+
+  @override
+  String get errorNotFound => 'Cet élément n\'existe plus.';
+
+  @override
+  String get navTrash => 'Corbeille';
+
+  @override
+  String get trashEmptyState => 'La corbeille est vide';
+
+  @override
+  String trashHint(int days) {
+    return 'Les éléments restent $days jours dans la corbeille, puis sont supprimés définitivement. Ils comptent dans votre espace jusque-là.';
+  }
+
+  @override
+  String get emptyTrash => 'Vider la corbeille';
+
+  @override
+  String get emptyTrashConfirm =>
+      'Tout le contenu de la corbeille sera supprimé définitivement. Impossible de revenir en arrière.';
+
+  @override
+  String get restore => 'Restaurer';
+
+  @override
+  String get restored => 'Restauré';
+
+  @override
+  String get deleteForever => 'Supprimer définitivement';
+
+  @override
+  String deleteForeverConfirm(String name) {
+    return '« $name » sera supprimé définitivement.';
+  }
+
+  @override
+  String trashPurgeIn(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Supprimé définitivement dans $n jours',
+      one: 'Supprimé définitivement demain',
+      zero: 'Supprimé définitivement aujourd\'hui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trashFrom(String place) {
+    return 'Depuis $place';
+  }
+
+  @override
+  String get freeUp => 'Libérer de l\'espace';
+
+  @override
+  String get freeUpIntro =>
+      'Les plus gros fichiers du coffre. Ceux que vous choisissez partent de partout, albums compris, pour que leur place soit vraiment libérée.';
+
+  @override
+  String get freeUpHint =>
+      'Les fichiers mis à la corbeille comptent encore dans votre espace jusqu\'à ce que la corbeille soit vidée.';
+
+  @override
+  String freeUpSelected(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers',
+      one: '1 fichier',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String freeUpTrash(String size) {
+    return 'La corbeille occupe $size';
+  }
+
+  @override
+  String get freeUpNothing => 'Aucun fichier dans le coffre';
 }

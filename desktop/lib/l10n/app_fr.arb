@@ -86,7 +86,7 @@
   "homeFolders": "Vos dossiers",
   "homeRecentAlbums": "Albums récents",
   "folderEmpty": "Vide",
-  "folderEmptyHint": "Ajoutez des fichiers depuis votre téléphone.",
+  "folderEmptyHint": "Ajoutez des fichiers avec « Ajouter », ou déposez-les ici.",
   "dateToday": "Aujourd'hui",
   "dateYesterday": "Hier",
   "dateUnknown": "Date inconnue",
@@ -415,5 +415,150 @@
   "uploadErrorChanged": "Le fichier a changé sur l'ordinateur pendant l'envoi",
   "uploadErrorMissing": "Le fichier n'est plus sur l'ordinateur",
   "uploadErrorGeneric": "L'envoi n'a pas abouti",
-  "change": "Changer"
+  "change": "Changer",
+  "newFolder": "Nouveau dossier",
+  "newAlbum": "Nouvel album",
+  "folderNameLabel": "Nom du dossier",
+  "albumNameLabel": "Nom de l'album",
+  "fileNameLabel": "Nom du fichier",
+  "create": "Créer",
+  "rename": "Renommer",
+  "move": "Déplacer…",
+  "moveTitle": "Déplacer vers",
+  "moveHere": "Déplacer ici",
+  "addToAlbum": "Ajouter à un album…",
+  "addToAlbumTitle": "Ajouter à un album",
+  "addHere": "Ajouter ici",
+  "addedToAlbum": "{n, plural, =1{1 fichier ajouté à l'album, sans copie} other{{n} fichiers ajoutés à l'album, sans copie}}",
+  "@addedToAlbum": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "moved": "{n, plural, =1{1 élément déplacé} other{{n} éléments déplacés}}",
+  "@moved": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "toTrash": "Mettre à la corbeille",
+  "movedToTrash": "{n, plural, =1{1 élément mis à la corbeille} other{{n} éléments mis à la corbeille}}",
+  "@movedToTrash": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteWhich": "{n, plural, =1{Ce fichier est aussi ailleurs dans le coffre} other{Certains de ces fichiers sont aussi ailleurs dans le coffre}}",
+  "@deleteWhich": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteHereOnly": "Retirer de « {place} » seulement",
+  "@deleteHereOnly": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteHereOnlyHint": "Il reste dans « {other} ». Aucun espace libéré.",
+  "@deleteHereOnlyHint": {
+    "placeholders": {
+      "other": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteEverywhere": "Supprimer partout",
+  "deleteEverywhereHint": "Il va à la corbeille ; l'espace est libéré quand elle est vidée.",
+  "selectedCount": "{n, plural, =1{1 élément sélectionné} other{{n} éléments sélectionnés}}",
+  "@selectedCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "selectAll": "Tout sélectionner",
+  "clearSelection": "Désélectionner",
+  "folderKeysHint": "Double-clic pour ouvrir · Ctrl ou Maj + clic pour sélectionner · Suppr : corbeille · F2 : renommer · clic droit : menu",
+  "errorNameTaken": "Ce nom est déjà pris dans ce dossier.",
+  "errorWrongFamily": "Ce dossier n'accepte pas ce type de fichier.",
+  "errorInvalidMove": "Un dossier ne se range pas dans lui-même.",
+  "errorTooDeep": "Trop de niveaux de dossiers.",
+  "errorFolderLimit": "Trop de dossiers dans le coffre.",
+  "errorInvalidName": "Ce nom n'est pas valide.",
+  "errorRootLocked": "Les dossiers principaux ne se renomment, ne se déplacent ni ne se suppriment.",
+  "errorNotFound": "Cet élément n'existe plus.",
+  "navTrash": "Corbeille",
+  "trashEmptyState": "La corbeille est vide",
+  "trashHint": "Les éléments restent {days} jours dans la corbeille, puis sont supprimés définitivement. Ils comptent dans votre espace jusque-là.",
+  "@trashHint": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "emptyTrash": "Vider la corbeille",
+  "emptyTrashConfirm": "Tout le contenu de la corbeille sera supprimé définitivement. Impossible de revenir en arrière.",
+  "restore": "Restaurer",
+  "restored": "Restauré",
+  "deleteForever": "Supprimer définitivement",
+  "deleteForeverConfirm": "« {name} » sera supprimé définitivement.",
+  "@deleteForeverConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "trashPurgeIn": "{n, plural, =0{Supprimé définitivement aujourd'hui} =1{Supprimé définitivement demain} other{Supprimé définitivement dans {n} jours}}",
+  "@trashPurgeIn": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "trashFrom": "Depuis {place}",
+  "@trashFrom": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "freeUp": "Libérer de l'espace",
+  "freeUpIntro": "Les plus gros fichiers du coffre. Ceux que vous choisissez partent de partout, albums compris, pour que leur place soit vraiment libérée.",
+  "freeUpHint": "Les fichiers mis à la corbeille comptent encore dans votre espace jusqu'à ce que la corbeille soit vidée.",
+  "freeUpSelected": "{n, plural, =1{1 fichier} other{{n} fichiers}} · {size}",
+  "@freeUpSelected": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "freeUpTrash": "La corbeille occupe {size}",
+  "@freeUpTrash": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "freeUpNothing": "Aucun fichier dans le coffre"
 }

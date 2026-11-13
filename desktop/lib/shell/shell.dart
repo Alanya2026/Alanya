@@ -4,7 +4,9 @@ import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 
 import '../browse/folder_view.dart';
+import '../browse/free_up_view.dart';
 import '../browse/home_view.dart';
+import '../browse/trash_view.dart';
 import '../settings/settings_view.dart';
 import '../ui/common.dart';
 import 'export_bar.dart';
@@ -28,6 +30,14 @@ class FolderDestination extends Destination {
 
 class SettingsDestination extends Destination {
   const SettingsDestination();
+}
+
+class TrashDestination extends Destination {
+  const TrashDestination();
+}
+
+class FreeUpDestination extends Destination {
+  const FreeUpDestination();
 }
 
 class Shell extends StatefulWidget {
@@ -60,6 +70,12 @@ class _ShellState extends State<Shell> {
     _aller(FolderDestination(r, id), garderRetour: false);
   }
 
+  /// Une entrée de la barre latérale : l'historique repart de zéro.
+  void _principal(Destination d) {
+    _precedents.clear();
+    _aller(d, garderRetour: false);
+  }
+
   void _retour() {
     if (_precedents.isEmpty) return;
     setState(() => _ici = _precedents.removeLast());
@@ -79,10 +95,9 @@ class _ShellState extends State<Shell> {
               _aller(const HomeDestination(), garderRetour: false);
             },
             onRoot: _racine,
-            onSettings: () {
-              _precedents.clear();
-              _aller(const SettingsDestination(), garderRetour: false);
-            },
+            onSettings: () => _principal(const SettingsDestination()),
+            onTrash: () => _principal(const TrashDestination()),
+            onFreeUp: () => _principal(const FreeUpDestination()),
           ),
         ),
         Expanded(
@@ -92,6 +107,7 @@ class _ShellState extends State<Shell> {
             HomeDestination() => HomeView(
                 onOpenRoot: _racine,
                 onOpenFolder: (root, id) => _aller(FolderDestination(root, id)),
+                onFreeUp: () => _aller(const FreeUpDestination()),
               ),
             FolderDestination(:final root, :final folderId) => FolderView(
                 key: ValueKey(folderId),
@@ -101,6 +117,8 @@ class _ShellState extends State<Shell> {
                 onBack: _precedents.isEmpty ? null : _retour,
               ),
             SettingsDestination() => const SettingsView(),
+            TrashDestination() => const TrashView(),
+            FreeUpDestination() => FreeUpView(onOpenTrash: () => _aller(const TrashDestination())),
               },
             ),
             const TransferBar(),
@@ -113,12 +131,21 @@ class _ShellState extends State<Shell> {
 }
 
 class _Barre extends StatelessWidget {
-  const _Barre({required this.ici, required this.onHome, required this.onRoot, required this.onSettings});
+  const _Barre({
+    required this.ici,
+    required this.onHome,
+    required this.onRoot,
+    required this.onSettings,
+    required this.onTrash,
+    required this.onFreeUp,
+  });
 
   final Destination ici;
   final VoidCallback onHome;
   final void Function(SafeboxRoot) onRoot;
   final VoidCallback onSettings;
+  final VoidCallback onTrash;
+  final VoidCallback onFreeUp;
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +184,7 @@ class _Barre extends StatelessWidget {
                 active: ici is FolderDestination && ici.root == r,
                 onTap: vault.rootId(r) == null ? null : () => onRoot(r),
               ),
+            _Entree(icon: Icons.delete_outline, label: l.navTrash, active: ici is TrashDestination, onTap: onTrash),
             const Padding(padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8), child: Divider(height: 1)),
             _Entree(
               icon: Icons.settings_outlined,
@@ -183,6 +211,12 @@ class _Barre extends StatelessWidget {
                   backgroundColor: Palette.border,
                   color: quota.ratio > 0.9 ? Palette.danger : Palette.brand,
                 ),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
+                onPressed: onFreeUp,
+                child: Text(l.freeUp, style: TextStyle(fontWeight: ici is FreeUpDestination ? FontWeight.w700 : null)),
               ),
             ]),
           ),

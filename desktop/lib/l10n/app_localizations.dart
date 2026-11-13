@@ -263,7 +263,7 @@ abstract class AppLocalizations {
   /// No description provided for @folderEmptyHint.
   ///
   /// In fr, this message translates to:
-  /// **'Ajoutez des fichiers depuis votre téléphone.'**
+  /// **'Ajoutez des fichiers avec « Ajouter », ou déposez-les ici.'**
   String get folderEmptyHint;
 
   /// No description provided for @dateToday.
@@ -919,6 +919,312 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Changer'**
   String get change;
+
+  /// No description provided for @newFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau dossier'**
+  String get newFolder;
+
+  /// No description provided for @newAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvel album'**
+  String get newAlbum;
+
+  /// No description provided for @folderNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du dossier'**
+  String get folderNameLabel;
+
+  /// No description provided for @albumNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de l\'album'**
+  String get albumNameLabel;
+
+  /// No description provided for @fileNameLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom du fichier'**
+  String get fileNameLabel;
+
+  /// No description provided for @create.
+  ///
+  /// In fr, this message translates to:
+  /// **'Créer'**
+  String get create;
+
+  /// No description provided for @rename.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renommer'**
+  String get rename;
+
+  /// No description provided for @move.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacer…'**
+  String get move;
+
+  /// No description provided for @moveTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacer vers'**
+  String get moveTitle;
+
+  /// No description provided for @moveHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déplacer ici'**
+  String get moveHere;
+
+  /// No description provided for @addToAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à un album…'**
+  String get addToAlbum;
+
+  /// No description provided for @addToAlbumTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter à un album'**
+  String get addToAlbumTitle;
+
+  /// No description provided for @addHere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter ici'**
+  String get addHere;
+
+  /// No description provided for @addedToAlbum.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier ajouté à l\'album, sans copie} other{{n} fichiers ajoutés à l\'album, sans copie}}'**
+  String addedToAlbum(int n);
+
+  /// No description provided for @moved.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 élément déplacé} other{{n} éléments déplacés}}'**
+  String moved(int n);
+
+  /// No description provided for @toTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mettre à la corbeille'**
+  String get toTrash;
+
+  /// No description provided for @movedToTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 élément mis à la corbeille} other{{n} éléments mis à la corbeille}}'**
+  String movedToTrash(int n);
+
+  /// No description provided for @deleteWhich.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{Ce fichier est aussi ailleurs dans le coffre} other{Certains de ces fichiers sont aussi ailleurs dans le coffre}}'**
+  String deleteWhich(int n);
+
+  /// No description provided for @deleteHereOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer de « {place} » seulement'**
+  String deleteHereOnly(String place);
+
+  /// No description provided for @deleteHereOnlyHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il reste dans « {other} ». Aucun espace libéré.'**
+  String deleteHereOnlyHint(String other);
+
+  /// No description provided for @deleteEverywhere.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer partout'**
+  String get deleteEverywhere;
+
+  /// No description provided for @deleteEverywhereHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Il va à la corbeille ; l\'espace est libéré quand elle est vidée.'**
+  String get deleteEverywhereHint;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 élément sélectionné} other{{n} éléments sélectionnés}}'**
+  String selectedCount(int n);
+
+  /// No description provided for @selectAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout sélectionner'**
+  String get selectAll;
+
+  /// No description provided for @clearSelection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Désélectionner'**
+  String get clearSelection;
+
+  /// No description provided for @folderKeysHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Double-clic pour ouvrir · Ctrl ou Maj + clic pour sélectionner · Suppr : corbeille · F2 : renommer · clic droit : menu'**
+  String get folderKeysHint;
+
+  /// No description provided for @errorNameTaken.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce nom est déjà pris dans ce dossier.'**
+  String get errorNameTaken;
+
+  /// No description provided for @errorWrongFamily.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce dossier n\'accepte pas ce type de fichier.'**
+  String get errorWrongFamily;
+
+  /// No description provided for @errorInvalidMove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un dossier ne se range pas dans lui-même.'**
+  String get errorInvalidMove;
+
+  /// No description provided for @errorTooDeep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de niveaux de dossiers.'**
+  String get errorTooDeep;
+
+  /// No description provided for @errorFolderLimit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de dossiers dans le coffre.'**
+  String get errorFolderLimit;
+
+  /// No description provided for @errorInvalidName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce nom n\'est pas valide.'**
+  String get errorInvalidName;
+
+  /// No description provided for @errorRootLocked.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les dossiers principaux ne se renomment, ne se déplacent ni ne se suppriment.'**
+  String get errorRootLocked;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cet élément n\'existe plus.'**
+  String get errorNotFound;
+
+  /// No description provided for @navTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Corbeille'**
+  String get navTrash;
+
+  /// No description provided for @trashEmptyState.
+  ///
+  /// In fr, this message translates to:
+  /// **'La corbeille est vide'**
+  String get trashEmptyState;
+
+  /// No description provided for @trashHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les éléments restent {days} jours dans la corbeille, puis sont supprimés définitivement. Ils comptent dans votre espace jusque-là.'**
+  String trashHint(int days);
+
+  /// No description provided for @emptyTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vider la corbeille'**
+  String get emptyTrash;
+
+  /// No description provided for @emptyTrashConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout le contenu de la corbeille sera supprimé définitivement. Impossible de revenir en arrière.'**
+  String get emptyTrashConfirm;
+
+  /// No description provided for @restore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restaurer'**
+  String get restore;
+
+  /// No description provided for @restored.
+  ///
+  /// In fr, this message translates to:
+  /// **'Restauré'**
+  String get restored;
+
+  /// No description provided for @deleteForever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Supprimer définitivement'**
+  String get deleteForever;
+
+  /// No description provided for @deleteForeverConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'« {name} » sera supprimé définitivement.'**
+  String deleteForeverConfirm(String name);
+
+  /// No description provided for @trashPurgeIn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =0{Supprimé définitivement aujourd\'hui} =1{Supprimé définitivement demain} other{Supprimé définitivement dans {n} jours}}'**
+  String trashPurgeIn(int n);
+
+  /// No description provided for @trashFrom.
+  ///
+  /// In fr, this message translates to:
+  /// **'Depuis {place}'**
+  String trashFrom(String place);
+
+  /// No description provided for @freeUp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Libérer de l\'espace'**
+  String get freeUp;
+
+  /// No description provided for @freeUpIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les plus gros fichiers du coffre. Ceux que vous choisissez partent de partout, albums compris, pour que leur place soit vraiment libérée.'**
+  String get freeUpIntro;
+
+  /// No description provided for @freeUpHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers mis à la corbeille comptent encore dans votre espace jusqu\'à ce que la corbeille soit vidée.'**
+  String get freeUpHint;
+
+  /// No description provided for @freeUpSelected.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier} other{{n} fichiers}} · {size}'**
+  String freeUpSelected(int n, String size);
+
+  /// No description provided for @freeUpTrash.
+  ///
+  /// In fr, this message translates to:
+  /// **'La corbeille occupe {size}'**
+  String freeUpTrash(String size);
+
+  /// No description provided for @freeUpNothing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun fichier dans le coffre'**
+  String get freeUpNothing;
 }
 
 class _AppLocalizationsDelegate

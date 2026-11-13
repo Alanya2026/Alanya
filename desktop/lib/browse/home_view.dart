@@ -7,10 +7,11 @@ import '../ui/common.dart';
 import 'thumbnail.dart';
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key, required this.onOpenRoot, required this.onOpenFolder});
+  const HomeView({super.key, required this.onOpenRoot, required this.onOpenFolder, required this.onFreeUp});
 
   final void Function(SafeboxRoot) onOpenRoot;
   final void Function(SafeboxRoot root, int folderId) onOpenFolder;
+  final VoidCallback onFreeUp;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +40,7 @@ class HomeView extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 20),
-              _Espace(quota: o.quota),
+              _Espace(quota: o.quota, onFreeUp: onFreeUp),
               const SizedBox(height: 28),
               _Titre(l.homeFolders),
               const SizedBox(height: 12),
@@ -81,8 +82,9 @@ class _Titre extends StatelessWidget {
 }
 
 class _Espace extends StatelessWidget {
-  const _Espace({required this.quota});
+  const _Espace({required this.quota, required this.onFreeUp});
   final SafeboxQuota quota;
+  final VoidCallback onFreeUp;
 
   static const _couleurs = {
     SafeboxRoot.photos: Color(0xFF3F51B5),
@@ -144,6 +146,15 @@ class _Espace extends StatelessWidget {
             if (quota.trashBytes > 0)
               Text(l.spaceTrash(formatBytes(context, quota.trashBytes)), style: Theme.of(context).textTheme.bodySmall),
           ]),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: onFreeUp,
+              icon: const Icon(Icons.cleaning_services_outlined, size: 18),
+              label: Text(l.freeUp),
+            ),
+          ),
         ]),
       ),
     );

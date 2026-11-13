@@ -114,7 +114,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get folderEmpty => 'Empty';
 
   @override
-  String get folderEmptyHint => 'Add files from your phone.';
+  String get folderEmptyHint => 'Add files with “Add”, or drop them here.';
 
   @override
   String get dateToday => 'Today';
@@ -571,4 +571,233 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get change => 'Change';
+
+  @override
+  String get newFolder => 'New folder';
+
+  @override
+  String get newAlbum => 'New album';
+
+  @override
+  String get folderNameLabel => 'Folder name';
+
+  @override
+  String get albumNameLabel => 'Album name';
+
+  @override
+  String get fileNameLabel => 'File name';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get rename => 'Rename';
+
+  @override
+  String get move => 'Move…';
+
+  @override
+  String get moveTitle => 'Move to';
+
+  @override
+  String get moveHere => 'Move here';
+
+  @override
+  String get addToAlbum => 'Add to an album…';
+
+  @override
+  String get addToAlbumTitle => 'Add to an album';
+
+  @override
+  String get addHere => 'Add here';
+
+  @override
+  String addedToAlbum(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files added to the album, without a copy',
+      one: '1 file added to the album, without a copy',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String moved(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n items moved',
+      one: '1 item moved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get toTrash => 'Move to trash';
+
+  @override
+  String movedToTrash(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n items moved to the trash',
+      one: '1 item moved to the trash',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteWhich(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Some of these files are also somewhere else in your SafeBox',
+      one: 'This file is also somewhere else in your SafeBox',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteHereOnly(String place) {
+    return 'Remove from “$place” only';
+  }
+
+  @override
+  String deleteHereOnlyHint(String other) {
+    return 'It stays in “$other”. No space is freed.';
+  }
+
+  @override
+  String get deleteEverywhere => 'Delete everywhere';
+
+  @override
+  String get deleteEverywhereHint =>
+      'It goes to the trash; the space is freed when the trash is emptied.';
+
+  @override
+  String selectedCount(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n items selected',
+      one: '1 item selected',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get clearSelection => 'Clear selection';
+
+  @override
+  String get folderKeysHint =>
+      'Double-click to open · Ctrl or Shift + click to select · Delete: trash · F2: rename · right-click: menu';
+
+  @override
+  String get errorNameTaken => 'This name is already used in this folder.';
+
+  @override
+  String get errorWrongFamily =>
+      'This folder doesn\'t accept this type of file.';
+
+  @override
+  String get errorInvalidMove => 'A folder can\'t go inside itself.';
+
+  @override
+  String get errorTooDeep => 'Too many folder levels.';
+
+  @override
+  String get errorFolderLimit => 'Too many folders in your SafeBox.';
+
+  @override
+  String get errorInvalidName => 'This name isn\'t valid.';
+
+  @override
+  String get errorRootLocked =>
+      'Main folders can\'t be renamed, moved or deleted.';
+
+  @override
+  String get errorNotFound => 'This item no longer exists.';
+
+  @override
+  String get navTrash => 'Trash';
+
+  @override
+  String get trashEmptyState => 'The trash is empty';
+
+  @override
+  String trashHint(int days) {
+    return 'Items stay in the trash for $days days, then are deleted for good. They count towards your space until then.';
+  }
+
+  @override
+  String get emptyTrash => 'Empty the trash';
+
+  @override
+  String get emptyTrashConfirm =>
+      'Everything in the trash will be deleted for good. This can\'t be undone.';
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String get restored => 'Restored';
+
+  @override
+  String get deleteForever => 'Delete for good';
+
+  @override
+  String deleteForeverConfirm(String name) {
+    return '“$name” will be deleted for good.';
+  }
+
+  @override
+  String trashPurgeIn(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Deleted for good in $n days',
+      one: 'Deleted for good tomorrow',
+      zero: 'Deleted for good today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String trashFrom(String place) {
+    return 'From $place';
+  }
+
+  @override
+  String get freeUp => 'Free up space';
+
+  @override
+  String get freeUpIntro =>
+      'The largest files in your SafeBox. The ones you choose are removed everywhere, albums included, so their space is really freed.';
+
+  @override
+  String get freeUpHint =>
+      'Files in the trash still count towards your space until the trash is emptied.';
+
+  @override
+  String freeUpSelected(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files',
+      one: '1 file',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String freeUpTrash(String size) {
+    return 'The trash takes up $size';
+  }
+
+  @override
+  String get freeUpNothing => 'No files in your SafeBox';
 }
