@@ -3,6 +3,7 @@
 import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 
+import '../backup/pc_backup_view.dart';
 import '../browse/folder_view.dart';
 import '../browse/free_up_view.dart';
 import '../browse/home_view.dart';
@@ -38,6 +39,10 @@ class TrashDestination extends Destination {
 
 class FreeUpDestination extends Destination {
   const FreeUpDestination();
+}
+
+class PcBackupDestination extends Destination {
+  const PcBackupDestination();
 }
 
 class Shell extends StatefulWidget {
@@ -98,6 +103,7 @@ class _ShellState extends State<Shell> {
             onSettings: () => _principal(const SettingsDestination()),
             onTrash: () => _principal(const TrashDestination()),
             onFreeUp: () => _principal(const FreeUpDestination()),
+            onPcBackup: () => _principal(const PcBackupDestination()),
           ),
         ),
         Expanded(
@@ -108,6 +114,7 @@ class _ShellState extends State<Shell> {
                 onOpenRoot: _racine,
                 onOpenFolder: (root, id) => _aller(FolderDestination(root, id)),
                 onFreeUp: () => _aller(const FreeUpDestination()),
+                onPcBackup: () => _principal(const PcBackupDestination()),
               ),
             FolderDestination(:final root, :final folderId) => FolderView(
                 key: ValueKey(folderId),
@@ -118,6 +125,7 @@ class _ShellState extends State<Shell> {
               ),
             SettingsDestination() => const SettingsView(),
             TrashDestination() => const TrashView(),
+            PcBackupDestination() => const PcBackupView(),
             FreeUpDestination() => FreeUpView(onOpenTrash: () => _aller(const TrashDestination())),
               },
             ),
@@ -138,6 +146,7 @@ class _Barre extends StatelessWidget {
     required this.onSettings,
     required this.onTrash,
     required this.onFreeUp,
+    required this.onPcBackup,
   });
 
   final Destination ici;
@@ -146,6 +155,7 @@ class _Barre extends StatelessWidget {
   final VoidCallback onSettings;
   final VoidCallback onTrash;
   final VoidCallback onFreeUp;
+  final VoidCallback onPcBackup;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +195,12 @@ class _Barre extends StatelessWidget {
                 onTap: vault.rootId(r) == null ? null : () => onRoot(r),
               ),
             _Entree(icon: Icons.delete_outline, label: l.navTrash, active: ici is TrashDestination, onTap: onTrash),
+            _Entree(
+              icon: Icons.backup_outlined,
+              label: l.navPcBackup,
+              active: ici is PcBackupDestination,
+              onTap: onPcBackup,
+            ),
             const Padding(padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8), child: Divider(height: 1)),
             _Entree(
               icon: Icons.settings_outlined,

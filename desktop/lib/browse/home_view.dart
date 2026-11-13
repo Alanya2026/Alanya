@@ -3,15 +3,23 @@
 import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 
+import '../core/pc_backup.dart';
 import '../ui/common.dart';
 import 'thumbnail.dart';
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key, required this.onOpenRoot, required this.onOpenFolder, required this.onFreeUp});
+  const HomeView({
+    super.key,
+    required this.onOpenRoot,
+    required this.onOpenFolder,
+    required this.onFreeUp,
+    required this.onPcBackup,
+  });
 
   final void Function(SafeboxRoot) onOpenRoot;
   final void Function(SafeboxRoot root, int folderId) onOpenFolder;
   final VoidCallback onFreeUp;
+  final VoidCallback onPcBackup;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +49,7 @@ class HomeView extends StatelessWidget {
               ]),
               const SizedBox(height: 20),
               _Espace(quota: o.quota, onFreeUp: onFreeUp),
+              _SauvegardePc(onOpen: onPcBackup),
               const SizedBox(height: 28),
               _Titre(l.homeFolders),
               const SizedBox(height: 12),
@@ -242,6 +251,48 @@ class _Album extends StatelessWidget {
           Text(context.l.fileCount(album.fileCount), style: Theme.of(context).textTheme.bodySmall),
         ]),
       ),
+    );
+  }
+}
+
+/// L'état de la sauvegarde du PC, quand elle est activée.
+class _SauvegardePc extends StatelessWidget {
+  const _SauvegardePc({required this.onOpen});
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = context.vault.pcBackup;
+    return ListenableBuilder(
+      listenable: Listenable.merge([b, b.engine.progress]),
+      builder: (context, _) {
+        if (!b.settings.toEngine().enabled) return const SizedBox.shrink();
+        final l = context.l;
+        final PcBackup(:running, :lastReport) = b;
+        final p = b.engine.progress.value;
+        final texte = running && (p?.listing ?? true)
+            ? l.pcBackupListing
+            : running && p != null && p.analysing
+                ? l.pcBackupChecking(p.checked, p.toCheck)
+                : l.pcBackupRemaining(p?.remaining ?? 0);
+        return Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Card(
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              onTap: onOpen,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              leading: Icon(running ? Icons.sync : Icons.backup_outlined, color: Palette.brand),
+              title: Text(l.pcBackupHome, style: const TextStyle(fontWeight: FontWeight.w500)),
+              subtitle: Text([
+                texte,
+                if (lastReport != null && lastReport.noRoom > 0) l.pcBackupNoRoom(lastReport.noRoom),
+              ].join(' · ')),
+              trailing: const Icon(Icons.chevron_right),
+            ),
+          ),
+        );
+      },
     );
   }
 }

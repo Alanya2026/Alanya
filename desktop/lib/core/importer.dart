@@ -321,14 +321,19 @@ class Importer extends ChangeNotifier {
         }
       }
 
-      final travail = await workDir();
-      await travail.create(recursive: true);
-      final maxApercu = limits.maxPreviewBytes - kSafeboxTagBytes;
       for (var i = 0; i < plan.send.length; i += 1) {
         final c = plan.send[i];
         try {
           final dossier = c.folderId ?? await dossiers.resolve(c.folderPath);
-          await _confier(c, dossier, travail, maxApercu, limits.fileNameMax);
+          await enqueueFile(
+            path: c.path,
+            name: c.name,
+            family: c.family,
+            folderId: dossier,
+            limits: limits,
+            source: c.source,
+            fp: c.fp,
+          );
           faits += 1;
         } catch (e) {
           debugPrint('[Coffre] préparation de ${c.name} impossible : $e');
@@ -341,16 +346,32 @@ class Importer extends ChangeNotifier {
     }
   }
 
-  Future<void> _confier(ImportCandidate c, int dossier, Directory travail, int maxApercu, int nomMax) async {
-    final st = await File(c.path).stat();
+  /// Confie un fichier du PC au gestionnaire d'envois, en Original : aperçu
+  /// chiffré d'une photo, dimensions, dossier d'origine ([source]), empreinte
+  /// ([fp]). [backupKey] : il vient de la sauvegarde du PC. Rend
+  /// l'identifiant de l'envoi.
+  Future<String> enqueueFile({
+    required String path,
+    required String name,
+    required SafeboxFamily family,
+    required int folderId,
+    required SafeboxLimits limits,
+    String? source,
+    String? fp,
+    String? backupKey,
+  }) async {
+    final travail = await workDir();
+    await travail.create(recursive: true);
+    final maxApercu = limits.maxPreviewBytes - kSafeboxTagBytes;
+    final st = await File(path).stat();
     final cle = safeboxNewFileKey();
     String? cheminApercu;
     var tailleApercu = 0;
     int? largeur;
     int? hauteur;
-    if (c.family == SafeboxFamily.photos) {
+    if (family == SafeboxFamily.photos) {
       try {
-        final a = await photoPreview(c.path);
+        final a = await photoPreview(path);
         largeur = a.width;
         hauteur = a.height;
         final jpeg = a.jpeg;
@@ -362,16 +383,17 @@ class Importer extends ChangeNotifier {
         }
       } catch (e) {
         // Format que l'ordinateur ne lit pas (HEIC sous Linux…) : sans aperçu.
-        debugPrint('[Coffre] aperçu de ${c.name} impossible : $e');
+        debugPrint('[Coffre] aperçu de $name impossible : $e');
       }
     }
+    final id = '${DateTime.now().microsecondsSinceEpoch}_${path.hashCode}';
     await enqueue(
       SafeboxUploadJob(
-        id: '${DateTime.now().microsecondsSinceEpoch}_${c.path.hashCode}',
-        folderId: dossier,
-        name: shortenFileName(c.name, nomMax),
+        id: id,
+        folderId: folderId,
+        name: shortenFileName(name, limits.fileNameMax),
         mime: null,
-        sourcePath: c.path,
+        sourcePath: path,
         sourceSize: st.size,
         sourceModifiedMs: st.modified.millisecondsSinceEpoch,
         // Jamais le fichier de l'inscrit : il reste sur son PC.
@@ -384,12 +406,14 @@ class Importer extends ChangeNotifier {
         previewSize: tailleApercu,
         meta: {
           if (largeur != null && hauteur != null) ...{'width': largeur, 'height': hauteur},
-          'source': ?c.source,
+          'source': ?source,
         },
-        sourceFp: c.fp,
+        sourceFp: fp,
+        backupKey: backupKey,
       ),
       cle,
     );
+    return id;
   }
 
   static Future<List<String?>> _empreintesIsolat(List<String> chemins) => Isolate.run(() => [

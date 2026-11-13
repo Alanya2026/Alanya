@@ -800,4 +800,170 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get freeUpNothing => 'No files in your SafeBox';
+
+  @override
+  String get navPcBackup => 'PC backup';
+
+  @override
+  String get pcBackupIntro =>
+      'Files in the chosen folders go to your SafeBox on their own, each into the folder for its type, with the PC folder\'s name as its source folder. A file deleted from the PC stays in your SafeBox; a file deleted from your SafeBox doesn\'t come back.';
+
+  @override
+  String get pcBackupSwitch => 'Back up these folders automatically';
+
+  @override
+  String get pcBackupOpenOnly =>
+      'While the app is open: a pass at startup, after each change in the folders, and every 15 minutes. In Original quality.';
+
+  @override
+  String get pcBackupFolders => 'Backed-up folders';
+
+  @override
+  String get pcBackupAddFolder => 'Add a folder…';
+
+  @override
+  String get pcBackupNoFolder =>
+      'No folder chosen yet. Add Pictures or Documents, for example.';
+
+  @override
+  String get pcBackupRemoveFolder => 'Stop backing up this folder';
+
+  @override
+  String pcBackupRemoveConfirm(String name) {
+    return '“$name” will no longer be backed up. What\'s already in your SafeBox stays there.';
+  }
+
+  @override
+  String get pcBackupFolderMissing => 'Folder not found on this PC';
+
+  @override
+  String get pcBackupAlreadyAdded => 'This folder is already backed up.';
+
+  @override
+  String get pcBackupNoType => 'Choose at least one type of file.';
+
+  @override
+  String get pcBackupRunNow => 'Back up now';
+
+  @override
+  String get pcBackupListing => 'Reading the folders…';
+
+  @override
+  String pcBackupChecking(int done, int total) {
+    return 'Comparing with your SafeBox… $done / $total';
+  }
+
+  @override
+  String pcBackupRemaining(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files to upload',
+      one: '1 file to upload',
+      zero: 'Up to date',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupLast(String time) {
+    return 'Last pass: $time';
+  }
+
+  @override
+  String get pcBackupNever => 'No pass yet';
+
+  @override
+  String get pcBackupOff => 'Backup is off';
+
+  @override
+  String pcBackupQueued(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files uploaded',
+      one: '1 file uploaded',
+      zero: 'nothing new',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupAlready(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n already in your SafeBox',
+      one: '1 already in your SafeBox',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupSkipped(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n deleted from your SafeBox, not uploaded again',
+      one: '1 deleted from your SafeBox, not uploaded again',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupNoRoom(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files are waiting for space in your SafeBox',
+      one: '1 file is waiting for space in your SafeBox',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupUnreadable(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n unreadable files',
+      one: '1 unreadable file',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupFailed(String reason) {
+    return 'The last pass didn\'t finish. $reason';
+  }
+
+  @override
+  String pcBackupEstimateTitle(String name) {
+    return 'Back up “$name”';
+  }
+
+  @override
+  String get pcBackupTypes => 'What\'s backed up:';
+
+  @override
+  String pcBackupEstimate(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n files · $size',
+      one: '1 file · $size',
+      zero: 'No files of these types yet.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pcBackupEstimateHint =>
+      'What\'s already in your SafeBox (backed up from your phone, for example) won\'t be uploaded again, so the real upload may be smaller. The newest files go first; if space runs out, the oldest wait.';
+
+  @override
+  String get pcBackupStart => 'Back up';
+
+  @override
+  String get pcBackupHome => 'PC backup';
 }

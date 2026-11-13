@@ -1225,6 +1225,192 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Aucun fichier dans le coffre'**
   String get freeUpNothing;
+
+  /// No description provided for @navPcBackup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde du PC'**
+  String get navPcBackup;
+
+  /// No description provided for @pcBackupIntro.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les fichiers des dossiers choisis partent tout seuls dans le coffre, chacun dans le dossier de son type, avec le nom du dossier du PC comme dossier d\'origine. Un fichier supprimé du PC reste dans le coffre ; un fichier supprimé du coffre ne revient pas.'**
+  String get pcBackupIntro;
+
+  /// No description provided for @pcBackupSwitch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder ces dossiers automatiquement'**
+  String get pcBackupSwitch;
+
+  /// No description provided for @pcBackupOpenOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tant que l\'application est ouverte : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.'**
+  String get pcBackupOpenOnly;
+
+  /// No description provided for @pcBackupFolders.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dossiers sauvegardés'**
+  String get pcBackupFolders;
+
+  /// No description provided for @pcBackupAddFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ajouter un dossier…'**
+  String get pcBackupAddFolder;
+
+  /// No description provided for @pcBackupNoFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun dossier choisi. Ajoutez par exemple Images ou Documents.'**
+  String get pcBackupNoFolder;
+
+  /// No description provided for @pcBackupRemoveFolder.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ne plus sauvegarder ce dossier'**
+  String get pcBackupRemoveFolder;
+
+  /// No description provided for @pcBackupRemoveConfirm.
+  ///
+  /// In fr, this message translates to:
+  /// **'« {name} » ne sera plus sauvegardé. Ce qui est déjà dans le coffre y reste.'**
+  String pcBackupRemoveConfirm(String name);
+
+  /// No description provided for @pcBackupFolderMissing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dossier introuvable sur ce PC'**
+  String get pcBackupFolderMissing;
+
+  /// No description provided for @pcBackupAlreadyAdded.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce dossier est déjà sauvegardé.'**
+  String get pcBackupAlreadyAdded;
+
+  /// No description provided for @pcBackupNoType.
+  ///
+  /// In fr, this message translates to:
+  /// **'Choisissez au moins un type de fichier.'**
+  String get pcBackupNoType;
+
+  /// No description provided for @pcBackupRunNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder maintenant'**
+  String get pcBackupRunNow;
+
+  /// No description provided for @pcBackupListing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lecture des dossiers…'**
+  String get pcBackupListing;
+
+  /// No description provided for @pcBackupChecking.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comparaison avec le coffre… {done} / {total}'**
+  String pcBackupChecking(int done, int total);
+
+  /// No description provided for @pcBackupRemaining.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =0{À jour} =1{1 fichier à envoyer} other{{n} fichiers à envoyer}}'**
+  String pcBackupRemaining(int n);
+
+  /// No description provided for @pcBackupLast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dernier passage : {time}'**
+  String pcBackupLast(String time);
+
+  /// No description provided for @pcBackupNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Pas encore de passage'**
+  String get pcBackupNever;
+
+  /// No description provided for @pcBackupOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde arrêtée'**
+  String get pcBackupOff;
+
+  /// No description provided for @pcBackupQueued.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =0{rien de nouveau} =1{1 fichier envoyé} other{{n} fichiers envoyés}}'**
+  String pcBackupQueued(int n);
+
+  /// No description provided for @pcBackupAlready.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 déjà dans le coffre} other{{n} déjà dans le coffre}}'**
+  String pcBackupAlready(int n);
+
+  /// No description provided for @pcBackupSkipped.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 supprimé du coffre, pas renvoyé} other{{n} supprimés du coffre, pas renvoyés}}'**
+  String pcBackupSkipped(int n);
+
+  /// No description provided for @pcBackupNoRoom.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier attend de la place dans le coffre} other{{n} fichiers attendent de la place dans le coffre}}'**
+  String pcBackupNoRoom(int n);
+
+  /// No description provided for @pcBackupUnreadable.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier illisible} other{{n} fichiers illisibles}}'**
+  String pcBackupUnreadable(int n);
+
+  /// No description provided for @pcBackupFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le dernier passage n\'a pas abouti. {reason}'**
+  String pcBackupFailed(String reason);
+
+  /// No description provided for @pcBackupEstimateTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder « {name} »'**
+  String pcBackupEstimateTitle(String name);
+
+  /// No description provided for @pcBackupTypes.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce qui part :'**
+  String get pcBackupTypes;
+
+  /// No description provided for @pcBackupEstimate.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =0{Aucun fichier de ces types pour l\'instant.} =1{1 fichier · {size}} other{{n} fichiers · {size}}}'**
+  String pcBackupEstimate(int n, String size);
+
+  /// No description provided for @pcBackupEstimateHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce qui est déjà dans le coffre (sauvegardé depuis le téléphone, par exemple) ne repartira pas : l\'envoi réel peut être plus léger. Les plus récents partent d\'abord ; si la place manque, les plus anciens attendent.'**
+  String get pcBackupEstimateHint;
+
+  /// No description provided for @pcBackupStart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder'**
+  String get pcBackupStart;
+
+  /// No description provided for @pcBackupHome.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarde du PC'**
+  String get pcBackupHome;
 }
 
 class _AppLocalizationsDelegate

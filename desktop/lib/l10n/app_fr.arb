@@ -560,5 +560,126 @@
       }
     }
   },
-  "freeUpNothing": "Aucun fichier dans le coffre"
+  "freeUpNothing": "Aucun fichier dans le coffre",
+  "navPcBackup": "Sauvegarde du PC",
+  "pcBackupIntro": "Les fichiers des dossiers choisis partent tout seuls dans le coffre, chacun dans le dossier de son type, avec le nom du dossier du PC comme dossier d'origine. Un fichier supprimé du PC reste dans le coffre ; un fichier supprimé du coffre ne revient pas.",
+  "pcBackupSwitch": "Sauvegarder ces dossiers automatiquement",
+  "pcBackupOpenOnly": "Tant que l'application est ouverte : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.",
+  "pcBackupFolders": "Dossiers sauvegardés",
+  "pcBackupAddFolder": "Ajouter un dossier…",
+  "pcBackupNoFolder": "Aucun dossier choisi. Ajoutez par exemple Images ou Documents.",
+  "pcBackupRemoveFolder": "Ne plus sauvegarder ce dossier",
+  "pcBackupRemoveConfirm": "« {name} » ne sera plus sauvegardé. Ce qui est déjà dans le coffre y reste.",
+  "@pcBackupRemoveConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pcBackupFolderMissing": "Dossier introuvable sur ce PC",
+  "pcBackupAlreadyAdded": "Ce dossier est déjà sauvegardé.",
+  "pcBackupNoType": "Choisissez au moins un type de fichier.",
+  "pcBackupRunNow": "Sauvegarder maintenant",
+  "pcBackupListing": "Lecture des dossiers…",
+  "pcBackupChecking": "Comparaison avec le coffre… {done} / {total}",
+  "@pcBackupChecking": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupRemaining": "{n, plural, =0{À jour} =1{1 fichier à envoyer} other{{n} fichiers à envoyer}}",
+  "@pcBackupRemaining": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupLast": "Dernier passage : {time}",
+  "@pcBackupLast": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "pcBackupNever": "Pas encore de passage",
+  "pcBackupOff": "Sauvegarde arrêtée",
+  "pcBackupQueued": "{n, plural, =0{rien de nouveau} =1{1 fichier envoyé} other{{n} fichiers envoyés}}",
+  "@pcBackupQueued": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupAlready": "{n, plural, =1{1 déjà dans le coffre} other{{n} déjà dans le coffre}}",
+  "@pcBackupAlready": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupSkipped": "{n, plural, =1{1 supprimé du coffre, pas renvoyé} other{{n} supprimés du coffre, pas renvoyés}}",
+  "@pcBackupSkipped": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupNoRoom": "{n, plural, =1{1 fichier attend de la place dans le coffre} other{{n} fichiers attendent de la place dans le coffre}}",
+  "@pcBackupNoRoom": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupUnreadable": "{n, plural, =1{1 fichier illisible} other{{n} fichiers illisibles}}",
+  "@pcBackupUnreadable": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "pcBackupFailed": "Le dernier passage n'a pas abouti. {reason}",
+  "@pcBackupFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "pcBackupEstimateTitle": "Sauvegarder « {name} »",
+  "@pcBackupEstimateTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pcBackupTypes": "Ce qui part :",
+  "pcBackupEstimate": "{n, plural, =0{Aucun fichier de ces types pour l'instant.} =1{1 fichier · {size}} other{{n} fichiers · {size}}}",
+  "@pcBackupEstimate": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "pcBackupEstimateHint": "Ce qui est déjà dans le coffre (sauvegardé depuis le téléphone, par exemple) ne repartira pas : l'envoi réel peut être plus léger. Les plus récents partent d'abord ; si la place manque, les plus anciens attendent.",
+  "pcBackupStart": "Sauvegarder",
+  "pcBackupHome": "Sauvegarde du PC"
 }

@@ -807,4 +807,170 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get freeUpNothing => 'Aucun fichier dans le coffre';
+
+  @override
+  String get navPcBackup => 'Sauvegarde du PC';
+
+  @override
+  String get pcBackupIntro =>
+      'Les fichiers des dossiers choisis partent tout seuls dans le coffre, chacun dans le dossier de son type, avec le nom du dossier du PC comme dossier d\'origine. Un fichier supprimé du PC reste dans le coffre ; un fichier supprimé du coffre ne revient pas.';
+
+  @override
+  String get pcBackupSwitch => 'Sauvegarder ces dossiers automatiquement';
+
+  @override
+  String get pcBackupOpenOnly =>
+      'Tant que l\'application est ouverte : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.';
+
+  @override
+  String get pcBackupFolders => 'Dossiers sauvegardés';
+
+  @override
+  String get pcBackupAddFolder => 'Ajouter un dossier…';
+
+  @override
+  String get pcBackupNoFolder =>
+      'Aucun dossier choisi. Ajoutez par exemple Images ou Documents.';
+
+  @override
+  String get pcBackupRemoveFolder => 'Ne plus sauvegarder ce dossier';
+
+  @override
+  String pcBackupRemoveConfirm(String name) {
+    return '« $name » ne sera plus sauvegardé. Ce qui est déjà dans le coffre y reste.';
+  }
+
+  @override
+  String get pcBackupFolderMissing => 'Dossier introuvable sur ce PC';
+
+  @override
+  String get pcBackupAlreadyAdded => 'Ce dossier est déjà sauvegardé.';
+
+  @override
+  String get pcBackupNoType => 'Choisissez au moins un type de fichier.';
+
+  @override
+  String get pcBackupRunNow => 'Sauvegarder maintenant';
+
+  @override
+  String get pcBackupListing => 'Lecture des dossiers…';
+
+  @override
+  String pcBackupChecking(int done, int total) {
+    return 'Comparaison avec le coffre… $done / $total';
+  }
+
+  @override
+  String pcBackupRemaining(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers à envoyer',
+      one: '1 fichier à envoyer',
+      zero: 'À jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupLast(String time) {
+    return 'Dernier passage : $time';
+  }
+
+  @override
+  String get pcBackupNever => 'Pas encore de passage';
+
+  @override
+  String get pcBackupOff => 'Sauvegarde arrêtée';
+
+  @override
+  String pcBackupQueued(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers envoyés',
+      one: '1 fichier envoyé',
+      zero: 'rien de nouveau',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupAlready(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n déjà dans le coffre',
+      one: '1 déjà dans le coffre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupSkipped(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n supprimés du coffre, pas renvoyés',
+      one: '1 supprimé du coffre, pas renvoyé',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupNoRoom(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers attendent de la place dans le coffre',
+      one: '1 fichier attend de la place dans le coffre',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupUnreadable(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers illisibles',
+      one: '1 fichier illisible',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String pcBackupFailed(String reason) {
+    return 'Le dernier passage n\'a pas abouti. $reason';
+  }
+
+  @override
+  String pcBackupEstimateTitle(String name) {
+    return 'Sauvegarder « $name »';
+  }
+
+  @override
+  String get pcBackupTypes => 'Ce qui part :';
+
+  @override
+  String pcBackupEstimate(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n fichiers · $size',
+      one: '1 fichier · $size',
+      zero: 'Aucun fichier de ces types pour l\'instant.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pcBackupEstimateHint =>
+      'Ce qui est déjà dans le coffre (sauvegardé depuis le téléphone, par exemple) ne repartira pas : l\'envoi réel peut être plus léger. Les plus récents partent d\'abord ; si la place manque, les plus anciens attendent.';
+
+  @override
+  String get pcBackupStart => 'Sauvegarder';
+
+  @override
+  String get pcBackupHome => 'Sauvegarde du PC';
 }

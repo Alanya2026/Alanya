@@ -7,12 +7,13 @@ import 'package:flutter/foundation.dart';
 import 'desktop_api.dart';
 import 'exporter.dart';
 import 'importer.dart';
+import 'pc_backup.dart';
 import 'photo_preview.dart';
 
 /// L'état du coffre pour les écrans : espace, dossiers racines, albums
 /// récents, aperçus, fichiers ouverts et enregistrés, envois.
 class Vault extends ChangeNotifier {
-  Vault(this.api, {Future<Directory> Function()? baseDir, SafeboxJobStore? jobStore})
+  Vault(this.api, {Future<Directory> Function()? baseDir, SafeboxJobStore? jobStore, SafeboxBackupStore? backupStore})
       : _baseDir = baseDir ?? safeboxLocalDir,
         _magasin = _MagasinFerme(jobStore ?? PrefsSafeboxJobStore()),
         previews = SafeboxPreviewCache(transport: ApiSafeboxDownloadTransport(api), baseDir: baseDir),
@@ -25,7 +26,22 @@ class Vault extends ChangeNotifier {
       workDir: () async => Directory('${(await _baseDir()).path}${Platform.pathSeparator}work'),
       photoPreview: makePhotoPreview,
     );
+    pcBackup = PcBackup(
+      api: _ApiSauvegarde(api),
+      enqueue: _envoyerSauvegarde,
+      freeSpace: _espaceLibre,
+      limits: () => _overview?.limits,
+      jobAlive: (id) async => uploads.jobs.any((j) => j.id == id && _enRoute(j)),
+      discardJob: uploads.cancel,
+      refreshOverview: refresh,
+      store: backupStore,
+    );
     _fin = uploads.completed.listen(_arrive);
+    _finSauvegarde = uploads.completedJobs.listen((e) {
+      final cle = e.job.backupKey;
+      if (cle != null) unawaited(pcBackup.markSaved(cle));
+    });
+    unawaited(pcBackup.start());
     // Les envois gardés d'une session précédente repartent ; ceux qui
     // attendaient le réseau sont relancés de temps en temps.
     unawaited(uploads.resumeAll());
@@ -46,6 +62,46 @@ class Vault extends ChangeNotifier {
   /// Les envois vers le coffre (paquet commun, comme le téléphone).
   late final SafeboxUploadManager uploads;
   late final Importer importer;
+
+  /// La sauvegarde des dossiers du PC (D6).
+  late final PcBackup pcBackup;
+  late final StreamSubscription<({SafeboxUploadJob job, SafeboxFile file})> _finSauvegarde;
+
+  static bool _enRoute(SafeboxUploadJob j) =>
+      j.state != SafeboxUploadState.failed && j.state != SafeboxUploadState.completed;
+
+  /// Place libre du coffre, envois en cours déduits ; null si inconnue.
+  Future<int?> _espaceLibre() async {
+    final q = _overview?.quota;
+    if (q == null) return null;
+    final enRoute = uploads.jobs.where(_enRoute).fold<int>(0, (s, j) => s + (j.storedSize - j.sentBytes).clamp(0, 1 << 62));
+    return (q.quotaBytes - q.usedBytes - enRoute).clamp(0, 1 << 62);
+  }
+
+  /// Un fichier de la sauvegarde du PC part dans la racine de son type.
+  Future<String?> _envoyerSauvegarde(SafeboxBackupUpload u) async {
+    // L'ordinateur ne compresse pas : ce que le moteur voudrait en HD (vidéo
+    // plus lourde que la limite) attend.
+    if (u.quality != SafeboxQuality.original) return null;
+    final o = _overview;
+    final dossier = o?.rootIds[u.item.family.root];
+    if (o == null || dossier == null) return null;
+    try {
+      return await importer.enqueueFile(
+        path: u.file.path,
+        name: u.item.name,
+        family: u.item.family,
+        folderId: dossier,
+        limits: o.limits,
+        source: u.item.folder,
+        fp: u.fp,
+        backupKey: u.item.key,
+      );
+    } catch (e) {
+      debugPrint('[Sauvegarde PC] ${u.item.name} non confié : $e');
+      return null;
+    }
+  }
   final _MagasinFerme _magasin;
   late final StreamSubscription<SafeboxFile> _fin;
   late final Timer _relance;
@@ -82,8 +138,12 @@ class Vault extends ChangeNotifier {
 
   int? rootId(SafeboxRoot r) => _overview?.rootIds[r];
 
-  Future<void> refresh() async {
-    if (_loading) return;
+  Future<void>? _lecture;
+
+  /// Relit l'espace et les racines ; pendant une lecture, rend celle-ci.
+  Future<void> refresh() => _lecture ??= _relire().whenComplete(() => _lecture = null);
+
+  Future<void> _relire() async {
     _loading = true;
     notifyListeners();
     try {
@@ -146,6 +206,7 @@ class Vault extends ChangeNotifier {
   Future<void> close() async {
     if (_magasin.closed) return;
     _relance.cancel();
+    pcBackup.close();
     await uploads.pauseAll();
     _magasin.closed = true;
   }
@@ -156,6 +217,8 @@ class Vault extends ChangeNotifier {
     _relance.cancel();
     _rafraichir?.cancel();
     unawaited(_fin.cancel());
+    unawaited(_finSauvegarde.cancel());
+    pcBackup.dispose();
     unawaited(_changes.close());
     unawaited(uploads.pauseAll());
     importer.dispose();
@@ -189,4 +252,31 @@ class _MagasinFerme implements SafeboxJobStore {
   Future<void> deleteKey(String jobId) async {
     if (!closed) await _s.deleteKey(jobId);
   }
+}
+
+/// Le serveur vu par la sauvegarde du PC (comme sur le téléphone).
+class _ApiSauvegarde implements SafeboxBackupApi {
+  _ApiSauvegarde(this._api);
+  final DesktopApi _api;
+
+  @override
+  Future<Map<String, SafeboxBackupStatus>> check(List<String> fps, {bool link = true}) async {
+    final r = await _api.checkSafeboxBackupQuality(fps, link: link);
+    return {
+      for (final e in r.entries)
+        e.key: SafeboxBackupStatus(
+          switch (e.value.state) {
+            'saved' => SafeboxBackupCheck.saved,
+            'elsewhere' => SafeboxBackupCheck.elsewhere,
+            'uploading' => SafeboxBackupCheck.uploading,
+            'skip' => SafeboxBackupCheck.skip,
+            _ => SafeboxBackupCheck.unknown,
+          },
+          original: e.value.original,
+        ),
+    };
+  }
+
+  @override
+  Future<void> skip(List<String> fps) => _api.skipSafeboxBackup(fps);
 }
