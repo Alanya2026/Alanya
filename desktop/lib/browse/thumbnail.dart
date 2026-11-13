@@ -51,6 +51,17 @@ class _ThumbnailState extends State<Thumbnail> {
           Image.memory(b, fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, _, _) => _Icone(f.family))
         else
           _Icone(f.family),
+        // Une bulle pour un commentaire écrit, un micro pour un audio seul.
+        if (f.note != null)
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(color: Color(0x99000000), shape: BoxShape.circle),
+              child: Icon(f.note!.text != null ? Icons.chat_bubble : Icons.mic, size: 12, color: Colors.white),
+            ),
+          ),
         if (f.family == SafeboxFamily.videos)
           const Align(
             alignment: Alignment.center,

@@ -52,6 +52,20 @@ class _FolderViewState extends State<FolderView> {
   final Set<_Cle> _choix = {};
   _Cle? _ancre;
 
+  /// Filtres, comme sur le téléphone : par type (Albums, Partager), par
+  /// dossier d'origine (Photos, Vidéos), « Avec commentaire ».
+  SafeboxFamily? _filtre;
+  String? _filtreSource;
+  bool _commentees = false;
+
+  /// Les fichiers montrés, filtres appliqués.
+  List<SafeboxFile> get _visibles => _fichiers
+      .where((f) =>
+          (_filtre == null || f.family == _filtre) &&
+          (_filtreSource == null || f.meta?.source == _filtreSource) &&
+          (!_commentees || f.note != null))
+      .toList();
+
   /// Le clic précédent : un second clic rapide sur le même élément l'ouvre.
   ({_Cle cle, DateTime quand})? _dernierClic;
 
@@ -103,6 +117,8 @@ class _FolderViewState extends State<FolderView> {
         // Ce qui a disparu (déplacé, à la corbeille) quitte la sélection.
         _choix.removeWhere((c) => c.dossier ? !p.folders.any((d) => d.id == c.id) : !_fichiers.any((f) => f.id == c.id));
       });
+      // « Avec commentaire » porte sur tout le dossier, pas sur la première page.
+      if (_commentees) await _toutCharger();
     } catch (e) {
       if (mounted && !silencieux) setState(() => _erreur = e);
     } finally {
@@ -133,7 +149,7 @@ class _FolderViewState extends State<FolderView> {
   /// Dans l'ordre de l'écran : les sous-dossiers, puis les fichiers.
   List<_Cle> get _ordre => [
         for (final d in _page?.folders ?? const <SafeboxFolder>[]) (dossier: true, id: d.id),
-        for (final f in _fichiers) (dossier: false, id: f.id),
+        for (final f in _visibles) (dossier: false, id: f.id),
       ];
 
   List<SafeboxFile> get _fichiersChoisis => _fichiers.where((f) => _choix.contains((dossier: false, id: f.id))).toList();
@@ -191,8 +207,9 @@ class _FolderViewState extends State<FolderView> {
       widget.onOpenFolder(cle.id);
       return;
     }
-    final i = _fichiers.indexWhere((x) => x.id == cle.id);
-    if (i >= 0) openViewer(context, _fichiers, i);
+    final visibles = _visibles;
+    final i = visibles.indexWhere((x) => x.id == cle.id);
+    if (i >= 0) openViewer(context, visibles, i);
   }
 
   String get _ici => _page == null ? rootName(context, widget.root) : folderName(context, _page!.folder);
@@ -248,6 +265,98 @@ class _FolderViewState extends State<FolderView> {
     final t = exporter.task;
     if (!mounted || t == null) return;
     if (t.state == ExportState.failed) messager.showSnackBar(SnackBar(content: Text(l.downloadFailed)));
+  }
+
+  // ── Filtres ──────────────────────────────────────────────────────────────
+
+  /// Tous les fichiers du dossier (toutes les pages) : un filtre ne doit
+  /// manquer aucune photo.
+  Future<bool> _toutCharger() async {
+    try {
+      while (_suite != null) {
+        final p = await context.vault.folder(widget.folderId, cursor: _suite);
+        if (!mounted) return false;
+        setState(() {
+          _fichiers.addAll(p.files);
+          _suite = p.nextCursor;
+        });
+      }
+      return true;
+    } catch (e) {
+      if (mounted) showErrorSnack(context, e);
+      return false;
+    }
+  }
+
+  void _filtrer(void Function() changement) => setState(() {
+        changement();
+        // Ce qui n'est plus montré quitte la sélection.
+        final montres = {for (final f in _visibles) f.id};
+        _choix.removeWhere((c) => !c.dossier && !montres.contains(c.id));
+      });
+
+  static String _nomSource(BuildContext context, String nom) {
+    final l = context.l;
+    return switch (nom.toLowerCase()) {
+      'camera' || 'dcim' => l.folderCamera,
+      'screenshots' => l.folderScreenshots,
+      'download' || 'downloads' => l.folderDownloads,
+      _ => nom,
+    };
+  }
+
+  /// La barre des filtres, quand le dossier en a besoin (mêmes règles que le
+  /// téléphone) ; null sinon.
+  Widget? _filtres(BuildContext context) {
+    final l = context.l;
+    final parJour = widget.root == SafeboxRoot.photos || widget.root == SafeboxRoot.videos;
+    final puces = <Widget>[];
+    // « Avec commentaire » : Photos, Vidéos, Albums, dès qu'une photo en a un.
+    if ((parJour || widget.root == SafeboxRoot.albums) && (_commentees || _fichiers.any((f) => f.note != null))) {
+      puces.add(FilterChip(
+        avatar: const Icon(Icons.chat_bubble_outline, size: 16),
+        label: Text(l.filterWithNote),
+        selected: _commentees,
+        onSelected: (oui) async {
+          if (oui && !await _toutCharger()) return;
+          if (mounted) _filtrer(() => _commentees = oui);
+        },
+      ));
+    }
+    Widget choix(bool choisi, String texte, VoidCallback onTap) =>
+        ChoiceChip(label: Text(texte), selected: choisi, onSelected: (_) => onTap());
+    if (parJour) {
+      // Par dossier d'origine, quand il y en a plusieurs.
+      final parSource = <String, int>{};
+      for (final f in _fichiers) {
+        final src = f.meta?.source;
+        if (src != null) parSource[src] = (parSource[src] ?? 0) + 1;
+      }
+      if (parSource.isNotEmpty && !(parSource.length < 2 && parSource.values.first == _fichiers.length)) {
+        final sources = parSource.keys.toList()..sort((a, b) => parSource[b]!.compareTo(parSource[a]!));
+        puces.add(choix(_filtreSource == null, l.filterAll, () => _filtrer(() => _filtreSource = null)));
+        for (final src in sources) {
+          puces.add(choix(_filtreSource == src, '${_nomSource(context, src)} · ${parSource[src]}',
+              () => _filtrer(() => _filtreSource = src)));
+        }
+      }
+    } else if (widget.root == SafeboxRoot.albums || widget.root == SafeboxRoot.partager) {
+      // Par type, quand le dossier en mélange plusieurs.
+      final familles = _fichiers.map((f) => f.family).toSet();
+      if (familles.length >= 2 || _filtre != null) {
+        puces.add(choix(_filtre == null, l.filterAll, () => _filtrer(() => _filtre = null)));
+        for (final f in SafeboxFamily.values) {
+          if (familles.contains(f)) {
+            puces.add(choix(_filtre == f, rootName(context, f.root), () => _filtrer(() => _filtre = f)));
+          }
+        }
+      }
+    }
+    if (puces.isEmpty) return null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 4, 32, 4),
+      child: Align(alignment: Alignment.centerLeft, child: Wrap(spacing: 8, runSpacing: 6, children: puces)),
+    );
   }
 
   // ── Menus ────────────────────────────────────────────────────────────────
@@ -354,6 +463,7 @@ class _FolderViewState extends State<FolderView> {
                 onNewFolder: _nouveauDossier,
                 onDownloadFolder: _fichiers.isNotEmpty || page.folders.isNotEmpty ? () => _telechargerDossier(page.folder) : null,
               ),
+              ?_filtres(context),
               if (_choix.isNotEmpty)
                 _BarreSelection(
                   count: _choix.length,
@@ -376,7 +486,7 @@ class _FolderViewState extends State<FolderView> {
   Widget _contenu(BuildContext context, SafeboxFolderPage page) {
     final l = context.l;
     final t = Theme.of(context).textTheme;
-    final jours = _parJour(_fichiers);
+    final jours = _parJour(_visibles);
     return GestureDetector(
       // Clic dans le vide : on désélectionne ; clic droit : menu du dossier.
       behavior: HitTestBehavior.translucent,

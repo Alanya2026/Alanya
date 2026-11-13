@@ -221,5 +221,10 @@
   "pcBackupHome": "PC backup",
   "updateAvailable": "Version {version} of Alanya SafeBox is available.",
   "updateDownload": "Download",
-  "updateLater": "Later"
+  "updateLater": "Later",
+  "filterWithNote": "With a comment",
+  "filterAll": "All",
+  "folderCamera": "Camera",
+  "folderScreenshots": "Screenshots",
+  "folderDownloads": "Downloaded images"
 }

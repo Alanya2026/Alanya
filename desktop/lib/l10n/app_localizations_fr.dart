@@ -984,4 +984,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get updateLater => 'Plus tard';
+
+  @override
+  String get filterWithNote => 'Avec commentaire';
+
+  @override
+  String get filterAll => 'Tout';
+
+  @override
+  String get folderCamera => 'Appareil photo';
+
+  @override
+  String get folderScreenshots => 'Captures d\'écran';
+
+  @override
+  String get folderDownloads => 'Images téléchargées';
 }

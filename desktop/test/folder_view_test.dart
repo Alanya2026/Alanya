@@ -76,13 +76,13 @@ void main() {
 
   tearDown(() => tmp.deleteSync(recursive: true));
 
-  Future<void> monter(WidgetTester tester) async {
+  Future<void> monter(WidgetTester tester, {Map<String, dynamic>? page, SafeboxRoot root = SafeboxRoot.documents}) async {
     final api = DesktopApi(
       store: SessionStore(),
       client: MockClient((req) async {
         appels.add('${req.method} ${req.url.path}${req.url.query.isEmpty ? '' : '?${req.url.query}'}');
         if (req.method == 'GET' && req.url.path == '/api/safebox/folders/10') {
-          return http.Response(jsonEncode(_page), 200);
+          return http.Response(jsonEncode(page ?? _page), 200);
         }
         if (req.method == 'DELETE') return http.Response('{}', 200);
         return http.Response(jsonEncode({'error': 'absent'}), 404);
@@ -104,7 +104,7 @@ void main() {
           GlobalCupertinoLocalizations.delegate,
         ],
         home: Scaffold(
-          body: FolderView(root: SafeboxRoot.documents, folderId: 10, onOpenFolder: ouverts.add),
+          body: FolderView(root: root, folderId: 10, onOpenFolder: ouverts.add),
         ),
       ),
     );
@@ -192,6 +192,44 @@ void main() {
       'DELETE /api/safebox/files/32?everywhere=1',
     ]);
     expect(find.text('2 éléments mis à la corbeille'), findsOneWidget);
+    await demonter(tester);
+  });
+
+  testWidgets('Photos : « Avec commentaire » et le dossier d’origine filtrent comme sur le téléphone', (tester) async {
+    Map<String, dynamic> photo(int id, String nom, String source, {String? note}) => {
+          ..._fichier(id, nom),
+          'ext': 'jpg',
+          'family': 'photos',
+          'meta': {'source': source},
+          'note': ?(note == null ? null : {'text': note}),
+        };
+    await monter(tester, root: SafeboxRoot.photos, page: {
+      'folder': {'id': 10, 'parentId': null, 'root': 'photos', 'name': null, 'depth': 0},
+      'breadcrumbs': [],
+      'folders': [],
+      'files': [
+        photo(41, 'plage.jpg', 'Camera', note: 'Kribi, août'),
+        photo(42, 'gateau.jpg', 'Camera'),
+        photo(43, 'meme.jpg', 'WhatsApp Images'),
+      ],
+      'nextCursor': null,
+    });
+    expect(find.text('Avec commentaire'), findsOneWidget);
+    expect(find.text('Appareil photo · 2'), findsOneWidget);
+    expect(find.text('WhatsApp Images · 1'), findsOneWidget);
+    expect(find.byTooltip('meme.jpg'), findsOneWidget);
+
+    await tester.tap(find.text('Avec commentaire'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('plage.jpg'), findsOneWidget);
+    expect(find.byTooltip('gateau.jpg'), findsNothing);
+    expect(find.byTooltip('meme.jpg'), findsNothing);
+
+    await tester.tap(find.text('Avec commentaire'));
+    await tester.tap(find.text('WhatsApp Images · 1'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('meme.jpg'), findsOneWidget);
+    expect(find.byTooltip('plage.jpg'), findsNothing);
     await demonter(tester);
   });
 

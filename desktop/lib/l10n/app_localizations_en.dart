@@ -977,4 +977,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateLater => 'Later';
+
+  @override
+  String get filterWithNote => 'With a comment';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get folderCamera => 'Camera';
+
+  @override
+  String get folderScreenshots => 'Screenshots';
+
+  @override
+  String get folderDownloads => 'Downloaded images';
 }

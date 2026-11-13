@@ -1429,6 +1429,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Plus tard'**
   String get updateLater;
+
+  /// No description provided for @filterWithNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Avec commentaire'**
+  String get filterWithNote;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout'**
+  String get filterAll;
+
+  /// No description provided for @folderCamera.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appareil photo'**
+  String get folderCamera;
+
+  /// No description provided for @folderScreenshots.
+  ///
+  /// In fr, this message translates to:
+  /// **'Captures d\'écran'**
+  String get folderScreenshots;
+
+  /// No description provided for @folderDownloads.
+  ///
+  /// In fr, this message translates to:
+  /// **'Images téléchargées'**
+  String get folderDownloads;
 }
 
 class _AppLocalizationsDelegate

@@ -691,5 +691,10 @@
     }
   },
   "updateDownload": "Télécharger",
-  "updateLater": "Plus tard"
+  "updateLater": "Plus tard",
+  "filterWithNote": "Avec commentaire",
+  "filterAll": "Tout",
+  "folderCamera": "Appareil photo",
+  "folderScreenshots": "Captures d'écran",
+  "folderDownloads": "Images téléchargées"
 }
