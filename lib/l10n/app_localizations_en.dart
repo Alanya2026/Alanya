@@ -10438,4 +10438,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get safeboxCompressNothingToGain =>
       'Already light: compressing would save almost nothing.';
+
+  @override
+  String get safeboxDesktopTitle => 'SafeBox on your computer';
+
+  @override
+  String get safeboxDesktopHint =>
+      'Open your SafeBox on Windows or Linux: the download page opens in your browser.';
 }

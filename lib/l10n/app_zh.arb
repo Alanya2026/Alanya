@@ -3071,5 +3071,7 @@
   "safeboxOpenWith": "用其他应用打开…",
   "safeboxVideoPlay": "播放 · {size}",
   "safeboxVideoUnreadable": "此视频无法在此播放。请尝试“打开方式…”。",
-  "safeboxCompressNothingToGain": "文件已经很小：压缩几乎没有效果。"
+  "safeboxCompressNothingToGain": "文件已经很小：压缩几乎没有效果。",
+  "safeboxDesktopTitle": "电脑上的保险箱",
+  "safeboxDesktopHint": "在 Windows 或 Linux 上打开您的保险箱：下载页面将在浏览器中打开。"
 }

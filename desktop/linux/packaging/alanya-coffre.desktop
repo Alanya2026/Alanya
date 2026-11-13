@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Alanya Coffre-fort
+Name[en]=Alanya SafeBox
+GenericName=Coffre-fort Alanya
+GenericName[en]=Alanya SafeBox
+Comment=Votre coffre-fort Alanya sur l'ordinateur
+Comment[en]=Your Alanya SafeBox on the computer
+Exec=alanya-coffre
+Icon=alanya-coffre
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=Alanya;coffre;safebox;sauvegarde;backup;
+StartupWMClass=alanya_coffre

@@ -681,5 +681,15 @@
   },
   "pcBackupEstimateHint": "Ce qui est déjà dans le coffre (sauvegardé depuis le téléphone, par exemple) ne repartira pas : l'envoi réel peut être plus léger. Les plus récents partent d'abord ; si la place manque, les plus anciens attendent.",
   "pcBackupStart": "Sauvegarder",
-  "pcBackupHome": "Sauvegarde du PC"
+  "pcBackupHome": "Sauvegarde du PC",
+  "updateAvailable": "La version {version} d'Alanya Coffre-fort est disponible.",
+  "@updateAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateDownload": "Télécharger",
+  "updateLater": "Plus tard"
 }

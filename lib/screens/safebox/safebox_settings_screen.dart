@@ -4,6 +4,7 @@
 //  pour qu'aucune photo ne disparaisse du téléphone par surprise.
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/services/safebox/safebox_phone_cleanup.dart';
 import '../../core/theme/app_dimens.dart';
@@ -79,6 +80,15 @@ class _SafeboxSettingsScreenState extends State<SafeboxSettingsScreen> {
                   title: Text(l10n.safeboxBackupTitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => showSafeboxBackupSetup(context),
+                ),
+                const Divider(height: 1),
+                // L'application de bureau (Windows, Linux) : sa page de téléchargement.
+                ListTile(
+                  leading: const Icon(Icons.computer_outlined),
+                  title: Text(l10n.safeboxDesktopTitle),
+                  subtitle: Text(l10n.safeboxDesktopHint),
+                  trailing: const Icon(Icons.open_in_new),
+                  onTap: () => launchUrl(Uri.parse('https://www.alanya237.com/coffre'), mode: LaunchMode.externalApplication),
                 ),
               ],
             ),

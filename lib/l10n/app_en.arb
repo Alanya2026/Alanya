@@ -4152,5 +4152,7 @@
   "safeboxOpenWith": "Open with…",
   "safeboxVideoPlay": "Play · {size}",
   "safeboxVideoUnreadable": "This video can't be played here. Try “Open with…”.",
-  "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing."
+  "safeboxCompressNothingToGain": "Already light: compressing would save almost nothing.",
+  "safeboxDesktopTitle": "SafeBox on your computer",
+  "safeboxDesktopHint": "Open your SafeBox on Windows or Linux: the download page opens in your browser."
 }

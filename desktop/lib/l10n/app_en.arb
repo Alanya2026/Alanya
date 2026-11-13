@@ -218,5 +218,8 @@
   "pcBackupEstimate": "{n, plural, =0{No files of these types yet.} =1{1 file · {size}} other{{n} files · {size}}}",
   "pcBackupEstimateHint": "What's already in your SafeBox (backed up from your phone, for example) won't be uploaded again, so the real upload may be smaller. The newest files go first; if space runs out, the oldest wait.",
   "pcBackupStart": "Back up",
-  "pcBackupHome": "PC backup"
+  "pcBackupHome": "PC backup",
+  "updateAvailable": "Version {version} of Alanya SafeBox is available.",
+  "updateDownload": "Download",
+  "updateLater": "Later"
 }

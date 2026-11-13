@@ -5186,5 +5186,8 @@
   "@safeboxVideoPlay": {"placeholders": {"size": {"type": "String"}}},
   "safeboxVideoUnreadable": "Cette vidéo ne se lit pas ici. Essayez « Ouvrir avec… ».",
   "safeboxCompressNothingToGain": "Déjà léger : la compression n'y gagnerait presque rien.",
-  "@safeboxCompressNothingToGain": {"description": "Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…)."}
+  "@safeboxCompressNothingToGain": {"description": "Feuille de compression : le fichier est déjà sous les réglages des discussions (vidéo reçue par WhatsApp, image réduite…)."},
+  "safeboxDesktopTitle": "Coffre-fort sur ordinateur",
+  "safeboxDesktopHint": "Ouvrez votre coffre sur Windows ou Linux : la page de téléchargement s'ouvre dans le navigateur.",
+  "@safeboxDesktopHint": {"description": "Réglages du coffre : lien vers alanya237.com/coffre (application de bureau)."}
 }

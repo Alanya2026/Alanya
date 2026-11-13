@@ -8,8 +8,10 @@ import '../browse/folder_view.dart';
 import '../browse/free_up_view.dart';
 import '../browse/home_view.dart';
 import '../browse/trash_view.dart';
+import '../core/app_version.dart';
 import '../settings/settings_view.dart';
 import '../ui/common.dart';
+import '../ui/system.dart';
 import 'export_bar.dart';
 import 'transfer_bar.dart';
 
@@ -108,6 +110,7 @@ class _ShellState extends State<Shell> {
         ),
         Expanded(
           child: Column(children: [
+            const _NouvelleVersion(),
             Expanded(
               child: switch (_ici) {
             HomeDestination() => HomeView(
@@ -277,4 +280,35 @@ class _Entree extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// « Nouvelle version disponible » : lien vers la page de téléchargement.
+class _NouvelleVersion extends StatelessWidget {
+  const _NouvelleVersion();
+
+  @override
+  Widget build(BuildContext context) {
+    final u = AppScope.of(context).updates;
+    if (u == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: u,
+      builder: (context, _) {
+        final v = u.available;
+        if (v == null) return const SizedBox.shrink();
+        final l = context.l;
+        return Container(
+          color: Palette.brandContainer,
+          padding: const EdgeInsets.fromLTRB(24, 8, 16, 8),
+          child: Row(children: [
+            const Icon(Icons.system_update_alt, color: Palette.brandDark),
+            const SizedBox(width: 12),
+            Expanded(child: Text(l.updateAvailable(v), style: const TextStyle(color: Palette.brandDark, fontWeight: FontWeight.w500))),
+            TextButton(onPressed: u.dismiss, child: Text(l.updateLater)),
+            const SizedBox(width: 4),
+            FilledButton(onPressed: () => openUrl(kDownloadPageUrl), child: Text(l.updateDownload)),
+          ]),
+        );
+      },
+    );
+  }
 }

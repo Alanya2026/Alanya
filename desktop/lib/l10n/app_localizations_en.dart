@@ -966,4 +966,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pcBackupHome => 'PC backup';
+
+  @override
+  String updateAvailable(String version) {
+    return 'Version $version of Alanya SafeBox is available.';
+  }
+
+  @override
+  String get updateDownload => 'Download';
+
+  @override
+  String get updateLater => 'Later';
 }

@@ -16,3 +16,12 @@ Future<bool> showInFolder(String path) async {
   final dossier = FileSystemEntity.isDirectorySync(path) ? path : File(path).parent.path;
   return openWithSystem(dossier);
 }
+
+/// Ouvre une adresse web dans le navigateur.
+Future<bool> openUrl(String url) async {
+  try {
+    return await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (_) {
+    return false;
+  }
+}

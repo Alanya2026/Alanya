@@ -4,6 +4,7 @@ import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/app_version.dart';
 import '../core/session.dart';
 import '../core/settings.dart';
 import '../core/vault.dart';
@@ -50,10 +51,20 @@ ThemeData buildTheme() {
 
 /// Les services de l'application, pour tous les écrans.
 class AppScope extends InheritedWidget {
-  const AppScope({super.key, required this.session, required this.locale, required this.vault, required super.child});
+  const AppScope({
+    super.key,
+    required this.session,
+    required this.locale,
+    required this.vault,
+    this.updates,
+    required super.child,
+  });
 
   final Session session;
   final LocaleSetting locale;
+
+  /// L'avis « nouvelle version » (nul dans les tests).
+  final UpdateChecker? updates;
 
   /// Nul hors connexion.
   final Vault? vault;
@@ -61,7 +72,7 @@ class AppScope extends InheritedWidget {
   static AppScope of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<AppScope>()!;
 
   @override
-  bool updateShouldNotify(AppScope old) => old.vault != vault || old.session != session || old.locale != locale;
+  bool updateShouldNotify(AppScope old) => old.vault != vault || old.session != session || old.locale != locale || old.updates != updates;
 }
 
 extension Contexte on BuildContext {

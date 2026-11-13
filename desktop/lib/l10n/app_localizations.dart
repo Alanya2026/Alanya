@@ -1411,6 +1411,24 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Sauvegarde du PC'**
   String get pcBackupHome;
+
+  /// No description provided for @updateAvailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'La version {version} d\'Alanya Coffre-fort est disponible.'**
+  String updateAvailable(String version);
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In fr, this message translates to:
+  /// **'Télécharger'**
+  String get updateDownload;
+
+  /// No description provided for @updateLater.
+  ///
+  /// In fr, this message translates to:
+  /// **'Plus tard'**
+  String get updateLater;
 }
 
 class _AppLocalizationsDelegate

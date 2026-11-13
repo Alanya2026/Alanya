@@ -973,4 +973,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pcBackupHome => 'Sauvegarde du PC';
+
+  @override
+  String updateAvailable(String version) {
+    return 'La version $version d\'Alanya Coffre-fort est disponible.';
+  }
+
+  @override
+  String get updateDownload => 'Télécharger';
+
+  @override
+  String get updateLater => 'Plus tard';
 }

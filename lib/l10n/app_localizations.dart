@@ -17457,6 +17457,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Déjà léger : la compression n\'y gagnerait presque rien.'**
   String get safeboxCompressNothingToGain;
+
+  /// No description provided for @safeboxDesktopTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coffre-fort sur ordinateur'**
+  String get safeboxDesktopTitle;
+
+  /// Réglages du coffre : lien vers alanya237.com/coffre (application de bureau).
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrez votre coffre sur Windows ou Linux : la page de téléchargement s\'ouvre dans le navigateur.'**
+  String get safeboxDesktopHint;
 }
 
 class _AppLocalizationsDelegate

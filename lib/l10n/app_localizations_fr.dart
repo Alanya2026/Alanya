@@ -10553,4 +10553,11 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get safeboxCompressNothingToGain =>
       'Déjà léger : la compression n\'y gagnerait presque rien.';
+
+  @override
+  String get safeboxDesktopTitle => 'Coffre-fort sur ordinateur';
+
+  @override
+  String get safeboxDesktopHint =>
+      'Ouvrez votre coffre sur Windows ou Linux : la page de téléchargement s\'ouvre dans le navigateur.';
 }

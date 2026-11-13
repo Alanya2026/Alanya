@@ -9835,4 +9835,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxCompressNothingToGain => '文件已经很小：压缩几乎没有效果。';
+
+  @override
+  String get safeboxDesktopTitle => '电脑上的保险箱';
+
+  @override
+  String get safeboxDesktopHint => '在 Windows 或 Linux 上打开您的保险箱：下载页面将在浏览器中打开。';
 }

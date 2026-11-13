@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/app_version.dart';
 import 'core/desktop_api.dart';
 import 'core/session.dart';
 import 'core/session_store.dart';
@@ -20,13 +21,15 @@ Future<void> main() async {
   final session = Session(api: DesktopApi(store: store), store: store);
   final locale = LocaleSetting();
   await Future.wait([session.start(), locale.load()]);
-  runApp(CoffreApp(session: session, locale: locale));
+  final updates = UpdateChecker()..start();
+  runApp(CoffreApp(session: session, locale: locale, updates: updates));
 }
 
 class CoffreApp extends StatefulWidget {
-  const CoffreApp({super.key, required this.session, required this.locale});
+  const CoffreApp({super.key, required this.session, required this.locale, this.updates});
   final Session session;
   final LocaleSetting locale;
+  final UpdateChecker? updates;
 
   @override
   State<CoffreApp> createState() => _CoffreAppState();
@@ -77,6 +80,7 @@ class _CoffreAppState extends State<CoffreApp> {
           session: widget.session,
           locale: widget.locale,
           vault: _vault,
+          updates: widget.updates,
           child: MaterialApp(
             navigatorKey: _navigateur,
             onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,

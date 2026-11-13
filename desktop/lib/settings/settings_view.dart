@@ -7,6 +7,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../core/app_version.dart';
 import '../core/exporter.dart';
 import '../core/session_store.dart';
 import '../ui/common.dart';
@@ -140,7 +141,7 @@ class SettingsView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(l.settingsVersion('1.0.0'), style: t.bodySmall),
+              Text(l.settingsVersion(kAppVersion), style: t.bodySmall),
             ]),
           ),
         ),
