@@ -2,13 +2,12 @@
 //  racine ; un fichier va dans la racine de son type, dans Albums ou dans
 //  Partager (décision du 24/10/2026).
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/services/safebox/safebox_controller.dart';
-import '../../core/services/safebox/safebox_models.dart';
 import '../../core/theme/app_dimens.dart';
-import '../../talky_api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_widgets.dart';

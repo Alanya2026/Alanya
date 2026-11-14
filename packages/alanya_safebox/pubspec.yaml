@@ -1,0 +1,23 @@
+name: alanya_safebox
+description: Coffre-fort Alanya, commun à l'application mobile et à l'application de bureau (chiffrement, modèles, API, envois, téléchargements, sauvegarde). Sans écran.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.9.2
+  flutter: '>=3.24.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  crypto: ^3.0.6
+  cryptography: ^2.7.0
+  flutter_secure_storage: ^9.0.0
+  http: ^1.6.0
+  path_provider: ^2.1.4
+  shared_preferences: ^2.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0

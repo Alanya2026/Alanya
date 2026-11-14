@@ -7,21 +7,18 @@
 //  dossiers remplis depuis le téléphone, les albums récents, « Libérer de
 //  l'espace » et la corbeille, et un bouton « + ».
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
 import '../../core/services/billing/entitlement_service.dart';
-import '../../core/services/safebox/safebox_backup.dart';
 import '../../core/services/safebox/safebox_controller.dart';
-import '../../core/services/safebox/safebox_models.dart';
-import '../../core/services/safebox/safebox_upload_manager.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
-import '../../talky_api_client.dart';
 import '../../widgets/common/app_bottom_sheet.dart';
 import 'safebox_backup_screens.dart';
 import 'safebox_folder_screen.dart';
@@ -101,6 +98,10 @@ class _SafeboxHomeScreenState extends State<SafeboxHomeScreen> with WidgetsBindi
     if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
     final n = await _c.emptyPhoneTrash();
     if (n != null && n > 0 && mounted) safeboxSnack(context, context.l10n.safeboxCleanupDone(n));
+    // « Retirer du téléphone après la sauvegarde » : ce qui n'a jamais été proposé.
+    if (!mounted || WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    final m = await _c.proposeRemovalFromPhone();
+    if (m != null && m > 0 && mounted) safeboxSnack(context, context.l10n.safeboxFreePhoneDone(m));
   }
 
   @override
@@ -395,39 +396,89 @@ class _LigneSauvegarde extends StatelessWidget {
     final dernier = c.lastBackup;
     final wifi = c.backupWaitingWifi;
     final enRoute = c.backupUploading;
-    final restants = c.backupRemaining;
+    final p = c.backupProgress;
+    final fraction = c.backupFraction;
+    // Avant le premier compte, ou pendant la recherche des fichiers : rien
+    // n'est encore « à jour » (11/11/2026 : l'accueil le disait à tort).
+    final cherche = p == null || p.listing;
+    final restants = p?.remaining ?? c.backupRemaining;
+    final eta = c.backupEta;
     final (IconData icone, Color couleur, String detail, (String, VoidCallback)? action) =
         c.mediaAccess == SafeboxMediaAccess.denied && r.documentFolders.isEmpty
             ? (Icons.block, context.colors.error, l10n.safeboxBackupNoAccess,
                 (l10n.safeboxBackupAllow, () => showSafeboxBackupSetup(context)))
-            : dernier?.stop == SafeboxBackupStop.spaceFull
-                ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom), null)
-                : wifi > 0
-                    ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
-                        (l10n.safeboxBackupUseMobile, c.allowMobileData))
-                    : enRoute + restants > 0
-                        ? (Icons.cloud_upload_outlined, context.colors.primary,
-                            l10n.safeboxBackupRemaining(enRoute + restants), null)
-                        : (dernier?.waitingCharge ?? 0) > 0
-                            ? (Icons.battery_charging_full, context.semantic.warning,
-                                l10n.safeboxBackupWaitingCharge(dernier!.waitingCharge), null)
-                            : c.mediaAccess == SafeboxMediaAccess.limited
-                                ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
-                                    (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
-                                : (Icons.check, context.semantic.success, l10n.safeboxBackupUpToDate, null);
+            : cherche
+                ? (Icons.manage_search, context.colors.primary, l10n.safeboxBackupSearching, null)
+                : dernier?.stop == SafeboxBackupStop.spaceFull
+                    ? (Icons.cloud_off_outlined, context.colors.error, l10n.safeboxBackupSpaceFull(dernier!.noRoom), null)
+                    : wifi > 0
+                        ? (Icons.wifi_off, context.semantic.warning, l10n.safeboxBackupWaitingWifi(wifi),
+                            (l10n.safeboxBackupUseMobile, c.allowMobileData))
+                        : p.analysing
+                            ? (Icons.cloud_upload_outlined, context.colors.primary,
+                                l10n.safeboxBackupAnalysing(p.checked, p.toCheck), null)
+                            : enRoute == 0 && (dernier?.waitingCharge ?? 0) > 0
+                                ? (Icons.battery_charging_full, context.semantic.warning,
+                                    l10n.safeboxBackupWaitingCharge(dernier!.waitingCharge), null)
+                                : restants > 0
+                                    ? (Icons.cloud_upload_outlined, context.colors.primary,
+                                        [
+                                          l10n.safeboxBackupRemaining(restants),
+                                          if (eta != null)
+                                            eta.inSeconds < 60
+                                                ? l10n.safeboxBackupEtaSoon
+                                                : l10n.safeboxBackupEtaMinutes((eta.inSeconds / 60).ceil()),
+                                        ].join(' · '),
+                                        null)
+                                    : c.mediaAccess == SafeboxMediaAccess.limited
+                                        ? (Icons.photo_library_outlined, context.semantic.warning, l10n.safeboxBackupLimited,
+                                            (l10n.safeboxBackupWiden, () => showSafeboxBackupSetup(context)))
+                                        : (Icons.check, context.semantic.success,
+                                            [
+                                              l10n.safeboxBackupUpToDate,
+                                              // Illisibles (dans le cloud, supprimés…) : hors du compte, mais dits.
+                                              if (p.unreadable > 0) l10n.safeboxBackupUnreadable(p.unreadable),
+                                            ].join(' · '),
+                                            null);
+    // La barre : animée pendant la recherche, sinon sur tous les fichiers
+    // retenus (elle n'avance que dans un sens).
+    final barre = !(c.mediaAccess == SafeboxMediaAccess.denied && r.documentFolders.isEmpty) && (cherche || restants > 0);
     return ListTile(
       leading: CircleAvatar(backgroundColor: couleur.withValues(alpha: 0.12), child: Icon(icone, color: couleur)),
       title: Text(l10n.safeboxBackupTitle, style: context.text.titleSmall),
-      subtitle: Text(detail, style: TextStyle(color: couleur)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(detail, style: TextStyle(color: couleur)),
+          if (barre) ...[
+            AppSpacing.vGapSm,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                key: const ValueKey('safebox-backup-progress'),
+                value: cherche ? null : fraction,
+                minHeight: 6,
+              ),
+            ),
+            if (!cherche && p.total > 0) ...[
+              const SizedBox(height: 4),
+              Text(l10n.safeboxBackupProgressCount(p.done, p.total), style: context.text.bodySmall),
+            ],
+          ],
+        ],
+      ),
       trailing: action != null ? petitBouton(action.$1, action.$2) : const Icon(Icons.chevron_right),
       onTap: () => showSafeboxBackupSetup(context),
     );
   }
 }
 
-/// « Libérer la mémoire du téléphone » (lot 10) : quand elle est presque
-/// pleine, les photos et vidéos déjà dans le coffre en Original peuvent
-/// quitter le téléphone. Android demande lui-même la confirmation.
+/// « Libérer la mémoire du téléphone » : les photos et vidéos sauvegardées en
+/// Original qui peuvent quitter le téléphone ([SafeboxController.phoneRemovable]).
+/// Avec « Retirer du téléphone après la sauvegarde », elle garde aussi celles
+/// refusées dans la confirmation d'Android, sans la redemander d'office
+/// (11/11/2026). Android demande lui-même la confirmation.
 class _CarteMemoire extends StatefulWidget {
   const _CarteMemoire();
 
@@ -436,38 +487,15 @@ class _CarteMemoire extends StatefulWidget {
 }
 
 class _CarteMemoireState extends State<_CarteMemoire> {
-  List<SafeboxDeviceItem> _liberables = const [];
   bool _occupe = false;
-
-  /// Presque pleine : moins de 15 % ou moins de 2 Go libres.
-  static bool _presquePleine(({int free, int total}) m) => m.free < 2 * (1 << 30) || m.free < m.total * 0.15;
-
-  @override
-  void initState() {
-    super.initState();
-    _charger();
-  }
-
-  Future<void> _charger() async {
-    final c = context.read<SafeboxController>();
-    if (!c.backupSettings.enabled) return;
-    try {
-      final memoire = await c.device.storage();
-      if (memoire == null || !_presquePleine(memoire)) return;
-      final l = await c.backup.freeable(c.backupSettings);
-      if (mounted) setState(() => _liberables = l);
-    } catch (_) {}
-  }
 
   Future<void> _liberer() async {
     final c = context.read<SafeboxController>();
     setState(() => _occupe = true);
     try {
-      final retires = await c.backup.free(_liberables);
+      final retires = await c.removeFromPhone(c.phoneRemovable);
       if (!mounted) return;
       if (retires.isNotEmpty) safeboxSnack(context, context.l10n.safeboxFreePhoneDone(retires.length));
-      await _charger();
-      if (mounted) setState(() => _liberables = _liberables.where((i) => !retires.contains(i.key)).toList());
     } catch (e) {
       if (mounted) safeboxShowError(context, e);
     } finally {
@@ -477,11 +505,12 @@ class _CarteMemoireState extends State<_CarteMemoire> {
 
   @override
   Widget build(BuildContext context) {
-    if (_liberables.isEmpty) return const SizedBox.shrink();
+    final liste = context.select<SafeboxController, List<SafeboxDeviceItem>>((c) => c.phoneRemovable);
+    if (liste.isEmpty) return const SizedBox.shrink();
     final l10n = context.l10n;
-    final photos = _liberables.where((i) => i.family == SafeboxFamily.photos).length;
-    final videos = _liberables.where((i) => i.family == SafeboxFamily.videos).length;
-    final taille = _liberables.fold<int>(0, (s, i) => s + (i.size > 0 ? i.size : 0));
+    final photos = liste.where((i) => i.family == SafeboxFamily.photos).length;
+    final videos = liste.where((i) => i.family == SafeboxFamily.videos).length;
+    final taille = liste.fold<int>(0, (s, i) => s + (i.size > 0 ? i.size : 0));
     return _Carte(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

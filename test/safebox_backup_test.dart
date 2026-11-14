@@ -1,11 +1,11 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_backup.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_backup_background.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 
 /// Lot 10 : la sauvegarde automatique, sans téléphone ni serveur.
 void main() {
@@ -48,6 +48,11 @@ void main() {
       expect(relu.qualityOf(SafeboxFamily.documents), SafeboxQuality.original, reason: 'documents toujours tels quels');
       expect(relu.wifiOnly, isFalse);
       expect(relu.copyWith(clearSince: true).since, isNull);
+      // 11/11/2026 : retirer du téléphone, décoché par défaut, 30 jours.
+      expect([d.removeFromPhone, d.removeAfterDays], [false, 30]);
+      await s.copyWith(removeFromPhone: true, removeAfterDays: 7).save();
+      final retrait = await SafeboxBackupSettings.load();
+      expect([retrait.removeFromPhone, retrait.removeAfterDays], [true, 7]);
     });
   });
 
@@ -260,6 +265,185 @@ void main() {
       expect(liberables.map((i) => i.key), ['g:1']);
       expect(await m.free(liberables), {'g:1'});
     });
+
+    // 11/11/2026 : un passage enregistrait sa copie de la liste par-dessus
+    // les « arrivé » notés entre-temps (4 photos sur 5 restaient « en cours »).
+    test('arrivés pendant le passage : tous notés dans le coffre, tous libérables', () async {
+      for (var i = 0; i < 5; i += 1) {
+        await ajouter('$i', 'p$i.jpg', SafeboxFamily.photos, 1000 + i, graine: i + 3, modifie: DateTime(2026, 11, 1, 10, i));
+      }
+      late SafeboxBackupEngine m;
+      m = SafeboxBackupEngine(
+        device: tel,
+        api: srv,
+        // Petite photo : l'envoi se termine avant la fin du lot.
+        enqueue: (u) async {
+          envoyes.add(u);
+          unawaited(Future<void>.delayed(Duration.zero, () => m.markSaved(u.item.key)));
+          return 'job${envoyes.length}';
+        },
+        freeSpace: () async => libre,
+        maxFileBytes: () => 1 << 30,
+        charging: () async => true,
+        jobAlive: (_) async => false,
+        store: store,
+        batchSize: 2,
+      );
+      await m.run(reglages);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final faits = await m.records();
+      expect(faits.values.map((r) => r.state).toSet(), {SafeboxBackupState.saved});
+      expect(faits.length, 5);
+      expect((await m.freeable(reglages)).length, 5);
+      envoyes.clear();
+      await m.run(reglages);
+      expect(envoyes, isEmpty, reason: 'rien ne repart');
+    });
+
+    test('envoi perdu ou en échec : relancé, l\'ancien retiré, 3 essais au plus', () async {
+      await ajouter('1', 'a.jpg', SafeboxFamily.photos, 1000);
+      final vivants = <String>{};
+      final retires = <String>[];
+      SafeboxBackupEngine m2() => SafeboxBackupEngine(
+            device: tel,
+            api: srv,
+            enqueue: (u) async {
+              envoyes.add(u);
+              final id = 'job${envoyes.length}';
+              vivants.add(id);
+              return id;
+            },
+            freeSpace: () async => libre,
+            maxFileBytes: () => 1 << 30,
+            charging: () async => true,
+            jobAlive: (id) async => vivants.contains(id),
+            discardJob: (id) async => retires.add(id),
+            store: store,
+          );
+      await m2().run(reglages);
+      expect(envoyes.length, 1);
+      // Encore en route : rien ne repart.
+      await m2().run(reglages);
+      expect(envoyes.length, 1);
+      // En échec : relancé, l'ancien envoi retiré.
+      vivants.clear();
+      await m2().run(reglages);
+      expect(envoyes.length, 2);
+      expect(retires, ['job1']);
+      expect((await m2().pending(reglages)), isEmpty, reason: 'job2 en route');
+      vivants.clear();
+      await m2().run(reglages);
+      expect(envoyes.length, 3);
+      expect((await store.load())['g:1']!.attempts, 3);
+      vivants.clear();
+      await m2().run(reglages);
+      expect(envoyes.length, 3, reason: 'trois essais : il attend qu\'il change');
+      expect(await m2().pending(reglages), isEmpty);
+      // Arrivé quand même (relancé à la main) : noté dans le coffre.
+      await m2().markSaved('g:1');
+      expect((await store.load())['g:1']!.state, SafeboxBackupState.saved);
+    });
+
+    // 11/11/2026 : la barre de l'accueil et de la notification.
+    test('progression : sur tous les fichiers retenus, elle ne recule jamais', () async {
+      await ajouter('1', 'deja.jpg', SafeboxFamily.photos, 1000, graine: 1);
+      await ajouter('2', 'a.jpg', SafeboxFamily.photos, 1000, graine: 2);
+      await ajouter('3', 'b.jpg', SafeboxFamily.photos, 1000, graine: 3);
+      srv.etats[await safeboxSourceFingerprint('${dossier.path}/deja.jpg')] = SafeboxBackupCheck.saved;
+      final m = moteur();
+      expect(m.progress.value, isNull, reason: 'rien avant le premier passage');
+      final vus = <SafeboxBackupProgress>[];
+      m.progress.addListener(() => vus.add(m.progress.value!));
+      await m.run(reglages);
+      expect(vus.first.listing, isTrue, reason: 'd\'abord la recherche des fichiers');
+      expect(vus.any((p) => p.analysing && p.toCheck == 3), isTrue);
+      final fin = m.progress.value!;
+      expect([fin.total, fin.done, fin.remaining], [3, 1, 2]);
+      expect(fin.listing || fin.analysing, isFalse);
+      expect(fin.complete, isFalse);
+      final faits = [for (final p in vus.where((p) => !p.listing)) p.done];
+      for (var i = 1; i < faits.length; i += 1) {
+        expect(faits[i], greaterThanOrEqualTo(faits[i - 1]));
+      }
+      await m.markSaved('g:2');
+      await m.markSaved('g:2');
+      expect(m.progress.value!.done, 2, reason: 'compté une seule fois');
+      await m.markSaved('g:3');
+      expect(m.progress.value!.complete, isTrue);
+      expect((await m.run(reglages.copyWith(enabled: false))).stop, SafeboxBackupStop.disabled);
+      expect(m.progress.value, isNull);
+    });
+
+    test('fichier illisible : hors du compte, la barre va au bout ; lisible, il revient', () async {
+      await ajouter('1', 'a.jpg', SafeboxFamily.photos, 1000, graine: 1);
+      await ajouter('2', 'cloud.jpg', SafeboxFamily.photos, 1000, graine: 2);
+      tel.illisibles.add('g:2');
+      final m = moteur();
+      await m.run(reglages);
+      expect([m.progress.value!.total, m.progress.value!.unreadable], [1, 1]);
+      await m.markSaved('g:1');
+      expect(m.progress.value!.complete, isTrue, reason: 'l\'illisible ne bloque plus la fin');
+      // Au passage suivant, toujours illisible : la barre ne recule pas.
+      await m.run(reglages);
+      expect(m.progress.value!.complete, isTrue);
+      tel.illisibles.clear();
+      await m.run(reglages);
+      expect([m.progress.value!.total, m.progress.value!.unreadable, m.progress.value!.remaining], [2, 0, 1]);
+      expect(envoyes.map((u) => u.item.name), ['a.jpg', 'cloud.jpg']);
+    });
+
+    // 11/11/2026 : retirer du téléphone ce qui est sauvegardé.
+    test('à retirer : en Original, plus vieux que le délai, et encore dans le coffre', () async {
+      final maintenant = DateTime(2026, 11, 11);
+      await ajouter('1', 'vieille.jpg', SafeboxFamily.photos, 1000, graine: 1, modifie: DateTime(2026, 9, 1));
+      await ajouter('2', 'recente.jpg', SafeboxFamily.photos, 1000, graine: 2, modifie: DateTime(2026, 11, 9));
+      await ajouter('3', 'hd.mp4', SafeboxFamily.videos, 1000, graine: 3, modifie: DateTime(2026, 9, 1));
+      await ajouter('4', 'ancienne-appli.jpg', SafeboxFamily.photos, 1000, graine: 4, modifie: DateTime(2026, 9, 1));
+      await ajouter('5', 'corbeille-coffre.jpg', SafeboxFamily.photos, 1000, graine: 5, modifie: DateTime(2026, 9, 1));
+      Future<String> fp(String nom) => safeboxSourceFingerprint('${dossier.path}/$nom');
+      // Déjà dans le coffre : le serveur dit en quelle qualité.
+      for (final n in ['vieille.jpg', 'recente.jpg', 'corbeille-coffre.jpg']) {
+        srv.etats[await fp(n)] = SafeboxBackupCheck.saved;
+        srv.originaux[await fp(n)] = true;
+      }
+      srv.etats[await fp('hd.mp4')] = SafeboxBackupCheck.saved;
+      srv.originaux[await fp('hd.mp4')] = false;
+      srv.etats[await fp('ancienne-appli.jpg')] = SafeboxBackupCheck.saved; // qualité inconnue
+      final m = moteur();
+      await m.run(reglages);
+      final faits = await m.records();
+      expect(faits['g:1']!.quality, SafeboxQuality.original, reason: 'qualité dite par le serveur');
+      expect(faits['g:3']!.quality, SafeboxQuality.hd);
+      expect(faits['g:4']!.quality, isNull);
+
+      final candidats = await m.freeable(reglages, olderThanDays: 30, now: maintenant);
+      expect(candidats.map((i) => i.key), unorderedEquals(['g:1', 'g:4', 'g:5']),
+          reason: 'la récente reste, la HD reste, l\'inconnue attend le serveur');
+      expect(candidats.firstWhere((i) => i.key == 'g:1').size, 1000, reason: 'taille de la fiche');
+      expect((await m.freeable(reglages, now: maintenant)).length, 4, reason: 'tout de suite : la récente aussi');
+
+      // Juste avant : mise à la corbeille du coffre entre-temps, qualité toujours inconnue.
+      srv.etats[await fp('corbeille-coffre.jpg')] = SafeboxBackupCheck.skip;
+      expect((await m.confirmInVault(candidats)).map((i) => i.key), ['g:1']);
+      expect(srv.liens.last, isFalse, reason: 'vérifier sans rien ajouter au coffre');
+      expect((await m.records())['g:5']!.state, SafeboxBackupState.skip);
+      // Le serveur apprend la qualité de l'inconnue : notée.
+      srv.originaux[await fp('ancienne-appli.jpg')] = true;
+      expect((await m.confirmInVault(candidats)).map((i) => i.key), unorderedEquals(['g:1', 'g:4']));
+      expect((await m.records())['g:4']!.quality, SafeboxQuality.original);
+      // Vers la corbeille du téléphone.
+      expect(await m.free([candidats.first]), {'g:1'});
+    });
+
+    test('dossier de documents illisible : les photos partent quand même', () async {
+      await ajouter('1', 'a.jpg', SafeboxFamily.photos, 1000);
+      tel.erreurDocuments = MissingPluginException('tâche de fond');
+      final r = await moteur().run(reglages.copyWith(
+        documentFolders: const [SafeboxDocumentFolder(uri: 'content://x', name: 'Factures')],
+      ));
+      expect(r.queued, 1);
+      expect(envoyes.single.item.name, 'a.jpg');
+    });
   });
 
   group('l\'application et la tâche de fond n\'envoient jamais en même temps', () {
@@ -320,10 +504,20 @@ class _FauxTelephone implements SafeboxDeviceSource {
 
   @override
   Future<SafeboxDocumentFolder?> pickDocumentFolder() async => null;
+  /// Le canal des documents absent (tâche de fond) ou un droit retiré.
+  Object? erreurDocuments;
+
   @override
-  Future<List<SafeboxDeviceItem>> documentItems(SafeboxDocumentFolder folder, {DateTime? since}) async => const [];
+  Future<List<SafeboxDeviceItem>> documentItems(SafeboxDocumentFolder folder, {DateTime? since}) async {
+    if (erreurDocuments != null) throw erreurDocuments!;
+    return const [];
+  }
+  /// Illisibles (dans le cloud, supprimés entre-temps).
+  final Set<String> illisibles = {};
+
   @override
-  Future<File?> open(SafeboxDeviceItem item) async => _elements.firstWhere((e) => e.item.key == item.key).file;
+  Future<File?> open(SafeboxDeviceItem item) async =>
+      illisibles.contains(item.key) ? null : _elements.firstWhere((e) => e.item.key == item.key).file;
   @override
   Future<Set<String>> delete(List<SafeboxDeviceItem> items) async => {for (final i in items) i.key};
 
@@ -335,14 +529,19 @@ class _FauxTelephone implements SafeboxDeviceSource {
 
 class _FauxServeur implements SafeboxBackupApi {
   final Map<String, SafeboxBackupCheck> etats = {};
+
+  /// Copie du coffre en Original ; absente : serveur d'avant le 11/11/2026.
+  final Map<String, bool> originaux = {};
   final List<bool> liens = [];
   int appels = 0;
 
   @override
-  Future<Map<String, SafeboxBackupCheck>> check(List<String> fps, {bool link = true}) async {
+  Future<Map<String, SafeboxBackupStatus>> check(List<String> fps, {bool link = true}) async {
     appels += 1;
     liens.add(link);
-    return {for (final fp in fps) fp: etats[fp] ?? SafeboxBackupCheck.unknown};
+    return {
+      for (final fp in fps) fp: SafeboxBackupStatus(etats[fp] ?? SafeboxBackupCheck.unknown, original: originaux[fp]),
+    };
   }
 
   @override

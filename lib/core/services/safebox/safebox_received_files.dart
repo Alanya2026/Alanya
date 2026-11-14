@@ -10,6 +10,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:mime/mime.dart';
@@ -18,7 +19,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'safebox_models.dart';
 
 /// Copie un fichier dans Téléchargements ; rend son emplacement (adresse
 /// `content://` ou chemin), ou null.

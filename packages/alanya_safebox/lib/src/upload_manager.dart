@@ -23,11 +23,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../talky_api_client.dart';
-import '../connectivity_service.dart';
-import '../secure_storage_guard.dart';
-import 'safebox_cipher.dart';
-import 'safebox_models.dart';
+import 'api.dart';
+import 'http.dart';
+import 'cipher.dart';
+import 'models.dart';
 
 // ── Ce que le gestionnaire attend du réseau ────────────────────────────────
 
@@ -68,7 +67,7 @@ abstract class SafeboxTransport {
 class ApiSafeboxTransport implements SafeboxTransport {
   ApiSafeboxTransport(this.api);
 
-  final TalkyApiClient api;
+  final SafeboxCalls api;
 
   @override
   Future<SafeboxUploadTicket> reserve({
@@ -340,14 +339,14 @@ abstract class SafeboxJobStore {
 }
 
 /// État dans les préférences, clé dans le stockage sécurisé : la clé d'un
-/// fichier n'est jamais écrite en clair sur le téléphone.
+/// fichier n'est jamais écrite en clair sur l'appareil. [secure] : le
+/// stockage sécurisé réglé par l'application (options Android, iOS…).
 class PrefsSafeboxJobStore implements SafeboxJobStore {
+  PrefsSafeboxJobStore({FlutterSecureStorage secure = const FlutterSecureStorage()}) : _secure = secure;
+
   static const _cle = 'safebox_upload_jobs_v1';
   static const _prefixeCle = 'safebox_upload_key_';
-  static const FlutterSecureStorage _secure = FlutterSecureStorage(
-    aOptions: kSecureStorageAndroidOptions,
-    iOptions: kSecureStorageIosOptions,
-  );
+  final FlutterSecureStorage _secure;
 
   @override
   Future<List<SafeboxUploadJob>> loadJobs() async {
@@ -410,12 +409,13 @@ class SafeboxUploadManager extends ChangeNotifier {
         _store = store ?? PrefsSafeboxJobStore(),
         _sleep = sleep ?? Future<void>.delayed,
         _encrypt = encrypt ?? safeboxEncryptBlock,
-        _surWifi = unmetered ?? (() => ConnectivityService().currentIsUnmetered);
+        _surWifi = unmetered ?? (() async => true);
 
   final SafeboxTransport _transport;
   final SafeboxJobStore _store;
 
-  /// La connexion actuelle ne se paie pas au volume (Wi-Fi, Ethernet).
+  /// La connexion actuelle ne se paie pas au volume (Wi-Fi, Ethernet). Par
+  /// défaut : oui (ordinateur) ; le téléphone passe sa propre mesure.
   final Future<bool> Function() _surWifi;
   final Future<void> Function(Duration) _sleep;
   final Future<Uint8List> Function(List<int>, Uint8List, SafeboxBlockPlan) _encrypt;
@@ -699,7 +699,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     for (var essai = 0;; essai += 1) {
       try {
         return await action();
-      } on TalkyException catch (e) {
+      } on SafeboxHttpException catch (e) {
         final demande = arret?.call();
         if (demande != null) throw demande;
         if (e.statusCode != 0) rethrow;
@@ -773,7 +773,7 @@ class SafeboxUploadManager extends ChangeNotifier {
             ..clear()
             ..addAll(etat.received);
           job.previewDone = !etat.previewMissing;
-        } on TalkyException catch (e) {
+        } on SafeboxHttpException catch (e) {
           // Envoi abandonné côté serveur (48 h sans nouvelles) : on repart.
           if (e.statusCode != 404) rethrow;
           job.fileId = null;
@@ -789,7 +789,7 @@ class SafeboxUploadManager extends ChangeNotifier {
         }
         try {
           return await _avecReprise(() => _transport.complete(job.fileId!, cle));
-        } on TalkyException catch (e) {
+        } on SafeboxHttpException catch (e) {
           if (e.code != 'SAFEBOX_UPLOAD_INCOMPLETE') rethrow;
           // MEGA n'a pas tout : on reprend la liste et on renvoie ce qui manque.
           final etat = await _avecReprise(() => _transport.status(job.fileId!));
@@ -802,7 +802,7 @@ class SafeboxUploadManager extends ChangeNotifier {
         }
       }
       throw SafeboxUploadFailure('SAFEBOX_UPLOAD_INCOMPLETE');
-    } on TalkyException catch (e) {
+    } on SafeboxHttpException catch (e) {
       throw SafeboxUploadFailure(e.code ?? 'HTTP_${e.statusCode}');
     }
   }
@@ -898,7 +898,7 @@ class SafeboxUploadManager extends ChangeNotifier {
           arret: () => _arretDemande(job.id),
         );
         return;
-      } on TalkyException catch (e) {
+      } on SafeboxHttpException catch (e) {
         // 403 : adresse expirée (24 h). Une nouvelle, une fois.
         if (e.statusCode != 403 || essai > 0) rethrow;
         final r = await _avecReprise(() => _transport.urls(job.fileId!, blocks: [n]));
@@ -924,7 +924,7 @@ class SafeboxUploadManager extends ChangeNotifier {
         job.previewDone = true;
         await _sauver();
         return url;
-      } on TalkyException catch (e) {
+      } on SafeboxHttpException catch (e) {
         if (e.statusCode != 403 || essai > 0) rethrow;
         url = null;
       }

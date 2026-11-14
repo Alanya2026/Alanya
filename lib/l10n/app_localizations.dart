@@ -15775,7 +15775,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupPitch.
   ///
   /// In fr, this message translates to:
-  /// **'Vos photos, vidéos et documents copiés dans le coffre, sans y penser. Rien n\'est supprimé du téléphone.'**
+  /// **'Vos photos, vidéos et documents copiés dans le coffre, sans y penser. Rien n\'est supprimé du téléphone sans votre accord.'**
   String get safeboxBackupPitch;
 
   /// No description provided for @safeboxBackupActivate.
@@ -15795,6 +15795,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'{count, plural, =1{1 fichier à sauvegarder} other{{count} fichiers à sauvegarder}}'**
   String safeboxBackupRemaining(int count);
+
+  /// No description provided for @safeboxBackupSearching.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche des fichiers du téléphone…'**
+  String get safeboxBackupSearching;
+
+  /// No description provided for @safeboxBackupProgressCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'{done} sur {total} sauvegardés'**
+  String safeboxBackupProgressCount(int done, int total);
+
+  /// No description provided for @safeboxBackupAnalysing.
+  ///
+  /// In fr, this message translates to:
+  /// **'Préparation des fichiers : {checked} sur {toCheck}'**
+  String safeboxBackupAnalysing(int checked, int toCheck);
+
+  /// No description provided for @safeboxBackupEtaMinutes.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{environ 1 min restante} other{environ {count} min restantes}}'**
+  String safeboxBackupEtaMinutes(int count);
+
+  /// No description provided for @safeboxBackupEtaSoon.
+  ///
+  /// In fr, this message translates to:
+  /// **'moins d\'une minute restante'**
+  String get safeboxBackupEtaSoon;
+
+  /// No description provided for @safeboxBackupNotifText.
+  ///
+  /// In fr, this message translates to:
+  /// **'{done} sur {total} sauvegardés · {percent} %'**
+  String safeboxBackupNotifText(int done, int total, int percent);
 
   /// No description provided for @safeboxBackupWaitingWifi.
   ///
@@ -15853,7 +15889,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupPermissionBody.
   ///
   /// In fr, this message translates to:
-  /// **'Le coffre copie vos fichiers chiffrés, dans un seul sens : rien n\'est supprimé du téléphone, et ce que vous supprimez du coffre n\'y revient pas.'**
+  /// **'Le coffre copie vos fichiers chiffrés, dans un seul sens : rien n\'est supprimé du téléphone sans votre accord, et ce que vous supprimez du coffre n\'y revient pas.'**
   String get safeboxBackupPermissionBody;
 
   /// No description provided for @safeboxBackupPermissionDenied.
@@ -15883,7 +15919,7 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxBackupGranted.
   ///
   /// In fr, this message translates to:
-  /// **'Accès aux photos, vidéos et musique autorisé. Vos fichiers sont copiés chiffrés ; rien n\'est supprimé du téléphone.'**
+  /// **'Accès aux photos, vidéos et musique autorisé. Vos fichiers sont copiés chiffrés ; rien n\'est supprimé du téléphone sans votre accord.'**
   String get safeboxBackupGranted;
 
   /// No description provided for @safeboxBackupWhat.
@@ -16059,6 +16095,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Réglages de la sauvegarde'**
   String get safeboxBackupSettings;
+
+  /// No description provided for @safeboxBackupRemoveTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer du téléphone après la sauvegarde'**
+  String get safeboxBackupRemoveTitle;
+
+  /// No description provided for @safeboxBackupRemoveHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les photos et vidéos gardées en Original dans le coffre vont dans la corbeille du téléphone, récupérables 30 jours (Android 11 et plus). Android vous demande de confirmer à l\'ouverture du coffre.'**
+  String get safeboxBackupRemoveHint;
+
+  /// No description provided for @safeboxBackupRemoveWhen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quand les retirer'**
+  String get safeboxBackupRemoveWhen;
+
+  /// No description provided for @safeboxBackupRemoveAfter.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{Après 1 jour} other{Après {count} jours}}'**
+  String safeboxBackupRemoveAfter(int count);
+
+  /// No description provided for @safeboxBackupRemoveNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout de suite'**
+  String get safeboxBackupRemoveNow;
+
+  /// No description provided for @safeboxBackupRemoveOriginalOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vos photos ou vidéos partent en HD ou Compressé : celles-là restent sur le téléphone. Seules celles gardées en Original le quittent.'**
+  String get safeboxBackupRemoveOriginalOnly;
 
   /// No description provided for @safeboxBackupScanning.
   ///
@@ -16723,8 +16795,32 @@ abstract class AppLocalizations {
   /// No description provided for @safeboxCleanupNote.
   ///
   /// In fr, this message translates to:
-  /// **'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique ne retire rien du téléphone.'**
+  /// **'Seules les photos et vidéos prises dans la galerie sont concernées, et jamais avant d\'être entièrement dans le coffre. Android vous demande de confirmer, puis les place dans sa corbeille, où elles restent récupérables 30 jours (Android 11 et plus ; avant, la suppression est définitive). En HD ou Compressé, la version gardée dans le coffre est moins nette que l\'original. La sauvegarde automatique a son propre réglage, dans Réglages de la sauvegarde.'**
   String get safeboxCleanupNote;
+
+  /// No description provided for @safeboxCleanupNotPossibleTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Retrait du téléphone impossible'**
+  String get safeboxCleanupNotPossibleTitle;
+
+  /// No description provided for @safeboxCleanupNotPossible.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 photo ou vidéo restera sur le téléphone.} other{{count} photos et vidéos resteront sur le téléphone.}}'**
+  String safeboxCleanupNotPossible(int count);
+
+  /// No description provided for @safeboxCleanupNotPossibleWhy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya ne peut retirer que celles choisies dans la galerie du téléphone (Images, Vidéos ou leurs dossiers), avec l\'accès à toutes les photos autorisé. Celles choisies depuis Google Photos, un autre service ou un dossier de fichiers restent en place ; elles sont tout de même ajoutées au coffre.'**
+  String get safeboxCleanupNotPossibleWhy;
+
+  /// No description provided for @safeboxBackupUnreadable.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count, plural, =1{1 fichier illisible ignoré} other{{count} fichiers illisibles ignorés}}'**
+  String safeboxBackupUnreadable(int count);
 
   /// No description provided for @safeboxCleanupAskTitle.
   ///

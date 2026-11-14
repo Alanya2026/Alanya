@@ -1,7 +1,7 @@
 import 'dart:convert';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 
 /// Réponses telles que les rend le backend (src/services/safebox/service.js).
 void main() {

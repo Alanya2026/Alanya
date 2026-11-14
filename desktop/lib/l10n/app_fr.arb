@@ -1,0 +1,419 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Alanya Coffre-fort",
+  "safeboxName": "Coffre-fort",
+  "navHome": "Accueil",
+  "navSettings": "Réglages",
+  "rootPhotos": "Photos",
+  "rootVideos": "Vidéos",
+  "rootAudios": "Audio",
+  "rootDocuments": "Documents",
+  "rootAlbums": "Albums",
+  "rootShare": "Partager",
+  "back": "Retour",
+  "refresh": "Actualiser",
+  "retry": "Réessayer",
+  "cancel": "Annuler",
+  "errorNetwork": "Pas de connexion au serveur. Vérifiez Internet, puis réessayez.",
+  "errorGeneric": "Une erreur est survenue. Réessayez dans un instant.",
+  "bytesB": "{n} o",
+  "@bytesB": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "bytesKB": "{n} Ko",
+  "@bytesKB": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "bytesMB": "{n} Mo",
+  "@bytesMB": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "bytesGB": "{n} Go",
+  "@bytesGB": {
+    "placeholders": {
+      "n": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceUsedOf": "{used} sur {total}",
+  "@spaceUsedOf": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceFree": "{free} libres",
+  "@spaceFree": {
+    "placeholders": {
+      "free": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceTrash": "Corbeille · {size}",
+  "@spaceTrash": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "fileCount": "{n, plural, =0{Aucun fichier} =1{1 fichier} other{{n} fichiers}}",
+  "@fileCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "homeFolders": "Vos dossiers",
+  "homeRecentAlbums": "Albums récents",
+  "folderEmpty": "Vide",
+  "folderEmptyHint": "Ajoutez des fichiers depuis votre téléphone.",
+  "dateToday": "Aujourd'hui",
+  "dateYesterday": "Hier",
+  "dateUnknown": "Date inconnue",
+  "loginTitle": "Connectez votre coffre-fort à cet ordinateur",
+  "loginStep1": "Ouvrez Alanya sur votre téléphone.",
+  "loginStep2": "Allez dans Compte et sécurité › Lier un nouvel appareil.",
+  "loginStep3": "Scannez ce code, puis confirmez sur le téléphone.",
+  "loginSharedComputer": "Sur un ordinateur partagé, déconnectez-vous en partant (Réglages › Se déconnecter). Vous pouvez aussi retirer cet ordinateur à distance depuis « Appareils connectés » sur votre téléphone.",
+  "loginEndedRemotely": "Cet ordinateur a été déconnecté. Scannez de nouveau le code pour l'utiliser.",
+  "loginQrLabel": "Code QR de connexion",
+  "loginQrHint": "Le code change toutes les 90 secondes.",
+  "loginScannedTitle": "Code scanné",
+  "loginScannedText": "Confirmez la connexion sur votre téléphone.",
+  "loginDeniedTitle": "Connexion refusée",
+  "loginDeniedText": "La connexion a été refusée sur le téléphone.",
+  "loginExpiredTitle": "Code expiré",
+  "loginExpiredText": "Affichez un nouveau code pour vous connecter.",
+  "loginNewCode": "Nouveau code",
+  "settingsAccount": "Compte",
+  "settingsApp": "Application",
+  "settingsComputerHint": "Visible dans « Appareils connectés » sur votre téléphone",
+  "settingsConnectedOn": "Connecté le {date} · visible dans « Appareils connectés » sur votre téléphone",
+  "@settingsConnectedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsLanguage": "Langue",
+  "settingsLanguageSystem": "Celle du système",
+  "settingsVersion": "Alanya Coffre-fort {version}",
+  "@settingsVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "logout": "Se déconnecter",
+  "logoutTitle": "Se déconnecter de cet ordinateur",
+  "logoutText": "Efface tout ce que l'application garde sur cet ordinateur. Vos fichiers restent dans le coffre.",
+  "logoutConfirmTitle": "Se déconnecter ?",
+  "logoutConfirmText": "L'application efface ce qu'elle garde sur cet ordinateur. Vos fichiers restent dans le coffre ; pour revenir, il faudra scanner de nouveau le code avec votre téléphone.",
+  "close": "Fermer",
+  "save": "Enregistrer",
+  "open": "Ouvrir",
+  "empty": "Vider",
+  "previous": "Précédent",
+  "next": "Suivant",
+  "download": "Télécharger",
+  "downloadFolder": "Télécharger le dossier",
+  "downloadSaved": "Enregistré : {path}",
+  "@downloadSaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadFailed": "Le téléchargement n'a pas abouti. Réessayez.",
+  "showInFolder": "Afficher dans le dossier",
+  "openWith": "Ouvrir avec…",
+  "openFailed": "Aucun logiciel de l'ordinateur ne sait ouvrir ce fichier.",
+  "viewerPosition": "{index} sur {total}",
+  "@viewerPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "viewerKeys": "← → pour passer d'un fichier à l'autre · molette pour zoomer · Échap pour fermer",
+  "viewerCannotShow": "L'ordinateur ne sait pas afficher cette photo ici.",
+  "viewerVideoHint": "La vidéo s'ouvre dans le lecteur de l'ordinateur.",
+  "viewerAudioHint": "L'audio s'ouvre dans le lecteur de l'ordinateur.",
+  "viewerDocumentHint": "Le document s'ouvre avec le logiciel de l'ordinateur.",
+  "viewerPlay": "Lire",
+  "fileLost": "Ce fichier est introuvable chez l'hébergeur : il ne peut plus être ouvert.",
+  "noteNone": "Pas de commentaire.",
+  "noteAdd": "Ajouter un commentaire",
+  "noteEdit": "Modifier le commentaire",
+  "noteEditTitle": "Commentaire",
+  "noteHint": "Quelques mots sur ce fichier (200 caractères au plus)",
+  "noteAudio": "Commentaire audio",
+  "noteListen": "Écouter le commentaire audio",
+  "exportRunning": "Téléchargement de {name}",
+  "@exportRunning": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "exportRunningMany": "Téléchargement de {name} : {done} sur {total}",
+  "@exportRunningMany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "exportDone": "{name} est sur l'ordinateur",
+  "@exportDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "exportFailed": "{name} n'a pas pu être téléchargé",
+  "@exportFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "exportCancelled": "Téléchargement de {name} arrêté",
+  "@exportCancelled": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsFiles": "Fichiers sur cet ordinateur",
+  "settingsDownloadFolder": "Dossier des téléchargements",
+  "settingsKeptFiles": "Fichiers gardés pour la visionneuse",
+  "settingsKeptFilesSize": "{size} · se retéléchargent au besoin",
+  "@settingsKeptFilesSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "add": "Ajouter",
+  "addFiles": "Des fichiers…",
+  "addFolder": "Un dossier…",
+  "dropHere": "Déposer ici pour ajouter à {folder}",
+  "@dropHere": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "importScanning": "Analyse des fichiers… {n}",
+  "@importScanning": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "importChecking": "Comparaison avec le coffre… {done} / {total}",
+  "@importChecking": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "importPreparing": "Préparation des envois… {done} / {total}",
+  "@importPreparing": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "importTitle": "Ajouter à {folder}",
+  "@importTitle": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "importSend": "{n, plural, =1{1 fichier à envoyer} other{{n} fichiers à envoyer}} · {size}",
+  "@importSend": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "importLink": "{n, plural, =1{1 fichier déjà dans le coffre, ajouté à l'album sans nouvel envoi} other{{n} fichiers déjà dans le coffre, ajoutés à l'album sans nouvel envoi}}",
+  "@importLink": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "importAlready": "{n, plural, =1{1 fichier déjà dans le coffre, pas renvoyé} other{{n} fichiers déjà dans le coffre, pas renvoyés}}",
+  "@importAlready": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "importDiverted": "{n, plural, =1{1 fichier ira dans {root}, le dossier de son type} other{{n} fichiers iront dans {root}, le dossier de leur type}}",
+  "@importDiverted": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "root": {
+        "type": "String"
+      }
+    }
+  },
+  "importTooLarge": "{n, plural, =1{1 fichier dépasse {max} et ne partira pas} other{{n} fichiers dépassent {max} et ne partiront pas}}",
+  "@importTooLarge": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "importIgnored": "{n, plural, =1{1 fichier caché, vide ou raccourci laissé de côté} other{{n} fichiers cachés, vides ou raccourcis laissés de côté}}",
+  "@importIgnored": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "importFree": "Place libre dans le coffre : {size}",
+  "@importFree": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "importNoRoom": "Pas assez de place : il manque {size}. Videz la corbeille ou ajoutez moins de fichiers.",
+  "@importNoRoom": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "importOriginal": "Les fichiers partent en Original, tels qu'ils sont sur l'ordinateur. Ils restent sur l'ordinateur.",
+  "importNothing": "Rien à envoyer : tout est déjà dans le coffre.",
+  "importStart": "Envoyer",
+  "importFailed": "Les fichiers n'ont pas pu être lus.",
+  "importBusy": "Un ajout est déjà en préparation.",
+  "uploadsTitle": "Envois vers le coffre",
+  "uploadsRunning": "{n, plural, =1{Envoi d'1 fichier} other{Envoi de {n} fichiers}}",
+  "@uploadsRunning": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadsDone": "{n, plural, =1{1 fichier ajouté au coffre} other{{n} fichiers ajoutés au coffre}}",
+  "@uploadsDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadsFailed": "{n, plural, =1{1 envoi n'a pas abouti} other{{n} envois n'ont pas abouti}}",
+  "@uploadsFailed": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadsPaused": "{n, plural, =1{1 envoi en pause} other{{n} envois en pause}}",
+  "@uploadsPaused": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "uploadsWaitingNetwork": "En attente du réseau",
+  "pauseAll": "Tout mettre en pause",
+  "resumeAll": "Tout reprendre",
+  "details": "Détails",
+  "pause": "Pause",
+  "resume": "Reprendre",
+  "clearFinished": "Effacer les terminés",
+  "speed": "{size}/s",
+  "@speed": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadQueued": "En attente",
+  "uploadPaused": "En pause",
+  "uploadDone": "Dans le coffre",
+  "uploadErrorQuota": "Plus assez de place dans le coffre",
+  "uploadErrorChanged": "Le fichier a changé sur l'ordinateur pendant l'envoi",
+  "uploadErrorMissing": "Le fichier n'est plus sur l'ordinateur",
+  "uploadErrorGeneric": "L'envoi n'a pas abouti",
+  "change": "Changer"
+}

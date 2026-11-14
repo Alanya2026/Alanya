@@ -13,6 +13,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -21,10 +22,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../core/services/safebox/safebox_controller.dart';
 import '../../core/services/safebox/safebox_phone_cleanup.dart';
-import '../../core/services/safebox/safebox_models.dart';
-import '../../core/services/safebox/safebox_upload_manager.dart';
 import '../../core/theme/app_dimens.dart';
-import '../../talky_api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/byte_format.dart';
 import '../../l10n/app_localizations.dart';
@@ -290,14 +288,28 @@ class _SafeboxFolderScreenState extends State<SafeboxFolderScreen> with SingleTi
     // Réglage « Après un ajout » : les photos et vidéos de la galerie quittent
     // le téléphone une fois dans le coffre, jamais avant.
     final effacables = tri.ok.where(_c.phoneTrashable).length;
-    final supprimer = effacables > 0 &&
-        switch (await SafeboxPhoneCleanup.load()) {
-          SafeboxPhoneCleanup.keep => false,
-          SafeboxPhoneCleanup.always => true,
-          SafeboxPhoneCleanup.ask => mounted &&
-              await askSafeboxPhoneCleanup(context, count: effacables, lighter: qualite != SafeboxQuality.original),
-        };
+    // Photos et vidéos qui ne pourront pas quitter le téléphone : dit, plutôt
+    // que de les y laisser en silence (11/11/2026).
+    final medias = tri.ok.where((p) {
+      final f = _c.familyOf(p.name);
+      return f == SafeboxFamily.photos || f == SafeboxFamily.videos;
+    }).length;
+    final restent = medias - effacables;
+    final reglage = await SafeboxPhoneCleanup.load();
     if (!mounted) return;
+    final supprimer = switch (reglage) {
+      SafeboxPhoneCleanup.keep => false,
+      SafeboxPhoneCleanup.always => effacables > 0,
+      SafeboxPhoneCleanup.ask => effacables > 0 &&
+          await askSafeboxPhoneCleanup(context,
+              count: effacables, lighter: qualite != SafeboxQuality.original, kept: restent),
+    };
+    if (!mounted) return;
+    // « Toujours », ou « Demander » sans rien à proposer : la fenêtre seule le dit.
+    if (restent > 0 && (reglage == SafeboxPhoneCleanup.always || (reglage == SafeboxPhoneCleanup.ask && effacables == 0))) {
+      await showSafeboxCleanupNotPossible(context, count: restent);
+      if (!mounted) return;
+    }
     safeboxSnack(context, l10n.safeboxPreparing);
     final echecs = await _c.addFiles(tri.ok, page.folder, quality: qualite, deleteFromPhone: supprimer);
     if (echecs.isNotEmpty && mounted) {

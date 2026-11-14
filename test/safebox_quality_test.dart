@@ -1,5 +1,5 @@
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_quality.dart';
 
 /// Les trois formats du coffre (décision du 24/10/2026, conception section 05).
 void main() {

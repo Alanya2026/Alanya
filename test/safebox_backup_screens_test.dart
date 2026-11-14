@@ -1,15 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_backup.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_controller.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 import 'package:talky_flutter/core/theme/app_theme.dart';
 import 'package:talky_flutter/core/theme/locale_controller.dart';
 import 'package:talky_flutter/l10n/app_localizations.dart';
@@ -81,6 +80,29 @@ void main() {
     expect(r.galleryFolders, {'camera'});
     expect(r.qualityOf(SafeboxFamily.photos), SafeboxQuality.original, reason: 'tout tient : Original');
     expect(r.wifiOnly && r.chargingOnly, isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    c.dispose();
+  });
+
+  // 11/11/2026 : « Retirer du téléphone après la sauvegarde », décoché par défaut.
+  testWidgets('retirer du téléphone : décoché, puis le délai à choisir, gardé', (tester) async {
+    final c = await monter(tester, _Telephone(SafeboxMediaAccess.full));
+    await tester.tap(find.text(fr.safeboxBackupContinue));
+    await tester.pumpAndSettle();
+    final interrupteur = find.byKey(const ValueKey('safebox-backup-remove'));
+    await tester.scrollUntilVisible(interrupteur, 200, scrollable: find.byType(Scrollable).last);
+    expect(tester.widget<SwitchListTile>(interrupteur).value, isFalse);
+    expect(find.text(fr.safeboxBackupRemoveWhen), findsNothing);
+    await tester.tap(interrupteur);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text(fr.safeboxBackupRemoveNow), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text(fr.safeboxBackupRemoveAfter(30)), findsOneWidget);
+    await tester.tap(find.text(fr.safeboxBackupRemoveAfter(7)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(fr.safeboxBackupEnable));
+    await tester.pumpAndSettle();
+    expect([c.backupSettings.removeFromPhone, c.backupSettings.removeAfterDays], [true, 7]);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     c.dispose();

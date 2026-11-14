@@ -89,7 +89,7 @@ class _SafeboxSettingsScreenState extends State<SafeboxSettingsScreen> {
 /// « Me demander à chaque ajout » : rend vrai pour retirer du téléphone ces
 /// [count] photos et vidéos une fois dans le coffre. [lighter] : elles partent
 /// en HD ou Compressé, la version du coffre sera moins nette.
-Future<bool> askSafeboxPhoneCleanup(BuildContext context, {required int count, required bool lighter}) async {
+Future<bool> askSafeboxPhoneCleanup(BuildContext context, {required int count, required bool lighter, int kept = 0}) async {
   final l10n = context.l10n;
   final oui = await showDialog<bool>(
     context: context,
@@ -98,6 +98,7 @@ Future<bool> askSafeboxPhoneCleanup(BuildContext context, {required int count, r
       content: Text([
         l10n.safeboxCleanupAskBody(count),
         if (lighter) l10n.safeboxCleanupLighter,
+        if (kept > 0) '${l10n.safeboxCleanupNotPossible(kept)} ${l10n.safeboxCleanupNotPossibleWhy}',
       ].join('\n\n')),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.safeboxCleanupKeep)),
@@ -106,4 +107,20 @@ Future<bool> askSafeboxPhoneCleanup(BuildContext context, {required int count, r
     ),
   );
   return oui ?? false;
+}
+
+/// Des photos ou vidéos choisies ne peuvent pas quitter le téléphone (prises
+/// hors de la galerie : Google Photos, un autre service, un dossier de
+/// fichiers ; ou accès aux photos limité) : l'inscrit le sait avant l'envoi,
+/// au lieu de les retrouver sans explication (11/11/2026).
+Future<void> showSafeboxCleanupNotPossible(BuildContext context, {required int count}) {
+  final l10n = context.l10n;
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.safeboxCleanupNotPossibleTitle),
+      content: Text('${l10n.safeboxCleanupNotPossible(count)}\n\n${l10n.safeboxCleanupNotPossibleWhy}'),
+      actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.commonOk))],
+    ),
+  );
 }

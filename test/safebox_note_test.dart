@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/errors/app_error.dart';
 import 'package:talky_flutter/core/errors/error_presenter.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_cipher.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 import 'package:talky_flutter/l10n/app_localizations.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 

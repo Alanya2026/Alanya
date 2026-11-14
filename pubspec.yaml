@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  alanya_safebox:
+    path: packages/alanya_safebox
   flutter_localizations:
     sdk: flutter
   intl: any

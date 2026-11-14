@@ -8,8 +8,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,19 +24,21 @@ import '../video_codec_policy.dart';
 import '../../utils/safebox_share_payload.dart';
 import '../../../talky_api_client.dart';
 import '../connectivity_service.dart';
+import '../secure_storage_guard.dart';
 import 'safebox_phone_cleanup.dart';
-import 'safebox_backup.dart';
 import 'safebox_backup_background.dart';
-import 'safebox_cipher.dart';
 import 'safebox_device_media.dart';
-import 'safebox_download_manager.dart';
 import 'safebox_export.dart';
 import 'safebox_foreground.dart';
 import 'safebox_media_prep.dart';
-import 'safebox_models.dart';
-import 'safebox_quality.dart';
 import 'safebox_received_files.dart';
-import 'safebox_upload_manager.dart';
+
+/// Le stockage sécurisé des clés d'envoi en cours, avec les options du
+/// téléphone (voir secure_storage_guard.dart).
+const FlutterSecureStorage kSafeboxSecureStorage = FlutterSecureStorage(
+  aOptions: kSecureStorageAndroidOptions,
+  iOptions: kSecureStorageIosOptions,
+);
 
 /// Un fichier choisi par l'inscrit, pas encore préparé.
 class SafeboxPick {
@@ -134,7 +138,12 @@ class SafeboxController extends ChangeNotifier {
         _enCharge = charging ?? _batterieEnCharge,
         _premierPlan = foreground ?? SafeboxForeground(),
         _alertes = SafeboxQuotaAlerter(quotaAlert ?? _notifierEspace),
-        uploads = uploadManager ?? SafeboxUploadManager(transport: ApiSafeboxTransport(api)),
+        uploads = uploadManager ??
+            SafeboxUploadManager(
+              transport: ApiSafeboxTransport(api),
+              store: PrefsSafeboxJobStore(secure: kSafeboxSecureStorage),
+              unmetered: () => ConnectivityService().currentIsUnmetered,
+            ),
         downloads = SafeboxDownloadManager(transport: ApiSafeboxDownloadTransport(api)),
         previews = SafeboxPreviewCache(transport: ApiSafeboxDownloadTransport(api)) {
     exports = SafeboxExporter(
@@ -159,6 +168,8 @@ class SafeboxController extends ChangeNotifier {
       freeSpace: _espaceLibre,
       maxFileBytes: () => _overview?.limits.maxFileBytes ?? (1 << 30),
       charging: _enCharge,
+      jobAlive: _envoiEnRoute,
+      discardJob: _abandonnerEnvoi,
       store: backupStore,
     );
     _abonnementPartages = uploads.completedJobs.listen((e) {
@@ -177,6 +188,8 @@ class SafeboxController extends ChangeNotifier {
       unawaited(groupe == null ? _partagerApresEnvoi(e.file, conv) : _ajouterAuGroupe(groupe, e.file, conv));
     });
     uploads.addListener(_surveillerGroupes);
+    backup.progress.addListener(notifyListeners);
+    backup.progress.addListener(_suivrePremierPlan);
   }
 
   late final StreamSubscription<({SafeboxUploadJob job, SafeboxFile file})> _abonnementPartages;
@@ -227,6 +240,31 @@ class SafeboxController extends ChangeNotifier {
     final actifs = uploads.jobs
         .where((j) => j.state == SafeboxUploadState.running || j.state == SafeboxUploadState.queued)
         .toList();
+    final p = backup.progress.value;
+    // La sauvegarde prépare des fichiers neufs (lecture, empreinte,
+    // compression) : déjà de quoi le dire, avant le premier envoi (11/11/2026).
+    // Pas pendant la simple recherche, rapide et refaite toutes les 30 min.
+    final prepare = p != null && p.analysing;
+    if (actifs.isEmpty && !prepare) {
+      unawaited(_premierPlan.stop());
+      return;
+    }
+    final l10n = resolveL10n();
+    // Seule la sauvegarde travaille : son avancement sur tous les fichiers
+    // retenus, qui ne recule pas quand un nouveau lot arrive (11/11/2026).
+    final fraction = backupFraction;
+    if (p != null && fraction != null && actifs.every((j) => j.backupKey != null)) {
+      final pct = (fraction * 100).floor().clamp(0, 100);
+      unawaited(_premierPlan.show(
+        channelName: l10n.safeboxNotifChannel,
+        title: l10n.safeboxBackupTitle,
+        text: actifs.isEmpty
+            ? l10n.safeboxBackupAnalysing(p.checked, p.toCheck)
+            : l10n.safeboxBackupNotifText(p.done, p.total, pct),
+        percent: pct,
+      ));
+      return;
+    }
     if (actifs.isEmpty) {
       unawaited(_premierPlan.stop());
       return;
@@ -234,7 +272,6 @@ class SafeboxController extends ChangeNotifier {
     final total = actifs.fold<int>(0, (s, j) => s + j.storedSize);
     final envoye = actifs.fold<int>(0, (s, j) => s + j.sentBytes);
     final pct = total <= 0 ? 0 : (envoye * 100 ~/ total).clamp(0, 100);
-    final l10n = resolveL10n();
     unawaited(_premierPlan.show(
       channelName: l10n.safeboxNotifChannel,
       title: l10n.safeboxTransfersCount(actifs.length),
@@ -693,6 +730,7 @@ class SafeboxController extends ChangeNotifier {
     _reglages = s;
     await s.save();
     notifyListeners();
+    if (!s.enabled) _retirables = const [];
     unawaited(scheduleSafeboxBackgroundBackup(s));
     unawaited(runBackup());
   }
@@ -703,16 +741,132 @@ class SafeboxController extends ChangeNotifier {
     try {
       _acces = await device.access();
       if (_overview == null) await refreshOverview();
+      // Les envois gardés d'abord (tâche de fond, démarrage) : sans eux, un
+      // envoi en attente passerait pour perdu et repartirait en double.
+      await uploads.reload();
       final r = await backup.run(_reglages);
       if (r.stop == SafeboxBackupStop.busy) return r;
       _dernierPassage = r;
       _restants = (await backup.pending(_reglages)).length;
       notifyListeners();
+      // Ce qui vient d'arriver dans le coffre peut quitter le téléphone.
+      unawaited(refreshPhoneRemovable());
       return r;
     } catch (e) {
       debugPrint('[Sauvegarde] passage impossible : $e');
       return null;
     }
+  }
+
+  /// Un envoi de la sauvegarde encore en route : ni terminé, ni en échec,
+  /// ni disparu (11/11/2026).
+  Future<bool> _envoiEnRoute(String jobId) async => uploads.jobs.any((j) =>
+      j.id == jobId && j.state != SafeboxUploadState.completed && j.state != SafeboxUploadState.failed);
+
+  /// La sauvegarde relance ce fichier : l'envoi en échec quitte la liste des
+  /// transferts et rend sa réservation.
+  Future<void> _abandonnerEnvoi(String jobId) async {
+    final j = uploads.jobs.where((x) => x.id == jobId).firstOrNull;
+    if (j != null && j.state == SafeboxUploadState.failed) await uploads.cancel(jobId);
+  }
+
+  /// Où en est la sauvegarde ; null avant le premier passage (11/11/2026).
+  SafeboxBackupProgress? get backupProgress => backup.progress.value;
+
+  /// La barre de la sauvegarde, de 0 à 1 : les fichiers finis, plus la part
+  /// déjà envoyée de ceux en route. Null tant que le compte n'est pas connu.
+  double? get backupFraction {
+    final p = backup.progress.value;
+    if (p == null || p.listing || p.total <= 0) return null;
+    final enVol = uploads.jobs
+        .where((j) => j.backupKey != null && _envoiActif(j))
+        .fold<double>(0, (s, j) => s + j.progress);
+    return ((p.done + enVol) / p.total).clamp(0.0, 1.0);
+  }
+
+  /// Temps restant, seulement quand tout ce qui reste est déjà en route et
+  /// que la vitesse est mesurée ; null sinon (une estimation fausse égare
+  /// plus qu'elle n'aide).
+  Duration? get backupEta {
+    final p = backup.progress.value;
+    if (p == null || p.listing || p.analysing || p.remaining == 0) return null;
+    final enRoute = uploads.jobs.where((j) =>
+        j.backupKey != null && (j.state == SafeboxUploadState.running || j.state == SafeboxUploadState.queued)).toList();
+    if (enRoute.length < p.remaining) return null;
+    final vitesse = enRoute.fold<double>(0, (s, j) => s + (j.state == SafeboxUploadState.running ? j.bytesPerSecond ?? 0 : 0));
+    if (vitesse <= 0) return null;
+    final reste = enRoute.fold<int>(0, (s, j) => s + (j.storedSize - j.sentBytes));
+    return Duration(seconds: (reste / vitesse).ceil());
+  }
+
+  // ── Retirer du téléphone ce qui est sauvegardé (11/11/2026) ─────────────
+
+  List<SafeboxDeviceItem> _retirables = const [];
+  bool _retraitEnCours = false;
+
+  /// Photos et vidéos sauvegardées en Original qui peuvent quitter le
+  /// téléphone : avec « Retirer du téléphone après la sauvegarde », celles
+  /// plus vieilles que le délai choisi ; sans lui, toutes, seulement quand la
+  /// mémoire du téléphone est presque pleine. Vérifiées auprès du serveur.
+  List<SafeboxDeviceItem> get phoneRemovable => _retirables;
+
+  /// Presque pleine : moins de 2 Gio ou moins de 15 % libres.
+  static bool phoneAlmostFull(({int free, int total}) m) => m.free < 2 * (1 << 30) || m.free < m.total * 0.15;
+
+  Future<void> refreshPhoneRemovable() async {
+    final s = _reglages;
+    var liste = const <SafeboxDeviceItem>[];
+    try {
+      if (s.enabled && s.removeFromPhone) {
+        liste = await backup.confirmInVault(await backup.freeable(s, olderThanDays: s.removeAfterDays));
+      } else if (s.enabled) {
+        final m = await device.storage();
+        if (m != null && phoneAlmostFull(m)) liste = await backup.confirmInVault(await backup.freeable(s));
+      }
+    } catch (e) {
+      // Serveur injoignable : rien n'est proposé (jamais sans vérification).
+      debugPrint('[Sauvegarde] fichiers à retirer du téléphone : $e');
+    }
+    _retirables = liste;
+    notifyListeners();
+  }
+
+  /// Envoie ces fichiers à la corbeille du téléphone (une confirmation
+  /// d'Android) ; rend les clés retirées.
+  Future<Set<String>> removeFromPhone(List<SafeboxDeviceItem> items) async {
+    if (_retraitEnCours || items.isEmpty) return const {};
+    _retraitEnCours = true;
+    try {
+      // Revérifiés à l'instant : rien ne quitte le téléphone sans être dans le coffre.
+      final surs = await backup.confirmInVault(items);
+      final retires = await backup.free(surs);
+      _retirables = [for (final it in _retirables) if (!retires.contains(it.key)) it];
+      notifyListeners();
+      return retires;
+    } finally {
+      _retraitEnCours = false;
+    }
+  }
+
+  static const _clePropose = 'safebox_backup_cleanup_proposed_v1';
+
+  /// À l'ouverture du coffre, avec « Retirer du téléphone après la
+  /// sauvegarde » : Android demande une fois pour les fichiers jamais encore
+  /// proposés. Refusés, ils ne sont plus redemandés d'office : la carte de
+  /// l'accueil les garde (décision du 11/11/2026). Rend le nombre retiré, ou
+  /// null s'il n'y avait rien à proposer.
+  Future<int?> proposeRemovalFromPhone() async {
+    final s = _reglages;
+    if (!s.enabled || !s.removeFromPhone || _retraitEnCours) return null;
+    await refreshPhoneRemovable();
+    final prefs = await SharedPreferences.getInstance();
+    final deja = (prefs.getStringList(_clePropose) ?? const <String>[]).toSet();
+    final nouveaux = [for (final it in _retirables) if (!deja.contains(it.key)) it];
+    if (nouveaux.isEmpty) return null;
+    // Gardés : ceux encore sur le téléphone et retenus (la liste ne grossit pas sans fin).
+    final retenus = {for (final it in _retirables) it.key};
+    await prefs.setStringList(_clePropose, [...deja.where(retenus.contains), ...nouveaux.map((it) => it.key)]);
+    return (await removeFromPhone(nouveaux)).length;
   }
 
   /// Envois de la sauvegarde qui attendent le Wi-Fi.
@@ -742,7 +896,9 @@ class SafeboxController extends ChangeNotifier {
     final maxApercu = (_overview?.limits.maxPreviewBytes ?? 256 * 1024) - kSafeboxTagBytes;
     final hevc = u.quality == SafeboxQuality.original ? false : await _hevcPermis(dossier, null);
     return _preparerUn(
-      SafeboxPick(path: u.file.path, name: u.item.name, size: u.item.size),
+      // Un document part d'une copie temporaire (safebox_device_media.dart) :
+      // effacée après l'envoi. Une photo de la galerie part de l'original.
+      SafeboxPick(path: u.file.path, name: u.item.name, size: u.item.size, temporary: !u.item.fromGallery),
       dossier,
       prep,
       quality: u.quality,
@@ -1212,6 +1368,8 @@ class SafeboxController extends ChangeNotifier {
     _minuterie?.cancel();
     _battement?.cancel();
     uploads.removeListener(_surveillerGroupes);
+    backup.progress.removeListener(notifyListeners);
+    backup.progress.removeListener(_suivrePremierPlan);
     _abonnementPartages.cancel();
     _abonnement.cancel();
     uploads.removeListener(notifyListeners);
@@ -1233,17 +1391,20 @@ class _ApiSauvegarde implements SafeboxBackupApi {
   final TalkyApiClient _api;
 
   @override
-  Future<Map<String, SafeboxBackupCheck>> check(List<String> fps, {bool link = true}) async {
-    final r = await _api.checkSafeboxBackup(fps, link: link);
+  Future<Map<String, SafeboxBackupStatus>> check(List<String> fps, {bool link = true}) async {
+    final r = await _api.checkSafeboxBackupQuality(fps, link: link);
     return {
       for (final e in r.entries)
-        e.key: switch (e.value) {
-          'saved' => SafeboxBackupCheck.saved,
-          'elsewhere' => SafeboxBackupCheck.elsewhere,
-          'uploading' => SafeboxBackupCheck.uploading,
-          'skip' => SafeboxBackupCheck.skip,
-          _ => SafeboxBackupCheck.unknown,
-        },
+        e.key: SafeboxBackupStatus(
+          switch (e.value.state) {
+            'saved' => SafeboxBackupCheck.saved,
+            'elsewhere' => SafeboxBackupCheck.elsewhere,
+            'uploading' => SafeboxBackupCheck.uploading,
+            'skip' => SafeboxBackupCheck.skip,
+            _ => SafeboxBackupCheck.unknown,
+          },
+          original: e.value.original,
+        ),
     };
   }
 

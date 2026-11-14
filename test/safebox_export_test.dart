@@ -1,9 +1,9 @@
 import 'dart:io';
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:archive/archive_io.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:talky_flutter/core/services/safebox/safebox_export.dart';
-import 'package:talky_flutter/core/services/safebox/safebox_models.dart';
 
 /// Télécharger depuis le coffre (lot 8) : galerie ou ZIP, un fichier à la fois.
 void main() {

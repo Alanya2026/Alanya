@@ -1,0 +1,34 @@
+name: alanya_coffre
+description: "Alanya Coffre-fort : le coffre-fort Alanya sur Windows et Linux."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  alanya_safebox:
+    path: ../packages/alanya_safebox
+  flutter_secure_storage: ^9.0.0
+  http: ^1.6.0
+  intl: any
+  path_provider: ^2.1.4
+  qr_flutter: ^4.1.0
+  shared_preferences: ^2.2.0
+  url_launcher: ^6.3.0
+  desktop_drop: ^0.5.0
+  file_selector: ^1.0.3
+  image: ^4.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

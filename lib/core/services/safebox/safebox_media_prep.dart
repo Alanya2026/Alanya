@@ -21,6 +21,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -32,8 +33,6 @@ import 'package:video_compress/video_compress.dart';
 import '../music_metadata_service.dart';
 import '../pdf_thumbnail_service.dart';
 import '../video_thumbnail_service.dart';
-import 'safebox_models.dart';
-import 'safebox_quality.dart';
 
 const int kSafeboxPreviewSide = 480;
 

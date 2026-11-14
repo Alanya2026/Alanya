@@ -1,5 +1,5 @@
+import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:talky_flutter/core/utils/upload_stall_guard.dart';
 
 void main() {
   const stall = Duration(milliseconds: 200);
