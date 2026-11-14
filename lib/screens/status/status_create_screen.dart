@@ -18,6 +18,8 @@ import '../../core/services/voice_record_config.dart';
 import '../../core/theme/app_dimens.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/app_log.dart';
+import '../../core/utils/media_album.dart';
+import '../chats/media_send_screen.dart';
 import '../../providers/status_provider.dart';
 import '../../widgets/common/common.dart';
 import '../../core/errors/afficher_erreur.dart';
@@ -34,10 +36,12 @@ enum _StatusType { text, photo, video, audio }
 class _StatusMediaDraft {
   _StatusMediaDraft({required this.file, this.name, this.durationMs});
 
-  /// Le fichier à publier : l'original, ou la photo retouchée qui l'a remplacé.
+  /// Le fichier à publier : l'original, ou le média retouché qui l'a remplacé.
   File file;
   final String? name;
-  final int? durationMs;
+
+  /// Durée connue (audio enregistré, vidéo découpée) ; `null` sinon.
+  int? durationMs;
   final TextEditingController captionCtrl = TextEditingController();
 
   void dispose() => captionCtrl.dispose();
@@ -46,15 +50,46 @@ class _StatusMediaDraft {
   void discardEdit() => unawaited(PhotoEditService.discard(file));
 }
 
+/// Retouche de médias de statut (une légende chacun) : le résultat de
+/// l'éditeur, ou `null` si l'on a fermé sans valider.
+typedef StatusMediaEditor =
+    Future<MediaSendResult?> Function(
+      BuildContext context,
+      List<AlbumSendItem> items,
+      List<String> captions,
+    );
+
+/// Le même éditeur que pour l'envoi dans une discussion (rogner, emoji,
+/// texte, crayon, filtres ; pour une vidéo : découpe, son et calques), avec
+/// une coche à la place de l'envoi et une légende par média.
+Future<MediaSendResult?> editStatusMedia(
+  BuildContext context,
+  List<AlbumSendItem> items,
+  List<String> captions,
+) {
+  return Navigator.push<MediaSendResult>(
+    context,
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => MediaSendScreen(
+        items: items,
+        initialCaptions: captions,
+        confirmOnly: true,
+      ),
+    ),
+  );
+}
+
 class StatusCreateScreen extends StatefulWidget {
   const StatusCreateScreen({
     super.key,
-    this.editPhoto = editPhotoWithFeedback,
+    this.editMedia = editStatusMedia,
     this.pickPhotos,
   });
 
-  /// Retouche d'une photo avant publication (injectable pour les tests).
-  final PhotoEditor editPhoto;
+  /// Retouche d'une photo ou d'une vidéo avant publication (injectable pour
+  /// les tests).
+  final StatusMediaEditor editMedia;
 
   /// Sélecteur de photos (injectable pour les tests) ; par défaut, image_picker.
   /// [limit] : nombre de photos encore acceptées.
@@ -238,26 +273,80 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     if (_drafts.isNotEmpty) _jumpTo(_index);
   }
 
-  /// Retouche facultative d'une photo : l'image modifiée remplace le fichier du
-  /// brouillon (légende et rang inchangés) ; abandonner ne change rien.
-  Future<void> _editDraft(_StatusMediaDraft draft) async {
-    if (_editing || _publishing) return;
+  /// Retouche de photos ou de vidéos dans l'éditeur des discussions : chaque
+  /// média modifié remplace le fichier de son brouillon, les légendes saisies
+  /// dans l'éditeur remplacent les leurs, un média retiré dans l'éditeur l'est
+  /// aussi ici. Fermer sans valider ne change rien.
+  Future<void> _editDrafts(
+    List<_StatusMediaDraft> drafts, {
+    required bool isVideo,
+  }) async {
+    if (drafts.isEmpty || _editing || _publishing) return;
     setState(() => _editing = true);
-    File? edited;
+    MediaSendResult? result;
     try {
-      edited = await widget.editPhoto(context, draft.file);
+      result = await widget.editMedia(
+        context,
+        [
+          for (final d in drafts)
+            AlbumSendItem(
+              file: d.file,
+              type: isVideo ? 2 : 1,
+              duration: d.durationMs == null
+                  ? null
+                  : (d.durationMs! / 1000).round(),
+            ),
+        ],
+        [for (final d in drafts) d.captionCtrl.text],
+      );
     } finally {
       if (mounted) setState(() => _editing = false);
     }
-    if (edited == null) return;
-    if (!mounted || !_drafts.contains(draft)) {
-      // Brouillon retiré ou écran fermé pendant la retouche.
-      await PhotoEditService.discard(edited);
+    if (result == null) return;
+    final items = result.items;
+    if (!mounted) {
+      // Écran fermé pendant la retouche : les retouches ne servent plus.
+      for (final i in items ?? const <AlbumSendItem>[]) {
+        await PhotoEditService.discard(i.file);
+      }
       return;
     }
-    final previous = draft.file;
-    setState(() => draft.file = edited!);
-    unawaited(PhotoEditService.discard(previous));
+    final origins =
+        result.origins ?? [for (var i = 0; i < drafts.length; i++) i];
+    final kept = <_StatusMediaDraft>{};
+    final replaced = <File>[];
+    setState(() {
+      for (var k = 0; k < origins.length; k++) {
+        final draft = drafts[origins[k]];
+        final edited = items?[k];
+        if (!_drafts.contains(draft)) {
+          // Brouillon retiré pendant la retouche.
+          if (edited != null) replaced.add(edited.file);
+          continue;
+        }
+        kept.add(draft);
+        final caption = result!.captions?[k];
+        if (caption != null) draft.captionCtrl.text = caption;
+        if (edited != null && edited.file.path != draft.file.path) {
+          // Seule une retouche précédente est supprimée, jamais l'original.
+          replaced.add(draft.file);
+          draft.file = edited.file;
+          if (isVideo && edited.duration != null) {
+            draft.durationMs = edited.duration! * 1000;
+          }
+        }
+      }
+      for (final draft in drafts) {
+        if (kept.contains(draft) || !_drafts.remove(draft)) continue;
+        draft.discardEdit();
+        _disposeDraftLater(draft);
+      }
+      _index = _index.clamp(0, _drafts.isEmpty ? 0 : _drafts.length - 1);
+    });
+    for (final f in replaced) {
+      unawaited(PhotoEditService.discard(f));
+    }
+    if (_drafts.isNotEmpty) _jumpTo(_index);
   }
 
   Future<void> _pickMedia(ImageSource source, {bool video = false}) async {
@@ -296,9 +385,13 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
     if (files.isEmpty || !mounted) return;
 
     if (files.length > remaining) _warnMaxReached();
-    _addDrafts(
-      files.take(remaining).map((f) => _StatusMediaDraft(file: File(f.path))),
-    );
+    final added = [
+      for (final f in files.take(remaining)) _StatusMediaDraft(file: File(f.path)),
+    ];
+    _addDrafts(added);
+    // L'éditeur s'ouvre aussitôt sur les médias choisis, comme dans les
+    // discussions ; « Modifier » le rouvre ensuite sur un média.
+    if (mounted) await _editDrafts(added, isVideo: video);
   }
 
   // ── Audio ────────────────────────────────────────────────────────
@@ -824,21 +917,23 @@ class _StatusCreateScreenState extends State<StatusCreateScreen>
                         tone: StatusChipTone.neutral,
                       ),
                     ),
-                  if (!isVideo)
-                    _OverlayIconButton(
-                      key: const ValueKey('status-edit-photo'),
-                      icon: Icons.edit_outlined,
-                      tooltip: context.l10n.edit,
-                      onPressed: _publishing || _editing
-                          ? null
-                          : () => _editDraft(draft),
-                    ),
                   if (isVideo)
-                    StatusChip(
-                      label: context.l10n.video2,
-                      tone: StatusChipTone.brand,
-                      icon: Icons.movie_outlined,
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: StatusChip(
+                        label: context.l10n.video2,
+                        tone: StatusChipTone.brand,
+                        icon: Icons.movie_outlined,
+                      ),
                     ),
+                  _OverlayIconButton(
+                    key: const ValueKey('status-edit-media'),
+                    icon: Icons.edit_outlined,
+                    tooltip: context.l10n.edit,
+                    onPressed: _publishing || _editing
+                        ? null
+                        : () => _editDrafts([draft], isVideo: isVideo),
+                  ),
                 ],
               ),
             ),

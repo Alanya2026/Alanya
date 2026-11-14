@@ -1,5 +1,6 @@
-// Statut photo : bouton « Modifier » facultatif sur l'aperçu de chaque photo.
-// Éditeur et sélecteur de photos injectés ; la publication est interceptée.
+// Statut photo / vidéo : bouton « Modifier » facultatif sur l'aperçu de chaque
+// média, qui ouvre l'éditeur des discussions. Éditeur et sélecteur de photos
+// injectés ; la publication est interceptée.
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,8 +11,10 @@ import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:talky_flutter/core/services/photo_edit_service.dart';
 import 'package:talky_flutter/core/theme/app_theme.dart';
+import 'package:talky_flutter/core/utils/media_album.dart';
 import 'package:talky_flutter/l10n/app_localizations.dart';
 import 'package:talky_flutter/providers/status_provider.dart';
+import 'package:talky_flutter/screens/chats/media_send_screen.dart';
 import 'package:talky_flutter/screens/status/status_create_screen.dart';
 import 'package:talky_flutter/talky_api_client.dart';
 import 'package:talky_flutter/talky_models.dart';
@@ -22,6 +25,7 @@ class _RecordingStatusProvider extends StatusProvider {
   _RecordingStatusProvider() : super(api: TalkyApiClient());
 
   final List<File> published = [];
+  final List<String?> captions = [];
 
   @override
   Future<Statut?> createMedia({
@@ -31,6 +35,7 @@ class _RecordingStatusProvider extends StatusProvider {
     int? mediaDurationMs,
   }) async {
     published.add(file);
+    captions.add(caption);
     return null;
   }
 }
@@ -38,21 +43,47 @@ class _RecordingStatusProvider extends StatusProvider {
 class _FakeEditor {
   _FakeEditor(this.dir);
   final Directory dir;
-  final List<File> sources = [];
+
+  /// Fichiers reçus, un appel par liste.
+  final List<List<String>> calls = [];
+  final List<int> types = [];
+  final List<List<String>> captionsIn = [];
   final List<File> produced = [];
   bool cancel = false;
 
-  Future<File?> call(
+  /// Rangs retirés dans l'éditeur.
+  Set<int> drop = {};
+
+  /// Légendes rendues (par média gardé) ; `null` : celles reçues.
+  List<String>? captionsOut;
+
+  List<String> get sources => [for (final c in calls) ...c];
+
+  Future<MediaSendResult?> call(
     BuildContext context,
-    File source, {
-    PhotoEditTarget target = PhotoEditTarget.photo,
-  }) async {
-    sources.add(source);
+    List<AlbumSendItem> items,
+    List<String> captions,
+  ) async {
+    calls.add([for (final i in items) i.file.path]);
+    types.addAll(items.map((i) => i.type));
+    captionsIn.add(captions);
     if (cancel) return null;
-    final f = File(p.join(dir.path, 'edited_${produced.length + 1}.jpg'))
-      ..writeAsBytesSync([0xFF, 0xD8, 1, 2, 3]);
-    produced.add(f);
-    return f;
+    final origins = [
+      for (var k = 0; k < items.length; k++)
+        if (!drop.contains(k)) k,
+    ];
+    final out = <AlbumSendItem>[];
+    for (final k in origins) {
+      final f = File(p.join(dir.path, 'edited_${produced.length + 1}.jpg'))
+        ..writeAsBytesSync([0xFF, 0xD8, 1, 2, 3]);
+      produced.add(f);
+      out.add(AlbumSendItem(file: f, type: items[k].type, duration: 4));
+    }
+    return MediaSendResult(
+      items: out,
+      origins: origins,
+      captions: captionsOut ?? [for (final k in origins) captions[k]],
+    );
   }
 }
 
@@ -79,7 +110,7 @@ Future<void> _pump(
           GlobalCupertinoLocalizations.delegate,
         ],
         home: StatusCreateScreen(
-          editPhoto: editor.call,
+          editMedia: editor.call,
           pickPhotos: (source, limit) async => picks.removeAt(0),
         ),
       ),
@@ -93,7 +124,7 @@ Future<void> _pump(
   await t.pumpAndSettle();
 }
 
-Finder get _edit => find.byKey(const ValueKey('status-edit-photo'));
+Finder get _edit => find.byKey(const ValueKey('status-edit-media'));
 
 Finder _imageOf(File f) => find.byWidgetPredicate(
   (w) =>
@@ -126,25 +157,13 @@ void main() {
   });
   tearDown(() => tmp.deleteSync(recursive: true));
 
-  testWidgets('sans modification : le fichier choisi est publié tel quel',
-      (t) async {
+  testWidgets('un seul média : l\'éditeur s\'ouvre tout seul', (t) async {
     await _pump(t, editor: editor, provider: provider, picks: [
       [XFile(photoA.path)],
     ]);
-    expect(_edit, findsOneWidget);
-    await _publish(t);
-    expect(provider.published.map((f) => f.path), [photoA.path]);
-    expect(editor.sources, isEmpty);
-  });
-
-  testWidgets('Modifier : l\'image modifiée remplace l\'original à la publication',
-      (t) async {
-    await _pump(t, editor: editor, provider: provider, picks: [
-      [XFile(photoA.path)],
-    ]);
-    await t.tap(_edit);
-    await t.pumpAndSettle();
-    expect(editor.sources.single.path, photoA.path);
+    expect(editor.calls.single, [photoA.path]);
+    expect(editor.types.single, 1);
+    expect(editor.captionsIn.single, ['']);
     expect(_imageOf(editor.produced.single), findsWidgets);
     expect(_imageOf(photoA), findsNothing);
     await _publish(t);
@@ -152,40 +171,64 @@ void main() {
     expect(photoA.existsSync(), isTrue);
   });
 
-  testWidgets('abandon de l\'éditeur : l\'original reste publié', (t) async {
+  testWidgets('éditeur fermé sans valider : les originaux sont publiés',
+      (t) async {
     editor.cancel = true;
-    await _pump(t, editor: editor, provider: provider, picks: [
-      [XFile(photoA.path)],
-    ]);
-    await t.tap(_edit);
-    await t.pumpAndSettle();
-    expect(_imageOf(photoA), findsWidgets);
-    await _publish(t);
-    expect(provider.published.map((f) => f.path), [photoA.path]);
-  });
-
-  testWidgets('plusieurs photos : seule celle retouchée change', (t) async {
     await _pump(t, editor: editor, provider: provider, picks: [
       [XFile(photoA.path), XFile(photoB.path)],
     ]);
-    // Après la sélection, on cadre sur la première des photos ajoutées ; on
-    // retouche la photo affichée (la première).
+    expect(editor.calls, hasLength(1));
+    expect(_edit, findsWidgets);
+    await _publish(t);
+    expect(provider.published.map((f) => f.path), [photoA.path, photoB.path]);
+  });
+
+  testWidgets('plusieurs médias : l\'éditeur s\'ouvre sur tous, une légende '
+      'chacun', (t) async {
+    editor.captionsOut = ['Un', 'Deux'];
+    await _pump(t, editor: editor, provider: provider, picks: [
+      [XFile(photoA.path), XFile(photoB.path)],
+    ]);
+    expect(editor.calls.single, [photoA.path, photoB.path]);
+    expect(editor.captionsIn.single, ['', '']);
+    await _publish(t);
+    expect(
+      provider.published.map((f) => f.path),
+      [for (final f in editor.produced) f.path],
+    );
+    expect(provider.captions, ['Un', 'Deux']);
+  });
+
+  testWidgets('un média retiré dans l\'éditeur n\'est pas publié', (t) async {
+    editor.drop = {0};
+    await _pump(t, editor: editor, provider: provider, picks: [
+      [XFile(photoA.path), XFile(photoB.path)],
+    ]);
+    await _publish(t);
+    expect(provider.published.map((f) => f.path), [editor.produced.single.path]);
+    expect(photoA.existsSync(), isTrue);
+  });
+
+  testWidgets('Modifier rouvre l\'éditeur sur ce média ; la retouche '
+      'précédente est supprimée', (t) async {
+    await _pump(t, editor: editor, provider: provider, picks: [
+      [XFile(photoA.path)],
+    ]);
+    final first = editor.produced.single;
     await t.tap(_edit);
     await t.pumpAndSettle();
-    final edited = editor.produced.single;
+    expect(editor.calls.last, [first.path]);
+    final second = editor.produced.last;
+    expect(first.existsSync(), isFalse);
     await _publish(t);
-    final names = provider.published.map((f) => f.path).toList();
-    expect(names, hasLength(2));
-    expect(names, contains(edited.path));
-    expect(names.where((n) => n == photoA.path || n == photoB.path), hasLength(1));
+    expect(provider.published.map((f) => f.path), [second.path]);
+    expect(photoA.existsSync(), isTrue);
   });
 
   testWidgets('retirer une photo retouchée supprime sa retouche', (t) async {
     await _pump(t, editor: editor, provider: provider, picks: [
       [XFile(photoA.path)],
     ]);
-    await t.tap(_edit);
-    await t.pumpAndSettle();
     final edited = editor.produced.single;
     expect(edited.existsSync(), isTrue);
     await t.tap(find.byTooltip('Retirer'));
@@ -196,6 +239,7 @@ void main() {
 
   testWidgets('accessibilité : Modifier est nommé et fait au moins 48 dp',
       (t) async {
+    editor.cancel = true;
     await _pump(t, editor: editor, provider: provider, picks: [
       [XFile(photoA.path)],
     ]);
@@ -203,5 +247,22 @@ void main() {
     final size = t.getSize(find.descendant(of: _edit, matching: find.byType(IconButton)));
     expect(size.width, greaterThanOrEqualTo(48));
     expect(size.height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('la légende passe dans l\'éditeur et en revient', (t) async {
+    editor.cancel = true;
+    await _pump(t, editor: editor, provider: provider, picks: [
+      [XFile(photoA.path)],
+    ]);
+    editor
+      ..cancel = false
+      ..captionsOut = ['Au marché'];
+    await t.enterText(find.byType(TextField), 'Bonjour');
+    await t.tap(_edit);
+    await t.pumpAndSettle();
+    expect(editor.captionsIn.last, ['Bonjour']);
+    expect(find.text('Au marché'), findsOneWidget);
+    await _publish(t);
+    expect(provider.captions, ['Au marché']);
   });
 }

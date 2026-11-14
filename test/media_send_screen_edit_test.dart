@@ -137,6 +137,7 @@ Future<void> _pump(
   String lang = 'fr',
   VideoEngine? engine,
   VideoLayerEditor? editVideo,
+  List<String>? captions,
 }) async {
   t.view.physicalSize = const Size(420, 900);
   t.view.devicePixelRatio = 1;
@@ -169,6 +170,8 @@ Future<void> _pump(
                     retouch: retoucher.call,
                     videoEngine: engine ?? const ProVideoEngine(),
                     editVideo: editVideo ?? editVideoLayers,
+                    initialCaptions: captions,
+                    confirmOnly: captions != null,
                   ),
                 ),
               );
@@ -448,6 +451,40 @@ void main() {
     final items = host.result!.items!;
     expect(items, hasLength(2));
     expect(items[0].file.path, photoB.path);
+  });
+
+  testWidgets('légende par média : chaque média garde la sienne', (t) async {
+    await _pump(
+      t,
+      items: [
+        AlbumSendItem(file: photoA, type: 1),
+        AlbumSendItem(file: photoB, type: 1),
+        AlbumSendItem(file: photoA, type: 1),
+      ],
+      retoucher: retoucher,
+      host: host,
+      captions: ['A', 'B', 'C'],
+    );
+    final field = find.byKey(const ValueKey('media-send-caption'));
+    String text() => t.widget<TextField>(field).controller!.text;
+    expect(text(), 'A');
+    await t.enterText(field, 'A2');
+    await t.tap(find.byKey(const ValueKey('media-send-thumb-1')));
+    await t.pumpAndSettle();
+    expect(text(), 'B');
+    // Retirer le média affiché : le champ montre celle du suivant.
+    await t.tap(find.byKey(const ValueKey('media-send-remove')));
+    await t.pumpAndSettle();
+    expect(text(), 'C');
+    await t.tap(find.byKey(const ValueKey('media-send-thumb-0')));
+    await t.pumpAndSettle();
+    expect(text(), 'A2');
+    expect(find.byIcon(Icons.check), findsOneWidget);
+    await _send(t);
+    final r = host.result!;
+    expect(r.caption, isNull);
+    expect(r.captions, ['A2', 'C']);
+    expect(r.origins, [0, 2]);
   });
 
   testWidgets('vue unique : proposée pour un seul média en discussion à deux',

@@ -25,9 +25,23 @@ import '../../features/media_editor/video/video_trim_bar.dart';
 /// à envoyer (les photos retouchées y ont remplacé leur original ; l'album a
 /// pu perdre ou gagner des médias) et vue unique.
 class MediaSendResult {
-  const MediaSendResult({this.caption, this.items, this.viewOnce = false});
+  const MediaSendResult({
+    this.caption,
+    this.items,
+    this.viewOnce = false,
+    this.captions,
+    this.origins,
+  });
 
   final String? caption;
+
+  /// Légendes par média (mode [MediaSendScreen.initialCaptions]), dans
+  /// l'ordre de [items] ; `null` sinon.
+  final List<String>? captions;
+
+  /// Pour chaque élément de [items] (ou de la liste d'origine si [items] est
+  /// `null`), son rang dans la liste passée à l'écran.
+  final List<int>? origins;
 
   /// `null` : aucun changement par rapport aux éléments passés à l'écran.
   final List<AlbumSendItem>? items;
@@ -88,7 +102,19 @@ class MediaSendScreen extends StatefulWidget {
     this.retouch = retouchPhotoWithFeedback,
     this.videoEngine = const ProVideoEngine(),
     this.editVideo = editVideoLayers,
-  });
+    this.initialCaptions,
+    this.confirmOnly = false,
+  }) : assert(
+         initialCaptions == null || initialCaptions.length == items.length,
+       );
+
+  /// Une légende par média (brouillons de statut) au lieu d'une seule pour
+  /// l'album : le champ montre celle du média affiché.
+  final List<String>? initialCaptions;
+
+  /// Le bouton valide la retouche au lieu d'envoyer (coche, pas de flèche) :
+  /// l'écran sert d'éditeur, l'envoi se fait ailleurs.
+  final bool confirmOnly;
 
   final List<AlbumSendItem> items;
 
@@ -123,8 +149,11 @@ class MediaSendScreen extends StatefulWidget {
 /// Un média de l'album et ses retouches successives (la dernière est celle
 /// qu'on voit et qu'on enverra).
 class _Slot {
-  _Slot(this.original);
+  _Slot(this.original, {this.caption = ''});
   final AlbumSendItem original;
+
+  /// Légende propre au média (mode légende par média).
+  String caption;
   final List<PhotoRetouch> retouches = [];
 
   /// Vidéo : réglages successifs (découpe, son, calques), rendus à l'envoi.
@@ -164,9 +193,14 @@ class _Slot {
 }
 
 class _MediaSendScreenState extends State<MediaSendScreen> {
-  final _captionCtrl = TextEditingController();
+  late final List<_Slot> _slots = [
+    for (var i = 0; i < widget.items.length; i++)
+      _Slot(widget.items[i], caption: widget.initialCaptions?[i] ?? ''),
+  ];
+  late final _captionCtrl = TextEditingController(
+    text: _perItemCaption ? _slots.first.caption : null,
+  );
   final _pageCtrl = PageController();
-  late final List<_Slot> _slots = [for (final i in widget.items) _Slot(i)];
   late bool _viewOnce = widget.isViewOnce;
   int _page = 0;
   bool _isSending = false;
@@ -202,6 +236,18 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
 
   bool get _canViewOnce => widget.allowViewOnce && _slots.length == 1;
 
+  bool get _perItemCaption => widget.initialCaptions != null;
+
+  /// Passe au média [index] : en mode légende par média, la légende saisie
+  /// reste sur le média quitté et le champ montre celle du nouveau.
+  void _showPage(int index, {bool saveCurrent = true}) {
+    if (_perItemCaption && saveCurrent && _page < _slots.length) {
+      _slots[_page].caption = _captionCtrl.text;
+    }
+    _page = index;
+    if (_perItemCaption) _captionCtrl.text = _slots[index].caption;
+  }
+
   Future<void> _send() async {
     if (_isSending || _editing) return;
     setState(() => _isSending = true);
@@ -222,11 +268,18 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
       }
     }
     if (rendered.isNotEmpty) changed = true;
+    if (_perItemCaption) _slots[_page].caption = _captionCtrl.text;
     final caption = _captionCtrl.text.trim();
     Navigator.pop(
       context,
       MediaSendResult(
-        caption: caption.isEmpty ? null : caption,
+        caption: _perItemCaption || caption.isEmpty ? null : caption,
+        captions: _perItemCaption
+            ? List.unmodifiable([for (final s in _slots) s.caption.trim()])
+            : null,
+        origins: List.unmodifiable([
+          for (final s in _slots) widget.items.indexOf(s.original),
+        ]),
         items: changed
             ? List.unmodifiable([
                 for (final s in _slots) rendered[s] ?? s.current,
@@ -466,7 +519,7 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
 
   void _goTo(int index) {
     if (index == _page) return;
-    setState(() => _page = index);
+    setState(() => _showPage(index));
     _pageCtrl.jumpToPage(index);
   }
 
@@ -477,7 +530,7 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
     setState(() {
       _slots.removeAt(index);
       _albumChanged = true;
-      _page = index.clamp(0, _slots.length - 1);
+      _showPage(index.clamp(0, _slots.length - 1), saveCurrent: false);
     });
     for (final r in slot.retouches) {
       unawaited(PhotoEditService.discard(r.file));
@@ -537,7 +590,9 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                         child: PageView.builder(
                           controller: _pageCtrl,
                           itemCount: _slots.length,
-                          onPageChanged: (i) => setState(() => _page = i),
+                          onPageChanged: (i) {
+                            if (i != _page) setState(() => _showPage(i));
+                          },
                           itemBuilder: (_, i) {
                             final s = _slots[i];
                             final item = s.current;
@@ -651,6 +706,7 @@ class _MediaSendScreenState extends State<MediaSendScreen> {
                           onViewOnce: () =>
                               setState(() => _viewOnce = !_viewOnce),
                           sending: _isSending,
+                          confirmOnly: widget.confirmOnly,
                           onSend: _send,
                         ),
                         if (widget.recipientName != null) ...[
@@ -988,6 +1044,7 @@ class _CaptionRow extends StatelessWidget {
     required this.onViewOnce,
     required this.sending,
     required this.onSend,
+    this.confirmOnly = false,
   });
 
   final TextEditingController controller;
@@ -996,6 +1053,7 @@ class _CaptionRow extends StatelessWidget {
   final VoidCallback onViewOnce;
   final bool sending;
   final VoidCallback onSend;
+  final bool confirmOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -1053,8 +1111,8 @@ class _CaptionRow extends StatelessWidget {
               width: 52,
               height: 52,
               child: Icon(
-                Icons.send,
-                semanticLabel: l10n.commonSend,
+                confirmOnly ? Icons.check : Icons.send,
+                semanticLabel: confirmOnly ? l10n.commonConfirm : l10n.commonSend,
                 color: sending
                     ? colors.onPrimary.withValues(alpha: 0.5)
                     : colors.onPrimary,

@@ -74,6 +74,9 @@ class TalkyApplication : Application() {
         // Avant tout affichage : c'est ce rappel qui permettra de ne pas
         // confondre un refus avec une notification expirée.
         FlutterCallkitIncomingPlugin.registerEventCallback(callkitEventCallback)
+        // Tap sur la notification d'un appel vidéo : l'écran Flutter (avec la
+        // caméra) plutôt que l'écran natif du plugin. Voir IncomingVideoRedirect.
+        IncomingVideoRedirect.register(this)
     }
 
     private fun onActiveCallsChanged() {

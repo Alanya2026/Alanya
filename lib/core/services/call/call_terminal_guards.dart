@@ -346,6 +346,27 @@ bool shouldAdoptNativeAccept({
   return presente == actif;
 }
 
+/// Faut-il reprendre, au retour au premier plan, l'entrant que seule la
+/// notification native connaît ?
+///
+/// Uniquement si Dart n'a aucun appel en main (statut `idle`, aucune
+/// auto-réponse en vol) et que l'entrée CallKit est un entrant qui sonne
+/// encore : ni acceptée — c'est alors `shouldAdoptNativeAccept` qui décroche —,
+/// ni un appel sortant que nous avons nous-mêmes posé.
+bool shouldAdoptNativeIncoming({
+  required bool statusIsIdle,
+  required bool autoAnswering,
+  required String? activeCallId,
+  required bool activeAccepted,
+  required bool activeOutgoing,
+}) {
+  if (!statusIsIdle || autoAnswering) return false;
+  if (activeAccepted || activeOutgoing) return false;
+  final actif = activeCallId?.trim() ?? '';
+  if (actif.isEmpty || actif.startsWith('meeting_')) return false;
+  return true;
+}
+
 /// Ce qu'une action CallKit terminale doit rapporter au serveur.
 enum TerminalCallReport {
   /// Un refus explicite de l'utilisateur : le serveur l'inscrit « rejeté ».
