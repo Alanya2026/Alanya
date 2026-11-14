@@ -13,6 +13,7 @@ import 'package:libsignal_protocol_dart/src/invalid_message_exception.dart';
 
 import '../../talky_api_client.dart';
 import 'e2ee_charge.dart';
+import 'e2ee_code_securite.dart';
 import 'e2ee_coffre.dart';
 import 'e2ee_database.dart';
 import 'e2ee_store.dart';
@@ -182,7 +183,7 @@ class E2eeService {
         _coffre = CoffreE2ee(cleDuCoffre),
         _api = api,
         _horloge = horloge ?? DateTime.now {
-    _store = AlanyaSignalStore(_db, _coffre, horloge: _horloge);
+    _store = AlanyaSignalStore(_db, _coffre, horloge: _horloge, surAlerte: _noterAlerte);
   }
 
   static E2eeService? _instance;
@@ -268,6 +269,7 @@ class E2eeService {
         await _coffre.detruire();
         _inscritEnMemoire = false;
         conversationsChiffrees.value = const {};
+        comptesAvecAlerte.value = const {};
       });
 
   // ── Conversations chiffrées ────────────────────────────────────────────
@@ -344,6 +346,13 @@ class E2eeService {
       final rows = await _verrou.executer(
         () => _db.customSelect('SELECT conv, depuis FROM e2ee_conversations').get(),
       );
+      final alertes = await _verrou.executer(
+        () => _db.customSelect('SELECT DISTINCT nom FROM e2ee_alertes_cles WHERE vue = 0').get(),
+      );
+      comptesAvecAlerte.value = {
+        ...comptesAvecAlerte.value,
+        for (final r in alertes) r.read<String>('nom'),
+      };
       conversationsChiffrees.value = {
         for (final r in rows)
           r.read<int>('conv'): DateTime.fromMillisecondsSinceEpoch(r.read<int>('depuis')),
@@ -366,6 +375,103 @@ class E2eeService {
     ).get();
     return rows.isNotEmpty;
   }
+
+  // ── Code de sécurité et alertes de clé ─────────────────────────────────
+
+  /// Comptes (alanyaID en texte) dont une clé a changé, ou chez qui un
+  /// appareil est apparu, sans que l'utilisateur l'ait encore vu. L'écran de
+  /// discussion s'y abonne pour afficher l'avertissement.
+  final ValueNotifier<Set<String>> comptesAvecAlerte = ValueNotifier(const {});
+
+  void _noterAlerte(String nom) {
+    if (comptesAvecAlerte.value.contains(nom)) return;
+    comptesAvecAlerte.value = {...comptesAvecAlerte.value, nom};
+  }
+
+  /// L'utilisateur a vu l'avertissement pour [alanyaID] : il ne revient pas
+  /// tant qu'aucune autre clé ne change.
+  Future<void> marquerAlertesVues(int alanyaID) async {
+    comptesAvecAlerte.value = {...comptesAvecAlerte.value}..remove('$alanyaID');
+    await _verrou.executer(() => _db.customStatement(
+          'UPDATE e2ee_alertes_cles SET vue = 1 WHERE nom = ? AND vue = 0',
+          ['$alanyaID'],
+        ));
+  }
+
+  /// Le code de sécurité de la conversation à deux [conversationID], ou
+  /// `null` si elle n'est pas chiffrée ou compte plus de deux personnes.
+  ///
+  /// La liste d'appareils est redemandée (pas de cache) et les sessions
+  /// manquantes sont ouvertes avant le calcul : les deux téléphones doivent
+  /// voir les mêmes appareils pour obtenir le même code.
+  Future<CodeSecurite?> codeSecurite({
+    required int conversationID,
+    required int moi,
+  }) async {
+    final reponse = await _api.appareils(conversationID);
+    _appareilsEnCache[conversationID] = (le: _horloge(), reponse: reponse);
+    final cibles = [
+      for (final c in (reponse['cibles'] as List? ?? const []))
+        Map<String, dynamic>.from(c as Map),
+    ];
+    final autres = {
+      for (final c in cibles)
+        if (c['estMoi'] != true && (c['alanyaID'] as num?)?.toInt() != moi)
+          (c['alanyaID'] as num).toInt(),
+    };
+    if (autres.length != 1) return null;
+    final lui = autres.single;
+
+    return executer(() async {
+      await _ouvrirSessions(cibles);
+      final mesCles = <IdentityKey>[(await _store.getIdentityKeyPair()).getPublicKey()];
+      final sesCles = <IdentityKey>[];
+      var manquants = (reponse['autresSansCles'] as List? ?? const []).length +
+          (reponse['mesAppareilsSansCles'] as List? ?? const []).length;
+      for (final c in cibles) {
+        final cle = await _store.getIdentity(_adresse(c));
+        if (cle == null) {
+          manquants += 1;
+        } else if ((c['alanyaID'] as num).toInt() == lui) {
+          sesCles.add(cle);
+        } else {
+          mesCles.add(cle);
+        }
+      }
+      if (sesCles.isEmpty) return null;
+      final calcul = calculerCodeSecurite(
+        moi: moi,
+        mesCles: mesCles,
+        correspondant: lui,
+        sesCles: sesCles,
+      );
+      final rows = await _db.customSelect(
+        'SELECT empreinte FROM e2ee_verifications WHERE conv = ?',
+        variables: [Variable.withInt(conversationID)],
+      ).get();
+      return CodeSecurite(
+        chiffres: calcul.chiffres,
+        empreinte: calcul.empreinte,
+        verifie: rows.isNotEmpty && rows.first.read<String>('empreinte') == calcul.empreinte,
+        appareilsManquants: manquants,
+      );
+    });
+  }
+
+  /// Retient que le code [empreinte] de [conversationID] a été comparé.
+  Future<void> marquerVerifie(int conversationID, String empreinte) =>
+      _verrou.executer(() => _db.customStatement(
+            'INSERT INTO e2ee_verifications (conv, empreinte, le) VALUES (?, ?, ?) '
+            'ON CONFLICT(conv) DO UPDATE SET empreinte = excluded.empreinte, le = excluded.le',
+            [conversationID, empreinte, _horloge().millisecondsSinceEpoch],
+          ));
+
+  /// Retire la marque « vérifié » de [conversationID].
+  Future<void> retirerVerification(int conversationID) =>
+      _verrou.executer(() => _db.customStatement(
+            'DELETE FROM e2ee_verifications WHERE conv = ?',
+            [conversationID],
+          ));
 
   // ── Chiffrer ───────────────────────────────────────────────────────────
 
@@ -409,42 +515,54 @@ class E2eeService {
     return executer(() => _chiffrerPour(cibles, moi, charge));
   }
 
+  /// Ouvre une session avec chaque cible qui n'en a pas, ou dont la clé
+  /// d'identité annoncée a changé (réinstallation). Un appareil dont le
+  /// bundle est refusé reste sans session : on ne lui écrira pas.
+  Future<void> _ouvrirSessions(List<Map<String, dynamic>> cibles) async {
+    _store.debutLot = _horloge().millisecondsSinceEpoch;
+    try {
+      // Sessions à ouvrir : aucune session, ou identité changée.
+      final aOuvrir = <int>[];
+      for (final c in cibles) {
+        final adresse = _adresse(c);
+        final connue = await _store.getIdentity(adresse);
+        final annoncee = c['identityKey'] as String?;
+        final changee = connue != null &&
+            annoncee != null &&
+            base64Encode(connue.serialize()) != annoncee;
+        if (!await _store.containsSession(adresse) || changee) {
+          aOuvrir.add((c['appareilId'] as num).toInt());
+        }
+      }
+      if (aOuvrir.isNotEmpty) {
+        final reponse = await _api.bundles(aOuvrir);
+        for (final b in (reponse['bundles'] as List? ?? const [])) {
+          final bundle = Map<String, dynamic>.from(b as Map);
+          final adresse = SignalProtocolAddress(
+            '${bundle['alanyaID']}',
+            (bundle['appareilId'] as num).toInt(),
+          );
+          try {
+            await SessionBuilder.fromSignalStore(_store, adresse)
+                .processPreKeyBundle(_preKeyBundle(bundle));
+          } catch (e) {
+            // Signature invalide, clé mal formée : on n'écrit pas à cet
+            // appareil plutôt que de lui envoyer ce qu'il ne lira pas.
+            debugPrint('[E2EE] session impossible avec $adresse : $e');
+          }
+        }
+      }
+    } finally {
+      _store.debutLot = null;
+    }
+  }
+
   Future<EnvoiChiffre> _chiffrerPour(
     List<Map<String, dynamic>> cibles,
     int moi,
     ChargeE2ee charge,
   ) async {
-    // Sessions à ouvrir : aucune session, ou identité changée.
-    final aOuvrir = <int>[];
-    for (final c in cibles) {
-      final adresse = _adresse(c);
-      final connue = await _store.getIdentity(adresse);
-      final annoncee = c['identityKey'] as String?;
-      final changee = connue != null &&
-          annoncee != null &&
-          base64Encode(connue.serialize()) != annoncee;
-      if (!await _store.containsSession(adresse) || changee) {
-        aOuvrir.add((c['appareilId'] as num).toInt());
-      }
-    }
-    if (aOuvrir.isNotEmpty) {
-      final reponse = await _api.bundles(aOuvrir);
-      for (final b in (reponse['bundles'] as List? ?? const [])) {
-        final bundle = Map<String, dynamic>.from(b as Map);
-        final adresse = SignalProtocolAddress(
-          '${bundle['alanyaID']}',
-          (bundle['appareilId'] as num).toInt(),
-        );
-        try {
-          await SessionBuilder.fromSignalStore(_store, adresse)
-              .processPreKeyBundle(_preKeyBundle(bundle));
-        } catch (e) {
-          // Signature invalide, clé mal formée : on n'écrit pas à cet
-          // appareil plutôt que de lui envoyer ce qu'il ne lira pas.
-          debugPrint('[E2EE] session impossible avec $adresse : $e');
-        }
-      }
-    }
+    await _ouvrirSessions(cibles);
 
     // Le corps, une fois.
     final cle = _aleatoire(32);

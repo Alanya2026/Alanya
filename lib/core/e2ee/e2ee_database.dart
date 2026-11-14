@@ -46,7 +46,7 @@ class E2eeDatabase extends GeneratedDatabase {
   Iterable<TableInfo<Table, dynamic>> get allTables => const [];
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -107,6 +107,23 @@ class E2eeDatabase extends GeneratedDatabase {
     'CREATE TABLE IF NOT EXISTS e2ee_conversations ('
         ' conv INTEGER NOT NULL PRIMARY KEY,'
         ' depuis INTEGER NOT NULL)',
+    // Changements constatés dans les identités des correspondants (v3) :
+    // clé remplacée (`changee`) ou appareil apparu chez un compte déjà connu
+    // (`nouvel_appareil`). Gardés jusqu'à ce que l'utilisateur les ait vus.
+    'CREATE TABLE IF NOT EXISTS e2ee_alertes_cles ('
+        ' nom TEXT NOT NULL,'
+        ' appareil INTEGER NOT NULL,'
+        ' genre TEXT NOT NULL,'
+        ' le INTEGER NOT NULL,'
+        ' vue INTEGER NOT NULL DEFAULT 0,'
+        ' PRIMARY KEY (nom, appareil, le))',
+    // Conversations dont le code de sécurité a été comparé (v3). `empreinte`
+    // résume les clés vérifiées : si l'une change, elle ne correspond plus et
+    // la marque tombe d'elle-même.
+    'CREATE TABLE IF NOT EXISTS e2ee_verifications ('
+        ' conv INTEGER NOT NULL PRIMARY KEY,'
+        ' empreinte TEXT NOT NULL,'
+        ' le INTEGER NOT NULL)',
   ];
 
   // ── Accès élémentaires ─────────────────────────────────────────────────
@@ -142,6 +159,8 @@ class E2eeDatabase extends GeneratedDatabase {
   Future<void> toutEffacer() => transaction(() async {
         for (final table in const [
           'e2ee_conversations',
+          'e2ee_alertes_cles',
+          'e2ee_verifications',
           'e2ee_sessions',
           'e2ee_identites_distantes',
           'e2ee_prekeys',

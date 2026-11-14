@@ -20,8 +20,17 @@ import 'e2ee_database.dart';
 /// `E2eeService` qui fait passer toute opération une par une ; personne d'autre
 /// ne doit appeler ce store.
 class AlanyaSignalStore extends SignalProtocolStore {
-  AlanyaSignalStore(this._db, this._coffre, {DateTime Function()? horloge})
+  AlanyaSignalStore(this._db, this._coffre, {DateTime Function()? horloge, this.surAlerte})
       : _horloge = horloge ?? DateTime.now;
+
+  /// Appelé après l'enregistrement d'une alerte de clé, avec le compte
+  /// concerné : l'écran ouvert l'affiche sans relire la base.
+  final void Function(String nom)? surAlerte;
+
+  /// Début du lot de sessions en cours d'ouverture (ms), posé par le service.
+  /// Les appareils d'un même compte découverts dans un même lot sont la
+  /// première rencontre, pas un ajout : seul compte un appareil connu AVANT.
+  int? debutLot;
 
   final E2eeDatabase _db;
   final CoffreE2ee _coffre;
@@ -95,6 +104,19 @@ class AlanyaSignalStore extends SignalProtocolStore {
     if (identityKey == null) return false;
     final existante = await getIdentity(address);
     if (existante != null && existante == identityKey) return false;
+    // Un appareil inconnu chez un compte dont on connaît déjà au moins un
+    // appareil : à signaler comme une clé changée. La liste d'appareils vient
+    // du serveur et n'est pas signée ; un appareil ajouté par lui est
+    // exactement ce qu'une interposition ferait.
+    final dejaConnu = existante == null &&
+        (await _db.customSelect(
+          'SELECT 1 FROM e2ee_identites_distantes WHERE nom = ? AND vu_le < ? LIMIT 1',
+          variables: [
+            Variable.withString(address.getName()),
+            Variable.withInt(debutLot ?? _maintenant),
+          ],
+        ).get())
+            .isNotEmpty;
     final scelle = await _coffre.sceller(
       identityKey.serialize(),
       _adresseIdentiteDistante(address),
@@ -111,6 +133,18 @@ class AlanyaSignalStore extends SignalProtocolStore {
         _maintenant,
       ],
     );
+    if (existante != null || dejaConnu) {
+      await _db.customStatement(
+        'INSERT OR IGNORE INTO e2ee_alertes_cles (nom, appareil, genre, le) VALUES (?, ?, ?, ?)',
+        [
+          address.getName(),
+          address.getDeviceId(),
+          existante != null ? 'changee' : 'nouvel_appareil',
+          _maintenant,
+        ],
+      );
+      surAlerte?.call(address.getName());
+    }
     return existante != null;
   }
 
