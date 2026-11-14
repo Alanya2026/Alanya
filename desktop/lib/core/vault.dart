@@ -35,6 +35,8 @@ class Vault extends ChangeNotifier {
       discardJob: uploads.cancel,
       refreshOverview: refresh,
       store: backupStore,
+      calls: api,
+      albumsRoot: () => _overview?.rootIds[SafeboxRoot.albums],
     );
     _fin = uploads.completed.listen(_arrive);
     _finSauvegarde = uploads.completedJobs.listen((e) {

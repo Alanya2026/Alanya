@@ -806,7 +806,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pcBackupIntro =>
-      'Files in the chosen folders go to your SafeBox on their own, each into the folder for its type, with the PC folder\'s name as its source folder. A file deleted from the PC stays in your SafeBox; a file deleted from your SafeBox doesn\'t come back.';
+      'Each chosen folder is recreated in Albums with its subfolders, and its files also show up in Photos, Videos, Audio or Documents, using no extra space. A file deleted from the PC stays in your SafeBox; a file deleted from your SafeBox doesn\'t come back.';
 
   @override
   String get pcBackupSwitch => 'Back up these folders automatically';
@@ -992,4 +992,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get folderDownloads => 'Downloaded images';
+
+  @override
+  String get pcRemoveTitle => 'Remove from the computer after backup';
+
+  @override
+  String get pcRemoveHint =>
+      'Photos and videos kept in Original quality in your SafeBox go to the computer\'s trash, where you can get them back until it\'s emptied. Documents and audio files stay on the computer.';
+
+  @override
+  String get pcRemoveWhen => 'When to remove them';
+
+  @override
+  String pcRemoveAfter(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'After $n days',
+      one: 'After 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pcRemoveNow => 'Right away';
+
+  @override
+  String get pcRemoveConfirmTitle => 'Remove from the computer?';
+
+  @override
+  String get pcRemoveConfirm =>
+      'Once they\'re in your SafeBox in Original quality, and checked with the server just before, photos and videos from the backed-up folders go to the computer\'s trash. You can get them back from the trash until you empty it, and always from your SafeBox.';
+
+  @override
+  String get pcRemoveConfirmAction => 'Turn on';
+
+  @override
+  String pcRemoved(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n photos and videos moved to the computer\'s trash',
+      one: '1 photo or video moved to the computer\'s trash',
+    );
+    return '$_temp0 · $size freed';
+  }
+
+  @override
+  String get pcBackupRename => 'Rename';
+
+  @override
+  String get pcBackupNameLabel => 'Name in your SafeBox';
+
+  @override
+  String get pcBackupRenameHint =>
+      'The folder takes this name in your SafeBox (its album in Albums, and the source folder in Photos and Videos). The folder on the computer doesn\'t change, and the backup carries on.';
 }

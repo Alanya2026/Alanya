@@ -300,7 +300,7 @@ class Importer extends ChangeNotifier {
     _etape(ImportProgress(ImportStep.preparing, total: tous.length));
     var faits = 0;
     try {
-      final dossiers = _Dossiers(api, plan.target.id, limits.folderNameMax);
+      final dossiers = FolderResolver(api, plan.target.id, limits.folderNameMax);
 
       // Ajouts sans copie, par dossier d'arrivée.
       final parDossier = <int, List<int>>{};
@@ -451,10 +451,11 @@ String shortenFileName(String name, int max) {
   return '${name.substring(0, max - ext.length).trimRight()}$ext';
 }
 
-/// Les sous-dossiers recréés sous la cible : un dossier du même nom est
-/// réutilisé ; trop profond, le fichier reste dans le dernier dossier créé.
-class _Dossiers {
-  _Dossiers(this.api, this.racine, this.nomMax);
+/// Une arborescence de dossiers recréée sous [racine] (ajout manuel dans
+/// Albums ou Partager, sauvegarde du PC dans Albums) : un dossier du même nom
+/// est réutilisé ; trop profond, le fichier reste dans le dernier dossier créé.
+class FolderResolver {
+  FolderResolver(this.api, this.racine, this.nomMax);
 
   final SafeboxCalls api;
   final int racine;
@@ -462,6 +463,7 @@ class _Dossiers {
   final Map<String, int> _connus = {};
   final Map<int, Map<String, int>> _enfants = {};
 
+  /// Le dossier au bout de [chemin], créé au besoin.
   Future<int> resolve(List<String> chemin) async {
     var ici = racine;
     for (var i = 0; i < chemin.length; i += 1) {
@@ -479,13 +481,19 @@ class _Dossiers {
     return ici;
   }
 
+  /// Le dossier [nom] directement sous [racine], sans le créer ; null s'il
+  /// n'existe pas.
+  Future<int?> find(String nom) async => (await _lire(racine))[_court(nom).toLowerCase()];
+
   Future<Map<String, int>> _lire(int parent) async {
     final p = await api.fetchSafeboxFolder(parent);
     return _enfants[parent] = {for (final f in p.folders) (f.name ?? '').toLowerCase(): f.id};
   }
 
+  String _court(String nom) => nom.length > nomMax && nomMax > 0 ? nom.substring(0, nomMax).trimRight() : nom;
+
   Future<int?> _enfant(int parent, String nomBrut) async {
-    final nom = nomBrut.length > nomMax && nomMax > 0 ? nomBrut.substring(0, nomMax).trimRight() : nomBrut;
+    final nom = _court(nomBrut);
     final enfants = _enfants[parent] ?? await _lire(parent);
     final existant = enfants[nom.toLowerCase()];
     if (existant != null) return existant;

@@ -813,7 +813,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pcBackupIntro =>
-      'Les fichiers des dossiers choisis partent tout seuls dans le coffre, chacun dans le dossier de son type, avec le nom du dossier du PC comme dossier d\'origine. Un fichier supprimé du PC reste dans le coffre ; un fichier supprimé du coffre ne revient pas.';
+      'Chaque dossier choisi est recréé dans Albums avec ses sous-dossiers, et ses fichiers apparaissent aussi dans Photos, Vidéos, Audios ou Documents, sans place en plus. Un fichier supprimé du PC reste dans le coffre ; un fichier supprimé du coffre ne revient pas.';
 
   @override
   String get pcBackupSwitch => 'Sauvegarder ces dossiers automatiquement';
@@ -999,4 +999,59 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get folderDownloads => 'Images téléchargées';
+
+  @override
+  String get pcRemoveTitle => 'Retirer de l\'ordinateur après la sauvegarde';
+
+  @override
+  String get pcRemoveHint =>
+      'Les photos et vidéos gardées en Original dans le coffre vont dans la corbeille de l\'ordinateur, d\'où vous pouvez les récupérer tant qu\'elle n\'est pas vidée. Les documents et les audios restent sur l\'ordinateur.';
+
+  @override
+  String get pcRemoveWhen => 'Quand les retirer';
+
+  @override
+  String pcRemoveAfter(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Après $n jours',
+      one: 'Après 1 jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pcRemoveNow => 'Tout de suite';
+
+  @override
+  String get pcRemoveConfirmTitle => 'Retirer de l\'ordinateur ?';
+
+  @override
+  String get pcRemoveConfirm =>
+      'Une fois arrivées dans le coffre en Original, et vérifiées auprès du serveur juste avant, les photos et vidéos des dossiers sauvegardés iront dans la corbeille de l\'ordinateur. Vous pourrez les récupérer depuis la corbeille tant que vous ne la videz pas, et toujours depuis le coffre.';
+
+  @override
+  String get pcRemoveConfirmAction => 'Activer';
+
+  @override
+  String pcRemoved(int n, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n photos et vidéos mises à la corbeille de l\'ordinateur',
+      one: '1 photo ou vidéo mise à la corbeille de l\'ordinateur',
+    );
+    return '$_temp0 · $size libérés';
+  }
+
+  @override
+  String get pcBackupRename => 'Renommer';
+
+  @override
+  String get pcBackupNameLabel => 'Nom dans le coffre';
+
+  @override
+  String get pcBackupRenameHint =>
+      'Le dossier garde ce nom dans le coffre (son album dans Albums, et le dossier d\'origine dans Photos et Vidéos). Le dossier de l\'ordinateur ne change pas, et la sauvegarde continue.';
 }

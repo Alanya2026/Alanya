@@ -42,6 +42,49 @@ class PcBackupView extends StatelessWidget {
     await b.update(b.settings.copyWith(folders: [for (final f in b.settings.folders) if (f.path != d.path) f]));
   }
 
+  /// Le nom affiché dans le coffre (dossier d'origine des prochains
+  /// fichiers) ; le chemin sur l'ordinateur ne change pas.
+  Future<void> _renommer(BuildContext context, PcBackup b, PcBackupFolder d) async {
+    final l = context.l;
+    final nom = await askName(
+      context,
+      title: l.pcBackupRename,
+      label: l.pcBackupNameLabel,
+      action: l.pcBackupRename,
+      initial: d.name,
+      maxLength: 80,
+      hint: l.pcBackupRenameHint,
+    );
+    if (nom == null || nom == d.name || !context.mounted) return;
+    try {
+      await b.renameFolder(d, nom);
+    } catch (e) {
+      if (context.mounted) showErrorSnack(context, e);
+    }
+  }
+
+  /// « Retirer de l'ordinateur après la sauvegarde » : une confirmation à
+  /// l'activation, puis les retraits se font tout seuls.
+  Future<void> _retraitOrdinateur(BuildContext context, PcBackup b, bool oui) async {
+    final l = context.l;
+    if (oui) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l.pcRemoveConfirmTitle),
+          content: SizedBox(width: 460, child: Text(l.pcRemoveConfirm, style: const TextStyle(height: 1.45))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(l.pcRemoveConfirmAction)),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    await b.update(b.settings.copyWith(removeFromPc: oui));
+    if (oui) await b.removeSaved();
+  }
+
   Future<void> _basculerType(BuildContext context, PcBackup b, PcBackupFolder d, SafeboxFamily f, bool oui) async {
     final types = {...d.families};
     oui ? types.add(f) : types.remove(f);
@@ -86,6 +129,41 @@ class PcBackupView extends StatelessWidget {
                     ],
                   ]),
                 ),
+                if (s.folders.any((d) => d.families.contains(SafeboxFamily.photos) || d.families.contains(SafeboxFamily.videos))) ...[
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      SwitchListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        title: Text(l.pcRemoveTitle, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: Text(l.pcRemoveHint),
+                        value: s.removeFromPc,
+                        onChanged: (v) => _retraitOrdinateur(context, b, v),
+                      ),
+                      if (s.removeFromPc)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(l.pcRemoveWhen, style: t.bodyMedium),
+                            const SizedBox(height: 8),
+                            SegmentedButton<int>(
+                              segments: [
+                                ButtonSegment(value: 30, label: Text(l.pcRemoveAfter(30))),
+                                ButtonSegment(value: 7, label: Text(l.pcRemoveAfter(7))),
+                                ButtonSegment(value: 0, label: Text(l.pcRemoveNow)),
+                              ],
+                              selected: {s.removeAfterDays},
+                              showSelectedIcon: false,
+                              onSelectionChanged: (v) async {
+                                await b.update(s.copyWith(removeAfterDays: v.first));
+                                await b.removeSaved();
+                              },
+                            ),
+                          ]),
+                        ),
+                    ]),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 Row(children: [
                   Expanded(
@@ -130,6 +208,11 @@ class PcBackupView extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ]),
+                            ),
+                            IconButton(
+                              tooltip: l.pcBackupRename,
+                              onPressed: () => _renommer(context, b, d),
+                              icon: const Icon(Icons.edit_outlined),
                             ),
                             IconButton(
                               tooltip: l.pcBackupRemoveFolder,
@@ -192,6 +275,7 @@ class _Etat extends StatelessWidget {
           if (r != null && r.skipped > 0) l.pcBackupSkipped(r.skipped),
           if (r != null && r.noRoom > 0) l.pcBackupNoRoom(r.noRoom),
           if (p != null && p.unreadable > 0) l.pcBackupUnreadable(p.unreadable),
+          if (b.lastRemoval case final rt?) l.pcRemoved(rt.count, formatBytes(context, rt.bytes)),
         ];
         final locale = Localizations.localeOf(context).toLanguageTag();
         return Padding(

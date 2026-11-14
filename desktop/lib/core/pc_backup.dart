@@ -7,9 +7,16 @@
 // attendent quand la place manque, un envoi perdu repart. Ici, la source
 // lit les dossiers choisis sur le PC.
 //
-//  - Un seul sens : un fichier supprimé du PC reste dans le coffre.
-//  - Chaque fichier va dans la racine de son type, avec le nom du dossier du
-//    PC comme dossier d'origine.
+//  - Un seul sens : un fichier supprimé du PC reste dans le coffre. Sur
+//    option (« Retirer de l'ordinateur après la sauvegarde », décochée par
+//    défaut), les photos et vidéos gardées en Original partent à la
+//    corbeille de l'ordinateur, comme sur le téléphone (removeSaved).
+//  - Le dossier du PC est recréé dans Albums, avec son arborescence
+//    (Albums › Images › Vacances › plage.jpg, 14/11/2026) : rien ne se
+//    disperse. Chaque fichier est aussi dans la racine de son type (Photos,
+//    Documents…), sans place en plus : c'est le même contenu. Un fichier
+//    déjà dans le coffre (venu du téléphone) n'est pas renvoyé mais rejoint
+//    l'album. Ce que l'inscrit change ensuite dans l'album est respecté.
 //  - En Original : l'ordinateur ne compresse pas. Une vidéo plus lourde que
 //    la limite d'un fichier attend (le moteur la voudrait en HD).
 //  - Tourne quand l'application est ouverte : un passage au démarrage, à
@@ -30,6 +37,9 @@ import 'dart:io';
 import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'importer.dart';
+import 'os_trash.dart';
 
 /// Préfixe des clés des fichiers du PC : `g:` pour que le moteur ne les
 /// supprime jamais (voir l'avertissement en tête du fichier).
@@ -57,12 +67,26 @@ class PcBackupFolder {
 }
 
 class PcBackupSettings {
-  const PcBackupSettings({this.enabled = false, this.folders = const []});
+  const PcBackupSettings({
+    this.enabled = false,
+    this.folders = const [],
+    this.removeFromPc = false,
+    this.removeAfterDays = 30,
+  });
 
   static const _cle = 'coffre_pc_backup_v1';
 
   final bool enabled;
   final List<PcBackupFolder> folders;
+
+  /// « Retirer de l'ordinateur après la sauvegarde » (14/11/2026), comme
+  /// sur le téléphone : décoché par défaut ; photos et vidéos gardées en
+  /// Original dans le coffre seulement, vers la corbeille de l'ordinateur.
+  final bool removeFromPc;
+
+  /// Seulement celles plus vieilles que ce nombre de jours (30, 7) ; 0 : dès
+  /// la sauvegarde.
+  final int removeAfterDays;
 
   static Future<PcBackupSettings> load() async {
     try {
@@ -72,6 +96,8 @@ class PcBackupSettings {
       final j = jsonDecode(brut) as Map<String, dynamic>;
       return PcBackupSettings(
         enabled: j['enabled'] == true,
+        removeFromPc: j['removeFromPc'] == true,
+        removeAfterDays: j['removeAfterDays'] is int ? j['removeAfterDays'] as int : 30,
         folders: [
           for (final f in (j['folders'] as List? ?? const []))
             if (f is Map) PcBackupFolder.fromJson(Map<String, dynamic>.from(f)),
@@ -84,11 +110,24 @@ class PcBackupSettings {
 
   Future<void> save() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cle, jsonEncode({'enabled': enabled, 'folders': [for (final f in folders) f.toJson()]}));
+    await prefs.setString(
+      _cle,
+      jsonEncode({
+        'enabled': enabled,
+        'folders': [for (final f in folders) f.toJson()],
+        'removeFromPc': removeFromPc,
+        'removeAfterDays': removeAfterDays,
+      }),
+    );
   }
 
-  PcBackupSettings copyWith({bool? enabled, List<PcBackupFolder>? folders}) =>
-      PcBackupSettings(enabled: enabled ?? this.enabled, folders: folders ?? this.folders);
+  PcBackupSettings copyWith({bool? enabled, List<PcBackupFolder>? folders, bool? removeFromPc, int? removeAfterDays}) =>
+      PcBackupSettings(
+        enabled: enabled ?? this.enabled,
+        folders: folders ?? this.folders,
+        removeFromPc: removeFromPc ?? this.removeFromPc,
+        removeAfterDays: removeAfterDays ?? this.removeAfterDays,
+      );
 
   /// Les réglages du moteur : chaque dossier du PC passe par les deux
   /// entrées du moteur (« galerie » pour photos, vidéos, audios ;
@@ -266,12 +305,22 @@ class PcBackup extends ChangeNotifier {
     SafeboxBackupStore? store,
     Future<PcBackupSettings> Function()? loadSettings,
     Future<void> Function(PcBackupSettings s)? saveSettings,
+    Future<Set<String>> Function(List<String> paths)? computerTrash,
+    SafeboxCalls? calls,
+    int? Function()? albumsRoot,
+    Future<Map<String, String>> Function()? loadPlaced,
+    Future<void> Function(Map<String, String> placed)? savePlaced,
     this.period = const Duration(minutes: 15),
     this.settle = const Duration(seconds: 20),
   })  : _store = _MagasinFerme(store ?? PrefsSafeboxBackupStore()),
         _charger = loadSettings ?? PcBackupSettings.load,
         _enregistrer = saveSettings ?? ((s) => s.save()),
-        _rafraichir = refreshOverview {
+        _rafraichir = refreshOverview,
+        _corbeille = computerTrash ?? moveToComputerTrash,
+        _api = calls,
+        _albums = albumsRoot ?? (() => null),
+        _chargerRanges = loadPlaced ?? _rangesPrefs,
+        _enregistrerRanges = savePlaced ?? _enregistrerRangesPrefs {
     source = PcFolderSource(folders: () => _reglages.folders, limits: limits);
     engine = SafeboxBackupEngine(
       device: source,
@@ -290,6 +339,32 @@ class PcBackup extends ChangeNotifier {
   final Future<PcBackupSettings> Function() _charger;
   final Future<void> Function(PcBackupSettings) _enregistrer;
   final Future<void> Function() _rafraichir;
+  final Future<Set<String>> Function(List<String>) _corbeille;
+
+  /// Pour ranger dans Albums (null : pas de rangement, tests du moteur).
+  final SafeboxCalls? _api;
+  final int? Function() _albums;
+  final Future<Map<String, String>> Function() _chargerRanges;
+  final Future<void> Function(Map<String, String>) _enregistrerRanges;
+
+  static const _cleRanges = 'coffre_pc_backup_placed_v1';
+
+  /// Fichier du PC → empreinte déjà rangée dans l'album : un fichier retiré
+  /// de l'album par l'inscrit n'y revient pas.
+  static Future<Map<String, String>> _rangesPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final brut = prefs.getString(_cleRanges);
+      return brut == null ? {} : Map<String, String>.from(jsonDecode(brut) as Map);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static Future<void> _enregistrerRangesPrefs(Map<String, String> r) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cleRanges, jsonEncode(r));
+  }
 
   /// Entre deux passages complets.
   final Duration period;
@@ -317,6 +392,12 @@ class PcBackup extends ChangeNotifier {
   Timer? _bientot;
   final List<StreamSubscription<FileSystemEvent>> _veilles = [];
   bool _encore = false;
+
+  /// Le dernier retrait de l'ordinateur : nombre de fichiers et octets.
+  ({int count, int bytes, DateTime at})? _retrait;
+  ({int count, int bytes, DateTime at})? get lastRemoval => _retrait;
+  Timer? _retraitBientot;
+  Future<void>? _retraitEnCours;
 
   /// Lit les réglages et démarre si la sauvegarde est activée.
   Future<void> start() async {
@@ -400,6 +481,8 @@ class PcBackup extends ChangeNotifier {
       _rapport = await engine.run(s);
       _quand = DateTime.now();
       _erreur = null;
+      await placeInAlbums();
+      await removeSaved();
     } catch (e) {
       debugPrint('[Sauvegarde PC] passage impossible : $e');
       _erreur = e;
@@ -421,12 +504,143 @@ class PcBackup extends ChangeNotifier {
     return PcBackupEstimate(counts: counts, bytes: bytes);
   }
 
-  /// Un envoi de la sauvegarde est arrivé dans le coffre.
-  Future<void> markSaved(String key) => engine.markSaved(key);
+  /// Un envoi de la sauvegarde est arrivé dans le coffre. « Tout de suite » :
+  /// le retrait suit peu après (une rafale d'envois, un seul retrait).
+  Future<void> markSaved(String key) async {
+    await engine.markSaved(key);
+    if (_ferme) return;
+    // Une rafale d'envois arrivés : un seul rangement (et un seul retrait
+    // pour « Tout de suite »).
+    _retraitBientot?.cancel();
+    _retraitBientot = Timer(const Duration(seconds: 10), () async {
+      await placeInAlbums();
+      if (_reglages.removeFromPc && _reglages.removeAfterDays == 0) await removeSaved();
+    });
+  }
+
+  Future<void>? _rangementEnCours;
+
+  /// Range dans Albums › dossier › sous-dossiers les fichiers sauvegardés
+  /// qui n'y sont pas encore, sans copie ; chacun est aussi lié à la racine
+  /// de son type.
+  Future<void> placeInAlbums() => _rangementEnCours ??= _ranger().whenComplete(() => _rangementEnCours = null);
+
+  Future<void> _ranger() async {
+    final api = _api;
+    final albums = _albums();
+    final r = _reglages;
+    if (_ferme || api == null || albums == null || !r.toEngine().enabled) return;
+    try {
+      final fiches = await engine.records();
+      final ranges = await _chargerRanges();
+      final dossiers = [...r.folders]..sort((a, b) => b.path.length.compareTo(a.path.length));
+      // Fichier → (empreinte, chemin dans l'album).
+      final aRanger = <String, ({String fp, List<String> chemin})>{};
+      for (final it in await engine.selection(r.toEngine())) {
+        final f = fiches[it.key];
+        final fp = f?.fp;
+        if (f == null || fp == null || f.state != SafeboxBackupState.saved || !f.matches(it)) continue;
+        if (ranges[it.key] == fp) continue;
+        final chemin = it.key.substring(kPcKeyPrefix.length);
+        final d = dossiers.where((x) => chemin.startsWith('${x.path}${Platform.pathSeparator}')).firstOrNull;
+        if (d == null) continue;
+        final morceaux = chemin.substring(d.path.length + 1).split(Platform.pathSeparator)..removeLast();
+        aRanger[it.key] = (fp: fp, chemin: [d.name, ...morceaux.where((m) => m.isNotEmpty)]);
+      }
+      if (aRanger.isEmpty) return;
+      // Le fichier du coffre de chaque empreinte, lié au passage à la racine
+      // de son type s'il n'était que dans un album (link).
+      final fps = {for (final v in aRanger.values) v.fp}.toList();
+      final fichiers = <String, int>{};
+      for (var i = 0; i < fps.length; i += 500) {
+        final res = await api.checkSafeboxSources(fps.sublist(i, i + 500 > fps.length ? fps.length : i + 500), link: true);
+        for (final e in res.entries) {
+          if (e.value.fileId != null && (e.value.state == 'saved' || e.value.state == 'elsewhere')) fichiers[e.key] = e.value.fileId!;
+        }
+      }
+      final resolveur = FolderResolver(api, albums, 80);
+      final parDossier = <int, Map<String, int>>{};
+      for (final e in aRanger.entries) {
+        final id = fichiers[e.value.fp];
+        if (id == null) continue;
+        final dossier = await resolveur.resolve(e.value.chemin);
+        parDossier.putIfAbsent(dossier, () => {})[e.key] = id;
+      }
+      for (final MapEntry(key: dossier, value: cles) in parDossier.entries) {
+        final liste = cles.entries.toList();
+        for (var i = 0; i < liste.length; i += 50) {
+          final lot = liste.sublist(i, i + 50 > liste.length ? liste.length : i + 50);
+          await api.addSafeboxFilesToFolder(dossier, [for (final x in lot) x.value]);
+          for (final x in lot) {
+            ranges[x.key] = aRanger[x.key]!.fp;
+          }
+          if (_ferme) return;
+          await _enregistrerRanges(ranges);
+        }
+      }
+    } catch (e) {
+      debugPrint('[Sauvegarde PC] rangement dans Albums impossible : $e');
+    }
+  }
+
+  /// Renomme un dossier sauvegardé : son album dans le coffre aussi (tous ses
+  /// fichiers, anciens et nouveaux). Le chemin sur l'ordinateur ne change pas.
+  Future<void> renameFolder(PcBackupFolder dossier, String nom) async {
+    final api = _api;
+    final albums = _albums();
+    if (api != null && albums != null) {
+      final id = await FolderResolver(api, albums, 80).find(dossier.name);
+      if (id != null) await api.updateSafeboxFolder(id, name: nom);
+    }
+    await update(_reglages.copyWith(folders: [
+      for (final f in _reglages.folders)
+        f.path == dossier.path ? PcBackupFolder(path: f.path, name: nom, families: f.families) : f,
+    ]));
+  }
+
+  /// « Retirer de l'ordinateur après la sauvegarde » : les photos et vidéos
+  /// des dossiers sauvegardés, assez anciennes, que le serveur confirme à
+  /// l'instant être dans le coffre en Original, partent à la corbeille de
+  /// l'ordinateur. Rien d'autre : ni documents, ni audios, ni un fichier
+  /// hors des dossiers choisis, ni une suppression définitive.
+  Future<void> removeSaved() => _retraitEnCours ??= _retirer().whenComplete(() => _retraitEnCours = null);
+
+  Future<void> _retirer() async {
+    final r = _reglages;
+    if (_ferme || !r.removeFromPc || !r.toEngine().enabled) return;
+    try {
+      final candidats = await engine.freeable(r.toEngine(), olderThanDays: r.removeAfterDays);
+      if (candidats.isEmpty) return;
+      final confirmes = await engine.confirmInVault(candidats);
+      final racines = [for (final d in r.folders) d.path.endsWith(Platform.pathSeparator) ? d.path : '${d.path}${Platform.pathSeparator}'];
+      final chemins = <String, int>{};
+      for (final it in confirmes) {
+        if (!it.key.startsWith(kPcKeyPrefix)) continue;
+        if (it.family != SafeboxFamily.photos && it.family != SafeboxFamily.videos) continue;
+        final chemin = it.key.substring(kPcKeyPrefix.length);
+        // Garde-fou : jamais un fichier hors des dossiers sauvegardés.
+        if (!racines.any(chemin.startsWith)) continue;
+        chemins[chemin] = it.size;
+      }
+      if (chemins.isEmpty || _ferme) return;
+      final partis = await _corbeille(chemins.keys.toList());
+      if (partis.isEmpty) return;
+      _retrait = (
+        count: partis.length,
+        bytes: partis.fold(0, (s, p) => s + (chemins[p] ?? 0)),
+        at: DateTime.now(),
+      );
+      source.forget();
+      if (!_ferme) notifyListeners();
+    } catch (e) {
+      debugPrint('[Sauvegarde PC] retrait impossible : $e');
+    }
+  }
 
   /// Déconnexion : plus de passage, plus d'écriture (tout va être effacé).
   void close() {
     _ferme = true;
+    _retraitBientot?.cancel();
     _store.closed = true;
     _desarmer();
   }

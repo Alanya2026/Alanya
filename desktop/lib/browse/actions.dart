@@ -30,6 +30,7 @@ Future<String?> askName(
   String initial = '',
   int maxLength = 80,
   bool keepExtension = false,
+  String? hint,
 }) {
   final champ = TextEditingController(text: initial);
   final point = initial.lastIndexOf('.');
@@ -49,13 +50,19 @@ Future<String?> askName(
         title: Text(title),
         content: SizedBox(
           width: 420,
-          child: TextField(
-            controller: champ,
-            autofocus: true,
-            maxLength: maxLength > 0 ? maxLength : null,
-            decoration: InputDecoration(labelText: label),
-            onSubmitted: (_) => valider(),
-          ),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (hint != null) ...[
+              Text(hint, style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.45)),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: champ,
+              autofocus: true,
+              maxLength: maxLength > 0 ? maxLength : null,
+              decoration: InputDecoration(labelText: label),
+              onSubmitted: (_) => valider(),
+            ),
+          ]),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l.cancel)),
