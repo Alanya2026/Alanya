@@ -34,21 +34,21 @@ Les fichiers sont servis par le serveur, sur `alanya237.com/coffre`
 (dépôt privé : pas de téléchargement public sur GitHub). Rien n'est payant ;
 les minutes GitHub Actions sont gratuites dans la limite offerte au dépôt.
 
-1. **Numéro de version** : le même à deux endroits, `version:` de
-   `pubspec.yaml` (ex. `1.2.0+3`) et `kAppVersion` de
-   `lib/core/app_version.dart` (ex. `'1.2.0'`). Un test le vérifie.
-2. **Nouveautés** affichées sur la page : `release-notes.json` (fr, en).
-3. **Commiter, pousser, puis poser l'étiquette** :
+1. **Nouveautés** affichées sur la page : `release-notes.json` (fr, en).
+2. **Numéro de version** : changer seulement `version:` de `pubspec.yaml`
+   (ex. `1.1.0+2` devient `1.2.0+3`). L'application lit ce numéro au
+   démarrage (Flutter l'écrit dans `data/flutter_assets/version.json`).
+3. **Pousser sur `main`.** GitHub Actions (« Coffre de bureau », environ
+   15 minutes) voit le nouveau numéro, construit l'installateur Windows, le
+   .deb et l'AppImage, puis les **dépose sur le VPS**
+   (`~/Alanya-backend/downloads/coffre`), `version.json` en dernier. La page
+   affiche alors la nouvelle version, et les applications déjà installées
+   l'annoncent (au démarrage, ou dans les 24 h). Pas de redémarrage du
+   serveur.
 
-       git tag coffre-v1.2.0
-       git push origin coffre-v1.2.0
-
-   GitHub Actions (« Coffre de bureau », environ 15 minutes) construit
-   l'installateur Windows, le .deb et l'AppImage, puis les **dépose sur le
-   VPS** (`~/Alanya-backend/downloads/coffre`), `version.json` en dernier.
-   La page affiche alors la nouvelle version, et les applications déjà
-   installées l'annoncent (au démarrage, ou dans les 24 h). Pas de
-   redémarrage du serveur.
+   Un push qui ne change pas le numéro (ou qui le fait reculer) ne
+   reconstruit rien. On peut aussi publier depuis une autre branche avec
+   une étiquette : `git tag coffre-v1.2.0 && git push origin coffre-v1.2.0`.
 4. **Vérifier** : https://www.alanya237.com/coffre affiche la version.
 
 ### Une fois : la clé de dépôt sur le VPS

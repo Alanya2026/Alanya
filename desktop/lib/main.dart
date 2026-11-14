@@ -21,7 +21,8 @@ Future<void> main() async {
   final session = Session(api: DesktopApi(store: store), store: store);
   final locale = LocaleSetting();
   await Future.wait([session.start(), locale.load()]);
-  final updates = UpdateChecker()..start();
+  appVersion = await loadAppVersion();
+  final updates = UpdateChecker(current: appVersion)..start();
   runApp(CoffreApp(session: session, locale: locale, updates: updates));
 }
 

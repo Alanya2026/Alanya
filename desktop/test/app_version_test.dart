@@ -15,9 +15,12 @@ void main() {
     expect(compareVersions('2.0.0', '10.0.0'), -1);
   });
 
-  test('kAppVersion suit la version de pubspec.yaml', () {
-    final ligne = File('pubspec.yaml').readAsLinesSync().firstWhere((l) => l.startsWith('version:'));
-    expect(ligne.split(':')[1].trim().split('+').first, kAppVersion);
+  test('la version est lue dans le version.json écrit par Flutter', () async {
+    final dir = Directory.systemTemp.createTempSync('coffre_version');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    expect(await loadAppVersion(assetsDir: dir.path), '0.0.0');
+    File('${dir.path}/version.json').writeAsStringSync('{"app_name":"alanya_coffre","version":"1.2.3","build_number":"4"}');
+    expect(await loadAppVersion(assetsDir: dir.path), '1.2.3');
   });
 
   test('une version plus récente s’annonce ; « Plus tard » l’écarte jusqu’à la suivante', () async {

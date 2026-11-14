@@ -141,7 +141,7 @@ class SettingsView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(l.settingsVersion(kAppVersion), style: t.bodySmall),
+              Text(l.settingsVersion(appVersion), style: t.bodySmall),
             ]),
           ),
         ),

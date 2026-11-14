@@ -5,17 +5,51 @@
 // version plus récente, affiche un bandeau avec le lien de téléchargement.
 // L'inscrit réinstalle par-dessus, sans perdre sa connexion.
 //
-// kAppVersion doit suivre `version:` de pubspec.yaml ; la construction
-// (.github/workflows/coffre-bureau.yml) vérifie les deux contre l'étiquette.
+// La version vient de `version:` de pubspec.yaml, le seul endroit à changer :
+// Flutter l'écrit dans data/flutter_assets/version.json, lu au démarrage
+// ([loadAppVersion]). Pousser sur main un pubspec.yaml au numéro changé
+// publie la nouvelle version (.github/workflows/coffre-bureau.yml).
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String kAppVersion = '1.1.0';
+/// La version de cette application, lue au démarrage (« 0.0.0 » si elle ne
+/// se lit pas : l'avis de nouvelle version s'affiche alors).
+String appVersion = '0.0.0';
+
+/// Lit la version écrite par Flutter à côté de l'exécutable
+/// (data/flutter_assets/version.json), sinon dans les ressources.
+/// [assetsDir] : pour les tests.
+Future<String> loadAppVersion({String? assetsDir}) async {
+  String? lire(String texte) {
+    final v = (jsonDecode(texte) as Map)['version'];
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
+  try {
+    final dossier = assetsDir ??
+        '${File(Platform.resolvedExecutable).parent.path}${Platform.pathSeparator}data'
+            '${Platform.pathSeparator}flutter_assets';
+    final f = File('$dossier${Platform.pathSeparator}version.json');
+    if (await f.exists()) {
+      final v = lire(await f.readAsString());
+      if (v != null) return v;
+    }
+  } catch (_) {}
+  if (assetsDir == null) {
+    try {
+      final v = lire(await rootBundle.loadString('version.json'));
+      if (v != null) return v;
+    } catch (_) {}
+  }
+  return '0.0.0';
+}
 const String kDownloadPageUrl = 'https://www.alanya237.com/coffre';
 const String kVersionUrl = 'https://www.alanya237.com/coffre/version.json';
 
@@ -32,7 +66,7 @@ int compareVersions(String a, String b) {
 }
 
 class UpdateChecker extends ChangeNotifier {
-  UpdateChecker({http.Client? client, this.current = kAppVersion}) : _client = client ?? http.Client();
+  UpdateChecker({http.Client? client, required this.current}) : _client = client ?? http.Client();
 
   static const _cleIgnoree = 'coffre_update_dismissed';
 
