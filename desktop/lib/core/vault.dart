@@ -44,6 +44,10 @@ class Vault extends ChangeNotifier {
       if (cle != null) unawaited(pcBackup.markSaved(cle));
     });
     unawaited(pcBackup.start());
+    // Les fichiers ouverts dans la visionneuse : ramenés sous la limite au
+    // démarrage, puis un peu après chaque téléchargement.
+    downloads.addListener(_trierBientot);
+    unawaited(trimKept());
     // Les envois gardés d'une session précédente repartent ; ceux qui
     // attendaient le réseau sont relancés de temps en temps.
     unawaited(uploads.resumeAll());
@@ -182,6 +186,65 @@ class Vault extends ChangeNotifier {
 
   Iterable<Directory> _gardes(Directory base) => [Directory('${base.path}/files'), Directory('${base.path}/notes')];
 
+  /// Au-delà, les fichiers gardés pour la visionneuse les moins récents sont
+  /// effacés (ils se retéléchargent au besoin) : un disque presque plein ne
+  /// doit pas se remplir de copies oubliées (14/11/2026).
+  static const int kKeptMaxBytes = 1 << 30;
+
+  Timer? _triTimer;
+  Future<void>? _tri;
+
+  void _trierBientot() {
+    _triTimer ??= Timer(const Duration(seconds: 20), () {
+      _triTimer = null;
+      unawaited(trimKept());
+    });
+  }
+
+  /// Ramène les fichiers gardés sous [maxBytes] (aux trois quarts, pour ne
+  /// pas recommencer à chaque ouverture), les plus anciens d'abord. Un
+  /// téléchargement en cours (fichier .part) n'est jamais touché.
+  Future<void> trimKept({int maxBytes = kKeptMaxBytes}) => _tri ??= _trierGardes(maxBytes).whenComplete(() => _tri = null);
+
+  Future<void> _trierGardes(int maxBytes) async {
+    try {
+      final dir = Directory('${(await _baseDir()).path}${Platform.pathSeparator}files');
+      if (!await dir.exists()) return;
+      final gardes = <({int id, int octets, DateTime quand})>[];
+      var total = 0;
+      await for (final e in dir.list()) {
+        final id = int.tryParse(e.uri.pathSegments.where((x) => x.isNotEmpty).last);
+        if (e is! Directory || id == null) continue;
+        var octets = 0;
+        var quand = DateTime.fromMillisecondsSinceEpoch(0);
+        var enCours = false;
+        await for (final f in e.list(recursive: true)) {
+          if (f is! File) continue;
+          if (f.path.endsWith('.part')) enCours = true;
+          final st = await f.stat();
+          octets += st.size;
+          if (st.modified.isAfter(quand)) quand = st.modified;
+        }
+        total += octets;
+        if (!enCours) gardes.add((id: id, octets: octets, quand: quand));
+      }
+      if (total <= maxBytes) return;
+      gardes.sort((a, b) => a.quand.compareTo(b.quand));
+      final cible = maxBytes * 3 ~/ 4;
+      for (final g in gardes) {
+        if (total <= cible) break;
+        try {
+          await downloads.evict(g.id);
+          total -= g.octets;
+        } catch (_) {
+          // Ouvert ailleurs (Windows) : il restera jusqu'au prochain tri.
+        }
+      }
+    } catch (e) {
+      debugPrint('[Coffre] tri des fichiers gardés impossible : $e');
+    }
+  }
+
   /// La place prise par les fichiers gardés pour la visionneuse.
   Future<int> keptBytes() async {
     final base = await _baseDir();
@@ -218,6 +281,8 @@ class Vault extends ChangeNotifier {
     _magasin.closed = true;
     _relance.cancel();
     _rafraichir?.cancel();
+    _triTimer?.cancel();
+    downloads.removeListener(_trierBientot);
     unawaited(_fin.cancel());
     unawaited(_finSauvegarde.cancel());
     pcBackup.dispose();

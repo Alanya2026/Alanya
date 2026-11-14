@@ -154,7 +154,23 @@ class PcBackupSettings {
 /// Les dossiers du PC vus comme la « galerie » et les « dossiers de
 /// documents » du moteur. Ne supprime jamais rien.
 class PcFolderSource implements SafeboxDeviceSource {
-  PcFolderSource({required this.folders, required this.limits});
+  PcFolderSource({required this.folders, required this.limits, this.stableAfter = const Duration(minutes: 2)});
+
+  /// Un fichier modifié depuis moins longtemps est peut-être encore en cours
+  /// de copie (une vidéo de 2 Go venue d'une clé USB) : il attend, sinon son
+  /// envoi échouerait (« le fichier a changé ») et finirait abandonné.
+  final Duration stableAfter;
+
+  /// Le moment où le plus proche des fichiers écartés comme trop récents
+  /// sera stable ; null s'il n'y en a pas (lu par [PcBackup] pour revenir).
+  DateTime? nextStableAt;
+
+  bool _stable(SafeboxDeviceItem it) {
+    final pret = it.modified.add(stableAfter);
+    if (!pret.isAfter(DateTime.now())) return true;
+    if (nextStableAt == null || pret.isBefore(nextStableAt!)) nextStableAt = pret;
+    return false;
+  }
 
   /// Les dossiers choisis (réglages en cours).
   final List<PcBackupFolder> Function() folders;
@@ -219,7 +235,10 @@ class PcFolderSource implements SafeboxDeviceSource {
   static const _ignores = {'desktop.ini', 'thumbs.db', 'ehthumbs.db'};
 
   /// Oublie les lectures gardées (début d'un passage).
-  void forget() => _lus.clear();
+  void forget() {
+    _lus.clear();
+    nextStableAt = null;
+  }
 
   @override
   Future<SafeboxMediaAccess> access() async => SafeboxMediaAccess.full;
@@ -243,7 +262,10 @@ class PcFolderSource implements SafeboxDeviceSource {
       if (d == null) continue;
       try {
         for (final it in await scan(d)) {
-          if (it.family != SafeboxFamily.documents && families.contains(it.family) && d.families.contains(it.family)) {
+          if (it.family != SafeboxFamily.documents &&
+              families.contains(it.family) &&
+              d.families.contains(it.family) &&
+              _stable(it)) {
             out.add(it);
           }
         }
@@ -261,7 +283,7 @@ class PcFolderSource implements SafeboxDeviceSource {
   Future<List<SafeboxDeviceItem>> documentItems(SafeboxDocumentFolder folder, {DateTime? since}) async {
     final d = _dossier(folder.uri);
     if (d == null || !d.families.contains(SafeboxFamily.documents)) return const [];
-    return [for (final it in await scan(d)) if (it.family == SafeboxFamily.documents) it];
+    return [for (final it in await scan(d)) if (it.family == SafeboxFamily.documents && _stable(it)) it];
   }
 
   @override
@@ -310,6 +332,7 @@ class PcBackup extends ChangeNotifier {
     int? Function()? albumsRoot,
     Future<Map<String, String>> Function()? loadPlaced,
     Future<void> Function(Map<String, String> placed)? savePlaced,
+    Duration stableAfter = const Duration(minutes: 2),
     this.period = const Duration(minutes: 15),
     this.settle = const Duration(seconds: 20),
   })  : _store = _MagasinFerme(store ?? PrefsSafeboxBackupStore()),
@@ -321,7 +344,7 @@ class PcBackup extends ChangeNotifier {
         _albums = albumsRoot ?? (() => null),
         _chargerRanges = loadPlaced ?? _rangesPrefs,
         _enregistrerRanges = savePlaced ?? _enregistrerRangesPrefs {
-    source = PcFolderSource(folders: () => _reglages.folders, limits: limits);
+    source = PcFolderSource(folders: () => _reglages.folders, limits: limits, stableAfter: stableAfter);
     engine = SafeboxBackupEngine(
       device: source,
       api: api,
@@ -483,6 +506,13 @@ class PcBackup extends ChangeNotifier {
       _erreur = null;
       await placeInAlbums();
       await removeSaved();
+      // Des fichiers encore en cours de copie ont été laissés : un passage
+      // revient quand ils seront stables.
+      final stable = source.nextStableAt;
+      if (stable != null && !_ferme) {
+        _bientot?.cancel();
+        _bientot = Timer(stable.difference(DateTime.now()) + const Duration(seconds: 5), () => unawaited(runNow()));
+      }
     } catch (e) {
       debugPrint('[Sauvegarde PC] passage impossible : $e');
       _erreur = e;

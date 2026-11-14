@@ -342,7 +342,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String settingsKeptFilesSize(String size) {
-    return '$size · downloaded again when needed';
+    return '$size · 1 GB at most, the oldest are removed · downloaded again when needed';
   }
 
   @override

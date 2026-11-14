@@ -225,7 +225,7 @@
   "settingsFiles": "Fichiers sur cet ordinateur",
   "settingsDownloadFolder": "Dossier des téléchargements",
   "settingsKeptFiles": "Fichiers gardés pour la visionneuse",
-  "settingsKeptFilesSize": "{size} · se retéléchargent au besoin",
+  "settingsKeptFilesSize": "{size} · 1 Go au plus, les plus anciens s'effacent · se retéléchargent au besoin",
   "@settingsKeptFilesSize": {
     "placeholders": {
       "size": {

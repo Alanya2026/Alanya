@@ -31,6 +31,13 @@ class UploadStallGuard {
   /// Un morceau vient de partir.
   void tick() => _arm();
 
+  /// Tout le corps est remis au système : il peut encore en garder quelques
+  /// Mo dans ses tampons, qui partent sans que l'application le voie (une
+  /// ligne très lente, plusieurs blocs en vol). L'attente de la réponse a
+  /// droit à [delai] (par défaut 4 × [stallTimeout]) avant d'être jugée
+  /// bloquée.
+  void bodySent([Duration? delai]) => _arm(delai ?? stallTimeout * 4);
+
   /// L'envoi est terminé (réussi ou non) : plus rien à surveiller.
   void stop() => _timer?.cancel();
 
@@ -40,10 +47,10 @@ class UploadStallGuard {
     if (!_abort.isCompleted) _abort.complete();
   }
 
-  void _arm() {
+  void _arm([Duration? delai]) {
     _timer?.cancel();
     if (_abort.isCompleted) return;
-    _timer = Timer(stallTimeout, () {
+    _timer = Timer(delai ?? stallTimeout, () {
       if (!_abort.isCompleted) _abort.complete();
     });
   }

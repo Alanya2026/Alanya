@@ -301,26 +301,25 @@ mixin SafeboxCalls {
     final h = safeboxHttp;
     final guard = UploadStallGuard(stallTimeout: h.stallTimeout);
     unawaited(cancel?.then((_) => guard.abortNow()));
-    final request = http.AbortableStreamedRequest('PUT', Uri.parse(url), abortTrigger: guard.abortTrigger);
-    request.contentLength = bytes.length;
-    const tranche = 64 * 1024;
-    var envoye = 0;
-    unawaited(() async {
-      try {
-        for (var i = 0; i < bytes.length; i += tranche) {
-          final fin = i + tranche < bytes.length ? i + tranche : bytes.length;
-          request.sink.add(Uint8List.sublistView(bytes, i, fin));
-          envoye = fin;
+    // Les morceaux ne sont fournis qu'au rythme où la connexion les prend
+    // (14/11/2026) : la surveillance et la progression suivent le vrai
+    // envoi. Avant, tout le bloc partait d'un coup dans un tampon ; sur une
+    // ligne lente (sous ~3 Mbit/s avec 3 blocs en vol), la réponse tardait
+    // plus que le délai et le bloc était coupé en boucle alors que les
+    // octets avançaient (test transfer_throttle_test).
+    final request = _EnvoiBloc(
+      Uri.parse(url),
+      bytes,
+      abortTrigger: guard.abortTrigger,
+      onAccepted: (envoye) {
+        if (envoye >= bytes.length) {
+          guard.bodySent();
+        } else {
           guard.tick();
-          onProgress?.call(envoye);
-          // Laisse la main : sans cela, tout le bloc part dans le tampon d'un
-          // coup et la progression comme la surveillance ne voient rien.
-          await Future<void>.delayed(Duration.zero);
         }
-      } finally {
-        await request.sink.close();
-      }
-    }());
+        onProgress?.call(envoye);
+      },
+    );
     final response = await _sendGuarded(h, request, guard);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw h.transferFailure(SafeboxTransferFailure.rejected, status: response.statusCode, code: 'SAFEBOX_BLOCK_REJECTED');
@@ -405,4 +404,36 @@ class SafeboxClient with SafeboxCalls {
 
   @override
   final SafeboxHttp safeboxHttp;
+}
+
+/// Le PUT d'un bloc, dont le corps est tiré par la connexion : chaque
+/// morceau de 64 Kio n'est donné qu'une fois le précédent accepté par la
+/// connexion (contre-pression du client HTTP), et [onAccepted] le signale.
+class _EnvoiBloc extends http.BaseRequest with http.Abortable {
+  _EnvoiBloc(Uri url, this._octets, {required this.abortTrigger, required this.onAccepted}) : super('PUT', url) {
+    contentLength = _octets.length;
+  }
+
+  final Uint8List _octets;
+  final void Function(int sent) onAccepted;
+
+  @override
+  final Future<void>? abortTrigger;
+
+  @override
+  http.ByteStream finalize() {
+    super.finalize();
+    return http.ByteStream(_morceaux());
+  }
+
+  Stream<List<int>> _morceaux() async* {
+    const tranche = 64 * 1024;
+    for (var i = 0; i < _octets.length; i += tranche) {
+      final fin = i + tranche < _octets.length ? i + tranche : _octets.length;
+      // Le générateur ne reprend qu'une fois ce morceau pris par la
+      // connexion : il est alors compté comme envoyé.
+      yield Uint8List.sublistView(_octets, i, fin);
+      onAccepted(fin);
+    }
+  }
 }

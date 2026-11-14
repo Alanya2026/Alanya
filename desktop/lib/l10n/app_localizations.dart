@@ -665,7 +665,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsKeptFilesSize.
   ///
   /// In fr, this message translates to:
-  /// **'{size} · se retéléchargent au besoin'**
+  /// **'{size} · 1 Go au plus, les plus anciens s\'effacent · se retéléchargent au besoin'**
   String settingsKeptFilesSize(String size);
 
   /// No description provided for @add.

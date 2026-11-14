@@ -351,7 +351,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String settingsKeptFilesSize(String size) {
-    return '$size · se retéléchargent au besoin';
+    return '$size · 1 Go au plus, les plus anciens s\'effacent · se retéléchargent au besoin';
   }
 
   @override

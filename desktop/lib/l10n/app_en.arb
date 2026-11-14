@@ -94,7 +94,7 @@
   "settingsFiles": "Files on this computer",
   "settingsDownloadFolder": "Download folder",
   "settingsKeptFiles": "Files kept for the viewer",
-  "settingsKeptFilesSize": "{size} · downloaded again when needed",
+  "settingsKeptFilesSize": "{size} · 1 GB at most, the oldest are removed · downloaded again when needed",
   "add": "Add",
   "addFiles": "Files…",
   "addFolder": "A folder…",

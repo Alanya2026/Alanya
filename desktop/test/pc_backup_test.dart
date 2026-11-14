@@ -137,6 +137,8 @@ void main() {
       albumsRoot: () => 5,
       loadPlaced: () async => Map.of(ranges),
       savePlaced: (r) async => ranges = Map.of(r),
+      // Les fichiers des tests viennent d'être écrits : stables tout de suite.
+      stableAfter: Duration.zero,
       // Pas de passage automatique pendant les tests.
       period: const Duration(days: 1),
       settle: const Duration(days: 1),
@@ -320,6 +322,23 @@ void main() {
     expect(reglages.folders.single.name, 'PC du bureau');
     expect(reglages.folders.single.path, '${tmp.path}/Images');
     await sauvegarde.idle;
+  });
+
+  test('un fichier modifié à l’instant (copie en cours) attend d’être stable', () async {
+    final source = PcFolderSource(
+      folders: () => [dossier('Images', {SafeboxFamily.photos})],
+      limits: () => _limites,
+      stableAfter: const Duration(minutes: 2),
+    );
+    final ancienne = ecrire('Images/ancienne.jpg', 'a')..setLastModifiedSync(DateTime.now().subtract(const Duration(hours: 1)));
+    ecrire('Images/en-copie.jpg', 'b');
+
+    final items = await source.galleryItems(folderIds: {'${tmp.path}/Images'}, families: {SafeboxFamily.photos});
+
+    expect(items.map((i) => i.name), ['ancienne.jpg']);
+    expect(ancienne.existsSync(), isTrue);
+    // Elle sera revue dans environ 2 minutes.
+    expect(source.nextStableAt!.difference(DateTime.now()).inSeconds, inInclusiveRange(100, 121));
   });
 
   test('désactivée : aucun passage', () async {

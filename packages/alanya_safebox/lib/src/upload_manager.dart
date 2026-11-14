@@ -284,13 +284,29 @@ class SafeboxUploadJob {
 
   int get storedSize => safeboxEncryptedLength(plainSize);
 
+  /// Le plus haut montré jusqu'ici (non gardé) : voir [sentBytes].
+  int _plusHaut = 0;
+
+  /// Octets envoyés, tels qu'affichés : ne recule pas (14/11/2026). Un bloc
+  /// coupé (coupure, pause) repart de zéro, et ses octets en vol étaient
+  /// comptés : la barre reculait de jusqu'à 3 × 8 Mo. Elle marque désormais
+  /// une pause le temps qu'il repasse. Repart de zéro seulement si l'envoi
+  /// repart de zéro ([restartProgress]).
   int get sentBytes {
     if (blockSize <= 0) return 0;
     var total = inFlightBytes;
     for (final n in done) {
       total += safeboxPlanBlock(n, plainSize: plainSize, blockSize: blockSize).cipherLength;
     }
-    return total;
+    if (total > _plusHaut) _plusHaut = total;
+    return _plusHaut > storedSize ? storedSize : _plusHaut;
+  }
+
+  /// L'envoi repart de zéro (nouvelle réservation) : l'affichage aussi.
+  void restartProgress() {
+    _plusHaut = 0;
+    _mesures.clear();
+    bytesPerSecond = null;
   }
 
   double get progress => storedSize <= 0 ? 0 : (sentBytes / storedSize).clamp(0.0, 1.0);
@@ -754,7 +770,8 @@ class SafeboxUploadManager extends ChangeNotifier {
         ..blockSize = ticket.blockSize
         ..blockCount = ticket.blockCount
         ..done.clear()
-        ..previewDone = false;
+        ..previewDone = false
+        ..restartProgress();
       for (final b in ticket.blocks) {
         adresses[b.n] = b.url;
       }
