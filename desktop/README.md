@@ -35,32 +35,52 @@ Les fichiers sont servis par le serveur, sur `alanya237.com/coffre`
 les minutes GitHub Actions sont gratuites dans la limite offerte au dépôt.
 
 1. **Numéro de version** : le même à deux endroits, `version:` de
-   `pubspec.yaml` (ex. `1.1.0+2`) et `kAppVersion` de
-   `lib/core/app_version.dart` (ex. `'1.1.0'`). Un test le vérifie.
-2. **Construire** : commiter, pousser, puis poser l'étiquette :
+   `pubspec.yaml` (ex. `1.2.0+3`) et `kAppVersion` de
+   `lib/core/app_version.dart` (ex. `'1.2.0'`). Un test le vérifie.
+2. **Nouveautés** affichées sur la page : `release-notes.json` (fr, en).
+3. **Commiter, pousser, puis poser l'étiquette** :
 
-       git tag coffre-v1.1.0
-       git push origin coffre-v1.1.0
+       git tag coffre-v1.2.0
+       git push origin coffre-v1.2.0
 
-   GitHub Actions (« Coffre de bureau ») construit l'installateur Windows,
-   le .deb et l'AppImage, et prépare `version.json`. Environ 15 minutes.
-3. **Récupérer** : GitHub › Actions › la construction › artefact
-   `coffre-release` (un zip). Le décompresser. Dans `version.json`, écrire
-   au besoin les nouveautés (`notes.fr`, `notes.en`), affichées sur la page.
-4. **Essayer** l'installateur sur un PC Windows et le .deb sur une Ubuntu :
-   connexion QR, parcours, ajout, téléchargement.
-5. **Déposer sur le serveur** (depuis le dossier décompressé) :
-
-       ssh ubuntu@www.alanya237.com 'mkdir -p ~/Alanya-backend/downloads/coffre'
-       scp *.exe *.deb *.AppImage ubuntu@www.alanya237.com:~/Alanya-backend/downloads/coffre/
-       scp version.json ubuntu@www.alanya237.com:~/Alanya-backend/downloads/coffre/
-
-   `version.json` en dernier : la page et l'avis « nouvelle version » ne
-   changent qu'à ce moment, quand les fichiers sont déjà là. Pas de
+   GitHub Actions (« Coffre de bureau », environ 15 minutes) construit
+   l'installateur Windows, le .deb et l'AppImage, puis les **dépose sur le
+   VPS** (`~/Alanya-backend/downloads/coffre`), `version.json` en dernier.
+   La page affiche alors la nouvelle version, et les applications déjà
+   installées l'annoncent (au démarrage, ou dans les 24 h). Pas de
    redémarrage du serveur.
-6. **Vérifier** : https://www.alanya237.com/coffre affiche la nouvelle
-   version et ses trois boutons. Les applications déjà installées affichent
-   « Nouvelle version disponible » au prochain démarrage (ou dans les 24 h).
+4. **Vérifier** : https://www.alanya237.com/coffre affiche la version.
 
-Les anciennes versions peuvent rester dans le dossier : seuls les fichiers
-annoncés par `version.json` se téléchargent.
+### Une fois : la clé de dépôt sur le VPS
+
+Le dépôt automatique a besoin de quatre secrets dans le dépôt GitHub
+Alanya (Settings › Secrets and variables › Actions › New repository
+secret). Sans eux, la construction réussit quand même et l'avertit : les
+fichiers se déposent alors à la main (ci-dessous).
+
+Une clé SSH réservée à ce dépôt, créée sur un poste qui se connecte au VPS :
+
+    ssh-keygen -t ed25519 -f ~/.ssh/alanya_coffre_depot -N "" -C "coffre bureau GitHub"
+    ssh-copy-id -i ~/.ssh/alanya_coffre_depot.pub ubuntu@www.alanya237.com
+
+| Secret | Valeur |
+|---|---|
+| `ALANYA_HOST` | `www.alanya237.com` |
+| `ALANYA_USER` | `ubuntu` |
+| `ALANYA_PORT` | `22` |
+| `ALANYA_SSH_KEY` | tout le contenu de `~/.ssh/alanya_coffre_depot` (la clé privée, lignes BEGIN et END comprises) |
+
+La clé privée ne va nulle part ailleurs ; pour la révoquer, retirer sa
+ligne (« coffre bureau GitHub ») de `~/.ssh/authorized_keys` sur le VPS.
+
+### Déposer à la main (sans les secrets)
+
+Télécharger l'artefact `coffre-release` (GitHub › Actions › la
+construction), le décompresser, puis :
+
+    ssh ubuntu@www.alanya237.com 'mkdir -p ~/Alanya-backend/downloads/coffre'
+    scp *.exe *.deb *.AppImage ubuntu@www.alanya237.com:~/Alanya-backend/downloads/coffre/
+    scp version.json ubuntu@www.alanya237.com:~/Alanya-backend/downloads/coffre/
+
+`version.json` en dernier. Les anciennes versions peuvent rester dans le
+dossier : seuls les fichiers annoncés par `version.json` se téléchargent.

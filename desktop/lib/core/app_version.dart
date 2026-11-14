@@ -15,7 +15,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String kAppVersion = '1.0.0';
+const String kAppVersion = '1.1.0';
 const String kDownloadPageUrl = 'https://www.alanya237.com/coffre';
 const String kVersionUrl = 'https://www.alanya237.com/coffre/version.json';
 

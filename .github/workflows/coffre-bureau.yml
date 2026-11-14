@@ -6,8 +6,14 @@
 # envoi de code : les minutes Windows comptent double sur un dépôt privé
 # (gratuit dans la limite des minutes offertes par GitHub).
 #
-# Résultat : l'artefact « coffre-release » (les trois fichiers + version.json),
-# à déposer sur le VPS (voir desktop/README.md, « Publier une version »).
+# Résultat : l'artefact « coffre-release » (les trois fichiers + version.json)
+# et, sur une étiquette, le dépôt de ces fichiers sur le VPS : la page
+# alanya237.com/coffre et l'avis « nouvelle version » des applications
+# changent dès que version.json arrive (déposé en dernier). Le dépôt demande
+# les secrets ALANYA_HOST, ALANYA_USER, ALANYA_PORT et ALANYA_SSH_KEY dans ce
+# dépôt ; sans eux, il est sauté et l'artefact se dépose à la main (voir
+# desktop/README.md, « Publier une version »).
+# Les nouveautés affichées sur la page : desktop/release-notes.json.
 # Conception : backend docs/conception/coffre-bureau.html, section 09.
 
 name: Coffre de bureau
@@ -86,6 +92,8 @@ jobs:
             desktop/dist/*.deb
             desktop/dist/*.AppImage
           if-no-files-found: error
+          # Étape de passage : coffre-release contient tout.
+          retention-days: 1
 
   windows:
     name: Windows (installateur)
@@ -121,12 +129,18 @@ jobs:
           name: coffre-windows
           path: desktop/dist/*.exe
           if-no-files-found: error
+          # Étape de passage : coffre-release contient tout.
+          retention-days: 1
 
   release:
     name: Fichiers à publier
     needs: [version, linux, windows]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: desktop/release-notes.json
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v4
         with:
           path: out
@@ -137,6 +151,10 @@ jobs:
           python3 - "${{ needs.version.outputs.version }}" <<'PY'
           import hashlib, json, os, sys, datetime
           version = sys.argv[1]
+          try:
+              notes = json.load(open('../desktop/release-notes.json'))
+          except Exception:
+              notes = {}
           def fiche(nom):
               data = open(nom, 'rb').read()
               return {'file': nom, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
@@ -145,7 +163,7 @@ jobs:
           json.dump({
               'version': version,
               'date': datetime.date.today().isoformat(),
-              'notes': {'fr': '', 'en': ''},
+              'notes': {'fr': str(notes.get('fr', '')), 'en': str(notes.get('en', ''))},
               'windows': fiche(trouve('.exe')),
               'deb': fiche(trouve('.deb')),
               'appimage': fiche(trouve('.AppImage')),
@@ -157,3 +175,55 @@ jobs:
           name: coffre-release
           path: out/*
           if-no-files-found: error
+
+  publish:
+    name: Dépôt sur le site
+    needs: [version, release]
+    # Seulement pour une étiquette (pas un lancement à la main).
+    if: startsWith(github.ref, 'refs/tags/coffre-v')
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.ALANYA_HOST }}
+      VPS_USER: ${{ secrets.ALANYA_USER }}
+      VPS_PORT: ${{ secrets.ALANYA_PORT }}
+      VPS_KEY: ${{ secrets.ALANYA_SSH_KEY }}
+      DOSSIER: Alanya-backend/downloads/coffre
+    steps:
+      - name: Secrets présents ?
+        id: secrets
+        run: |
+          if [ -z "$VPS_HOST" ] || [ -z "$VPS_USER" ] || [ -z "$VPS_KEY" ]; then
+            echo "::warning::Secrets ALANYA_HOST, ALANYA_USER, ALANYA_SSH_KEY absents de ce dépôt : fichiers non déposés, à faire à la main (artefact coffre-release)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v4
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          name: coffre-release
+          path: out
+      - name: Déposer sur le VPS
+        if: steps.secrets.outputs.ok == 'true'
+        working-directory: out
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_KEY" > ~/.ssh/cle
+          chmod 600 ~/.ssh/cle
+          P="${VPS_PORT:-22}"
+          SSH="ssh -i $HOME/.ssh/cle -p $P -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
+          SCP="scp -i $HOME/.ssh/cle -P $P -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
+          $SSH "$VPS_USER@$VPS_HOST" "mkdir -p ~/$DOSSIER"
+          # Les fichiers d'abord, version.json en dernier (renommé d'un coup) :
+          # la page n'annonce jamais un fichier pas encore arrivé.
+          $SCP *.exe *.deb *.AppImage "$VPS_USER@$VPS_HOST:$DOSSIER/"
+          $SCP version.json "$VPS_USER@$VPS_HOST:$DOSSIER/version.json.nouveau"
+          $SSH "$VPS_USER@$VPS_HOST" "mv ~/$DOSSIER/version.json.nouveau ~/$DOSSIER/version.json"
+          rm -f ~/.ssh/cle
+      - name: Vérifier la page
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          sleep 5
+          V=$(curl -fsS https://www.alanya237.com/coffre/version.json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')
+          echo "Version annoncée par le site : $V"
+          [ "$V" = "${{ needs.version.outputs.version }}" ] || { echo "::error::le site annonce $V"; exit 1; }
