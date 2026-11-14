@@ -36,7 +36,7 @@ Section: utils
 Priority: optional
 Architecture: amd64
 Installed-Size: $TAILLE_KO
-Depends: libgtk-3-0t64 | libgtk-3-0, libsecret-1-0, libc6, libstdc++6
+Depends: libgtk-3-0t64 | libgtk-3-0, libsecret-1-0, libayatana-appindicator3-1 | libappindicator3-1, libmpv2 | libmpv1, libc6, libstdc++6
 Maintainer: Alanya <alanyapro64@gmail.com>
 Homepage: https://www.alanya237.com/coffre
 Description: Alanya Coffre-fort

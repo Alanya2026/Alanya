@@ -10,20 +10,42 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  // La fenêtre, une fois créée : relancer l'application la remontre au lieu
+  // d'en ouvrir une seconde (une seule sauvegarde du PC à la fois).
+  GtkWindow* window;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Lancé avec --hidden (au démarrage de la session) : reste caché près de
+// l'horloge, la sauvegarde du PC tourne sans fenêtre.
+static gboolean started_hidden(MyApplication* self) {
+  if (self->dart_entrypoint_arguments == nullptr) return FALSE;
+  for (char** a = self->dart_entrypoint_arguments; *a != nullptr; a++) {
+    if (g_strcmp0(*a, "--hidden") == 0) return TRUE;
+  }
+  return FALSE;
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
+  if (started_hidden(self)) return;
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+  // Déjà ouverte (cachée près de l'horloge, ou derrière d'autres fenêtres) :
+  // on la remontre.
+  if (self->window != nullptr) {
+    gtk_widget_show(GTK_WIDGET(self->window));
+    gtk_window_present(self->window);
+    return;
+  }
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  self->window = window;
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
@@ -134,7 +156,7 @@ static void my_application_class_init(MyApplicationClass* klass) {
   G_OBJECT_CLASS(klass)->dispose = my_application_dispose;
 }
 
-static void my_application_init(MyApplication* self) {}
+static void my_application_init(MyApplication* self) { self->window = nullptr; }
 
 MyApplication* my_application_new() {
   // Set the program name to the application ID, which helps various systems
@@ -145,5 +167,8 @@ MyApplication* my_application_new() {
 
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     G_APPLICATION_NON_UNIQUE, nullptr));
+                                     // Unique (0 : ni NON_UNIQUE, ni d'autre
+                                     // drapeau ; G_APPLICATION_DEFAULT_FLAGS
+                                     // n'existe pas sur la GLib d'Ubuntu 22.04).
+                                     static_cast<GApplicationFlags>(0), nullptr));
 }

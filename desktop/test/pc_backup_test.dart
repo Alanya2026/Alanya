@@ -98,6 +98,7 @@ void main() {
   late PcBackupSettings reglages;
   late List<String> corbeille;
   late _Coffre coffre;
+  late SafeboxLimits limites;
 
   File ecrire(String chemin, String contenu) => File('${tmp.path}/$chemin')
     ..createSync(recursive: true)
@@ -110,6 +111,7 @@ void main() {
     reglages = const PcBackupSettings();
     corbeille = [];
     coffre = _Coffre();
+    limites = _limites;
     var ranges = <String, String>{};
     sauvegarde = PcBackup(
       api: api,
@@ -118,7 +120,7 @@ void main() {
         return 'job${confies.length}';
       },
       freeSpace: () async => 1 << 30,
-      limits: () => _limites,
+      limits: () => limites,
       jobAlive: (_) async => true,
       discardJob: (_) async {},
       refreshOverview: () async {},
@@ -339,6 +341,28 @@ void main() {
     expect(ancienne.existsSync(), isTrue);
     // Elle sera revue dans environ 2 minutes.
     expect(source.nextStableAt!.difference(DateTime.now()).inSeconds, inInclusiveRange(100, 121));
+  });
+
+  test('un fichier plus lourd que la limite du coffre reste sur l’ordinateur, et c’est dit', () async {
+    limites = SafeboxLimits.fromJson({
+      'maxFileBytes': 10,
+      'extensions': {
+        'photos': ['jpg'],
+        'videos': ['mp4'],
+      },
+    });
+    final petit = ecrire('Videos/court.mp4', '12345');
+    final gros = ecrire('Videos/film.mp4', 'x' * 50);
+    final doc = ecrire('Videos/notice.pdf', 'y' * 50);
+    await sauvegarde.update(PcBackupSettings(
+      enabled: true,
+      folders: [dossier('Videos', {SafeboxFamily.videos, SafeboxFamily.documents})],
+    ));
+    await sauvegarde.idle;
+
+    expect(confies.map((u) => u.item.name), ['court.mp4']);
+    expect(sauvegarde.tooLarge, 2);
+    expect([petit, gros, doc].every((f) => f.existsSync()), isTrue);
   });
 
   test('désactivée : aucun passage', () async {

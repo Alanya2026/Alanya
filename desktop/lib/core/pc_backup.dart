@@ -348,7 +348,17 @@ class PcBackup extends ChangeNotifier {
     engine = SafeboxBackupEngine(
       device: source,
       api: api,
-      enqueue: enqueue,
+      // Trop lourd pour le coffre (au-delà de la limite d'un fichier ; une
+      // vidéo que le téléphone compresserait, le PC ne le sait pas) : il
+      // reste sur l'ordinateur, et l'écran le dit (tooLarge).
+      enqueue: (u) async {
+        final max = limits()?.maxFileBytes ?? 0;
+        if (u.quality != SafeboxQuality.original || (max > 0 && u.item.size > max)) {
+          _tropLourds[u.item.key] = u.item.size;
+          return null;
+        }
+        return enqueue(u);
+      },
       freeSpace: freeSpace,
       maxFileBytes: () => limits()?.maxFileBytes ?? (1 << 30),
       charging: () async => true,
@@ -403,6 +413,14 @@ class PcBackup extends ChangeNotifier {
   PcBackupSettings get settings => _reglages;
 
   SafeboxBackupReport? _rapport;
+
+  /// Fichiers trop lourds pour le coffre au dernier passage : clé → taille.
+  final Map<String, int> _tropLourds = {};
+  Map<String, int> _tropLourdsVus = const {};
+
+  /// Les fichiers laissés sur l'ordinateur au dernier passage parce qu'ils
+  /// dépassent la limite d'un fichier du coffre.
+  int get tooLarge => _tropLourdsVus.length;
   SafeboxBackupReport? get lastReport => _rapport;
   DateTime? _quand;
   DateTime? get lastRunAt => _quand;
@@ -501,7 +519,9 @@ class PcBackup extends ChangeNotifier {
       await _rafraichir();
       if (_ferme) return;
       source.forget();
+      _tropLourds.clear();
       _rapport = await engine.run(s);
+      _tropLourdsVus = Map.of(_tropLourds);
       _quand = DateTime.now();
       _erreur = null;
       await placeInAlbums();

@@ -2,15 +2,20 @@
 // commentaire en bas. ← → pour passer d'un fichier à l'autre, molette pour
 // zoomer, Échap pour fermer.
 //
-// Les photos s'affichent ici. Vidéos, audios et documents s'ouvrent pour
-// l'instant avec le logiciel de l'ordinateur (lecteur intégré à venir).
+// Les photos s'affichent ici ; vidéos et audios se lisent ici aussi, en
+// continu, sans attendre la fin du téléchargement (media_kit, servi par
+// VaultStreamServer, 14/11/2026) ; les documents s'ouvrent avec le logiciel
+// de l'ordinateur.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:alanya_safebox/alanya_safebox.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 import '../core/vault.dart';
 import '../ui/common.dart';
@@ -226,6 +231,9 @@ class _ContenuState extends State<_Contenu> {
     final l = context.l;
     final f = widget.file;
     if (f.lost) return _Message(icon: Icons.report_outlined, text: l.fileLost);
+    if (f.family == SafeboxFamily.videos || f.family == SafeboxFamily.audios) {
+      return _Lecteur(key: ValueKey('lecteur-${f.id}'), file: f, apercu: _apercu, onOpenWith: widget.onOpenWith);
+    }
     if (_photo) {
       final complet = _complet;
       if (complet != null && !_illisible) {
@@ -348,8 +356,7 @@ class _Pied extends StatelessWidget {
   }
 }
 
-/// L'audio d'un commentaire : déchiffré à la demande, écouté avec le lecteur
-/// de l'ordinateur (lecteur intégré à venir).
+/// L'audio d'un commentaire : déchiffré à la demande, écouté ici.
 class _AudioCommentaire extends StatefulWidget {
   const _AudioCommentaire({super.key, required this.fileId, required this.audio});
   final int fileId;
@@ -361,15 +368,34 @@ class _AudioCommentaire extends StatefulWidget {
 
 class _AudioCommentaireState extends State<_AudioCommentaire> {
   bool _charge = false;
+  Player? _lecteur;
+  bool _enLecture = false;
+  StreamSubscription<bool>? _suivi;
+
+  @override
+  void dispose() {
+    _suivi?.cancel();
+    _lecteur?.dispose();
+    super.dispose();
+  }
 
   Future<void> _ecouter() async {
+    final lecteur = _lecteur;
+    if (lecteur != null) {
+      await lecteur.playOrPause();
+      return;
+    }
     final messager = ScaffoldMessenger.of(context);
-    final l = context.l;
     setState(() => _charge = true);
     try {
       final f = await context.vault.noteAudioFile(widget.fileId, widget.audio);
-      final ok = await openWithSystem(f.path);
-      if (!ok) messager.showSnackBar(SnackBar(content: Text(l.openFailed)));
+      if (!mounted) return;
+      final p = Player();
+      _lecteur = p;
+      _suivi = p.stream.playing.listen((oui) {
+        if (mounted) setState(() => _enLecture = oui);
+      });
+      await p.open(Media(f.path));
     } catch (e) {
       if (mounted) messager.showSnackBar(SnackBar(content: Text(errorText(context, e))));
     } finally {
@@ -385,11 +411,87 @@ class _AudioCommentaireState extends State<_AudioCommentaire> {
                 tooltip: context.l.noteListen,
                 style: IconButton.styleFrom(backgroundColor: Palette.brand),
                 onPressed: _ecouter,
-                icon: const Icon(Icons.play_arrow, color: Colors.white),
+                icon: Icon(_enLecture ? Icons.pause : Icons.play_arrow, color: Colors.white),
               ),
         const SizedBox(width: 10),
         Text('${context.l.noteAudio} · ${widget.audio.durationLabel}', style: const TextStyle(color: Color(0xFFB8BBC8), fontSize: 13)),
       ]);
+}
+
+/// Une vidéo ou un audio, lu en continu depuis le coffre (VaultStreamServer) :
+/// la lecture commence dès le premier bloc, on peut avancer sans attendre.
+class _Lecteur extends StatefulWidget {
+  const _Lecteur({super.key, required this.file, required this.apercu, required this.onOpenWith});
+  final SafeboxFile file;
+  final Uint8List? apercu;
+  final VoidCallback onOpenWith;
+
+  @override
+  State<_Lecteur> createState() => _LecteurState();
+}
+
+class _LecteurState extends State<_Lecteur> {
+  late final Player _lecteur = Player();
+  late final VideoController _video = VideoController(_lecteur);
+  Uri? _adresse;
+  late Vault _vault;
+  Object? _erreur;
+  StreamSubscription<String>? _erreurs;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_adresse == null && _erreur == null) {
+      _vault = context.vault;
+      unawaited(_ouvrir());
+    }
+  }
+
+  Future<void> _ouvrir() async {
+    try {
+      final adresse = await _vault.streams.open(widget.file);
+      if (!mounted) {
+        _vault.streams.release(adresse);
+        return;
+      }
+      _adresse = adresse;
+      _erreurs = _lecteur.stream.error.listen((e) {
+        if (mounted) setState(() => _erreur = e);
+      });
+      await _lecteur.open(Media(adresse.toString()));
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) setState(() => _erreur = e);
+    }
+  }
+
+  @override
+  void dispose() {
+    _erreurs?.cancel();
+    unawaited(_lecteur.dispose());
+    final a = _adresse;
+    if (a != null) _vault.streams.release(a);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l;
+    if (_erreur != null) {
+      return _Message(icon: Icons.play_disabled_outlined, text: l.viewerCannotShow, action: l.openWith, onAction: widget.onOpenWith);
+    }
+    final audio = widget.file.family == SafeboxFamily.audios;
+    return Stack(fit: StackFit.expand, children: [
+      // Un audio n'a pas d'image : sa pochette (l'aperçu) sous les commandes.
+      if (audio)
+        Center(
+          child: widget.apercu != null
+              ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(widget.apercu!, width: 320, height: 320, fit: BoxFit.cover))
+              : const Icon(Icons.music_note, size: 120, color: Color(0xFF9FA8DA)),
+        ),
+      Video(controller: _video, fill: audio ? Colors.transparent : Colors.black),
+    ]);
+  }
 }
 
 class _BoutonSombre extends StatelessWidget {

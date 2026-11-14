@@ -11,4 +11,4 @@ Icon=alanya-coffre
 Terminal=false
 Categories=Utility;FileTools;
 Keywords=Alanya;coffre;safebox;sauvegarde;backup;
-StartupWMClass=alanya_coffre
+StartupWMClass=com.alanya.alanya_coffre

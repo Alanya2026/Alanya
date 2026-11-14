@@ -1,5 +1,7 @@
 #include "flutter_window.h"
 
+#include <string>
+
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -27,8 +29,11 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+  // Lancé avec --hidden (au démarrage de la session) : reste caché près de
+  // l'horloge, la sauvegarde du PC tourne sans fenêtre.
+  const bool cachee = std::wstring(::GetCommandLineW()).find(L"--hidden") != std::wstring::npos;
+  flutter_controller_->engine()->SetNextFrameCallback([this, cachee]() {
+    if (!cachee) this->Show();
   });
 
   // Flutter can complete the first frame before the "show window" callback is

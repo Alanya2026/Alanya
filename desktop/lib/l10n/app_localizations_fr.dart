@@ -820,7 +820,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get pcBackupOpenOnly =>
-      'Tant que l\'application est ouverte : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.';
+      'Tant que l\'application tourne, fenêtre ouverte ou icône près de l\'horloge : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.';
 
   @override
   String get pcBackupFolders => 'Dossiers sauvegardés';
@@ -1054,4 +1054,45 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get pcBackupRenameHint =>
       'Le dossier garde ce nom dans le coffre (son album dans Albums, et le dossier d\'origine dans Photos et Vidéos). Le dossier de l\'ordinateur ne change pas, et la sauvegarde continue.';
+
+  @override
+  String pcBackupTooLarge(int n, String max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other:
+          '$n fichiers dépassent $max, la limite d\'un fichier du coffre : ils restent sur l\'ordinateur',
+      one:
+          '1 fichier dépasse $max, la limite d\'un fichier du coffre : il reste sur l\'ordinateur',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trayOpen => 'Ouvrir Alanya Coffre-fort';
+
+  @override
+  String get trayBackupNow => 'Sauvegarder maintenant';
+
+  @override
+  String get trayQuit => 'Quitter';
+
+  @override
+  String get settingsKeepRunning =>
+      'Continuer près de l\'horloge quand la fenêtre est fermée';
+
+  @override
+  String get settingsKeepRunningHint =>
+      'La sauvegarde du PC et les envois continuent. Pour quitter vraiment : icône Alanya près de l\'horloge › Quitter.';
+
+  @override
+  String get settingsAutostart => 'Lancer au démarrage de l\'ordinateur';
+
+  @override
+  String get settingsAutostartHint =>
+      'Alanya Coffre-fort s\'ouvre caché près de l\'horloge à l\'ouverture de votre session : la sauvegarde du PC tourne sans y penser.';
+
+  @override
+  String get settingsTrayUnavailable =>
+      'L\'icône près de l\'horloge n\'est pas disponible sur ce système : fermer la fenêtre quitte l\'application.';
 }

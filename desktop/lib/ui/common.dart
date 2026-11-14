@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../core/app_version.dart';
+import '../core/desktop_integration.dart';
 import '../core/session.dart';
 import '../core/settings.dart';
 import '../core/vault.dart';
@@ -57,6 +58,7 @@ class AppScope extends InheritedWidget {
     required this.locale,
     required this.vault,
     this.updates,
+    this.desktop,
     required super.child,
   });
 
@@ -66,13 +68,16 @@ class AppScope extends InheritedWidget {
   /// L'avis « nouvelle version » (nul dans les tests).
   final UpdateChecker? updates;
 
+  /// L'icône près de l'horloge et le démarrage automatique (nul dans les tests).
+  final DesktopIntegration? desktop;
+
   /// Nul hors connexion.
   final Vault? vault;
 
   static AppScope of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<AppScope>()!;
 
   @override
-  bool updateShouldNotify(AppScope old) => old.vault != vault || old.session != session || old.locale != locale || old.updates != updates;
+  bool updateShouldNotify(AppScope old) => old.vault != vault || old.session != session || old.locale != locale || old.updates != updates || old.desktop != desktop;
 }
 
 extension Contexte on BuildContext {

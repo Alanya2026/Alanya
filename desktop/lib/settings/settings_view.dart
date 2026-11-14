@@ -90,25 +90,49 @@ class SettingsView extends StatelessWidget {
               const SizedBox(height: 24),
               _Section(l.settingsApp),
               Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Row(children: [
-                    Expanded(child: Text(l.settingsLanguage, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
-                    ListenableBuilder(
-                      listenable: langue,
-                      builder: (context, _) => DropdownButton<String?>(
-                        value: langue.locale?.languageCode,
-                        underline: const SizedBox.shrink(),
-                        onChanged: langue.set,
-                        items: [
-                          DropdownMenuItem(value: null, child: Text(l.settingsLanguageSystem)),
-                          const DropdownMenuItem(value: 'fr', child: Text('Français')),
-                          const DropdownMenuItem(value: 'en', child: Text('English')),
-                        ],
+                child: Column(children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Row(children: [
+                      Expanded(child: Text(l.settingsLanguage, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500))),
+                      ListenableBuilder(
+                        listenable: langue,
+                        builder: (context, _) => DropdownButton<String?>(
+                          value: langue.locale?.languageCode,
+                          underline: const SizedBox.shrink(),
+                          onChanged: langue.set,
+                          items: [
+                            DropdownMenuItem(value: null, child: Text(l.settingsLanguageSystem)),
+                            const DropdownMenuItem(value: 'fr', child: Text('Français')),
+                            const DropdownMenuItem(value: 'en', child: Text('English')),
+                          ],
+                        ),
                       ),
+                    ]),
+                  ),
+                  if (scope.desktop case final d?)
+                    ListenableBuilder(
+                      listenable: d,
+                      builder: (context, _) => Column(children: [
+                        const Divider(height: 1, indent: 20, endIndent: 20),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                          title: Text(l.settingsKeepRunning, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          subtitle: Text(d.trayAvailable ? l.settingsKeepRunningHint : l.settingsTrayUnavailable),
+                          value: d.trayAvailable && d.keepRunning,
+                          onChanged: d.trayAvailable ? d.setKeepRunning : null,
+                        ),
+                        const Divider(height: 1, indent: 20, endIndent: 20),
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                          title: Text(l.settingsAutostart, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          subtitle: Text(l.settingsAutostartHint),
+                          value: d.autostart,
+                          onChanged: d.setAutostart,
+                        ),
+                      ]),
                     ),
-                  ]),
-                ),
+                ]),
               ),
               const SizedBox(height: 24),
               Container(

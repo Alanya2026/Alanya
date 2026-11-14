@@ -8,6 +8,7 @@ import 'desktop_api.dart';
 import 'exporter.dart';
 import 'importer.dart';
 import 'pc_backup.dart';
+import 'stream_server.dart';
 import 'photo_preview.dart';
 
 /// L'état du coffre pour les écrans : espace, dossiers racines, albums
@@ -64,6 +65,9 @@ class Vault extends ChangeNotifier {
   /// le dossier de l'application, jusqu'à « Vider » ou la déconnexion.
   final SafeboxDownloadManager downloads;
   late final Exporter exporter;
+
+  /// Vidéos et audios lus en continu dans la visionneuse.
+  late final VaultStreamServer streams = VaultStreamServer(api);
 
   /// Les envois vers le coffre (paquet commun, comme le téléphone).
   late final SafeboxUploadManager uploads;
@@ -290,6 +294,7 @@ class Vault extends ChangeNotifier {
     unawaited(uploads.pauseAll());
     importer.dispose();
     exporter.dispose();
+    unawaited(streams.close());
     downloads.dispose();
     super.dispose();
   }

@@ -23,6 +23,12 @@ dependencies:
   desktop_drop: ^0.5.0
   file_selector: ^1.0.3
   image: ^4.3.0
+  window_manager: ^0.5.2
+  tray_manager: ^0.5.3
+  launch_at_startup: ^0.5.1
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
 
 dev_dependencies:
   flutter_test:
@@ -32,3 +38,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    # L'icône près de l'horloge (tray_manager) : PNG sous Linux, ICO sous Windows.
+    - assets/tray/

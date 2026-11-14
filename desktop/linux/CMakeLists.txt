@@ -85,6 +85,13 @@ if(TARGET flutter_secure_storage_linux_plugin AND ALANYA_OPTION_LITTERAUX)
   target_compile_options(flutter_secure_storage_linux_plugin PRIVATE -Wno-deprecated-literal-operator)
 endif()
 
+# tray_manager (icône près de l'horloge) appelle app_indicator_new, marquée
+# obsolète par les libayatana-appindicator récentes : un avertissement que
+# les réglages standard changent en erreur.
+if(TARGET tray_manager_plugin)
+  target_compile_options(tray_manager_plugin PRIVATE -Wno-deprecated-declarations)
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

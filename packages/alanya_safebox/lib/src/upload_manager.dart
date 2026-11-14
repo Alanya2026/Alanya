@@ -121,6 +121,10 @@ class ApiSafeboxTransport implements SafeboxTransport {
       api.putSafeboxBlock(url, bytes, onProgress: onProgress, cancel: cancel);
 }
 
+/// Un « petit » fichier : un seul bloc de stockage (8 Mio). Plusieurs partent
+/// en même temps (voir [SafeboxUploadManager.parallelSmallFiles]).
+const int kSafeboxSmallFileBytes = 8 << 20;
+
 // ── Un envoi ───────────────────────────────────────────────────────────────
 
 /// `paused` : mis en pause par l'inscrit ; il le reste après un redémarrage,
@@ -421,6 +425,7 @@ class SafeboxUploadManager extends ChangeNotifier {
     Future<bool> Function()? unmetered,
     this.networkRetries = const [Duration(seconds: 2), Duration(seconds: 5), Duration(seconds: 15), Duration(seconds: 30)],
     this.parallelBlocks = 3,
+    this.parallelSmallFiles = 3,
   })  : _transport = transport,
         _store = store ?? PrefsSafeboxJobStore(),
         _sleep = sleep ?? Future<void>.delayed,
@@ -446,6 +451,21 @@ class SafeboxUploadManager extends ChangeNotifier {
   /// chaque réponse de MEGA : 900 Mo en 2 h sur une ligne de 100 Mbit/s. Trois
   /// blocs de 8 Mo en vol : environ 50 Mo de mémoire au plus.
   final int parallelBlocks;
+
+  /// Petits fichiers (un seul bloc, [kSafeboxSmallFileBytes] au plus) envoyés
+  /// en même temps (14/11/2026). Un par un, chacun attendait ses quatre
+  /// allers-retours (réservation, bloc, aperçu, fin) : avec 250 ms de
+  /// latence, 1 000 photos coûtaient des dizaines de minutes d'attente,
+  /// quelle que soit leur taille. Un gros fichier, lui, passe seul : ses
+  /// blocs en vol occupent déjà la ligne (et la mémoire).
+  final int parallelSmallFiles;
+
+  /// Les envois en cours.
+  final Set<String> _actifs = {};
+
+  /// Réveille la boucle d'envoi qui attend : un envoi vient d'être ajouté
+  /// ou relancé, il peut partir à côté de ceux en cours.
+  Completer<void>? _reveil;
 
   final List<SafeboxUploadJob> _jobs = [];
   final StreamController<SafeboxFile> _termines = StreamController<SafeboxFile>.broadcast();
@@ -648,14 +668,38 @@ class SafeboxUploadManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  static bool _gros(SafeboxUploadJob j) => j.plainSize > kSafeboxSmallFileBytes;
+
+  /// Démarre les envois en attente, dans l'ordre : jusqu'à
+  /// [parallelSmallFiles] petits fichiers ensemble, un gros fichier seul
+  /// (il attend que les petits en cours finissent, et rien ne démarre à côté).
   Future<void> _pomper() async {
-    if (_enCours) return;
+    if (_enCours) {
+      final r = _reveil;
+      if (r != null && !r.isCompleted) r.complete();
+      return;
+    }
     _enCours = true;
     try {
+      final enVol = <Future<void>>{};
       for (;;) {
-        final suivant = _jobs.where((j) => j.state == SafeboxUploadState.queued).firstOrNull;
-        if (suivant == null) return;
-        await _executer(suivant);
+        for (;;) {
+          final suivant = _jobs.where((j) => j.state == SafeboxUploadState.queued && !_actifs.contains(j.id)).firstOrNull;
+          if (suivant == null) break;
+          final actifs = _jobs.where((j) => _actifs.contains(j.id)).toList();
+          if (actifs.any(_gros)) break;
+          if (actifs.isNotEmpty && (_gros(suivant) || actifs.length >= (parallelSmallFiles < 1 ? 1 : parallelSmallFiles))) break;
+          _actifs.add(suivant.id);
+          late final Future<void> envoi;
+          envoi = _executer(suivant).whenComplete(() {
+            _actifs.remove(suivant.id);
+            enVol.remove(envoi);
+          });
+          enVol.add(envoi);
+        }
+        if (enVol.isEmpty) return;
+        final reveil = _reveil = Completer<void>();
+        await Future.any([...enVol, reveil.future]);
       }
     } finally {
       _enCours = false;

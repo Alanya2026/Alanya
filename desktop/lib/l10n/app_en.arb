@@ -191,7 +191,7 @@
   "navPcBackup": "PC backup",
   "pcBackupIntro": "Each chosen folder is recreated in Albums with its subfolders, and its files also show up in Photos, Videos, Audio or Documents, using no extra space. A file deleted from the PC stays in your SafeBox; a file deleted from your SafeBox doesn't come back.",
   "pcBackupSwitch": "Back up these folders automatically",
-  "pcBackupOpenOnly": "While the app is open: a pass at startup, after each change in the folders, and every 15 minutes. In Original quality.",
+  "pcBackupOpenOnly": "While the app is running, window open or icon near the clock: a pass at startup, after each change in the folders, and every 15 minutes. In Original quality.",
   "pcBackupFolders": "Backed-up folders",
   "pcBackupAddFolder": "Add a folder…",
   "pcBackupNoFolder": "No folder chosen yet. Add Pictures or Documents, for example.",
@@ -238,5 +238,14 @@
   "pcRemoved": "{n, plural, =1{1 photo or video moved to the computer's trash} other{{n} photos and videos moved to the computer's trash}} · {size} freed",
   "pcBackupRename": "Rename",
   "pcBackupNameLabel": "Name in your SafeBox",
-  "pcBackupRenameHint": "The folder takes this name in your SafeBox (its album in Albums, and the source folder in Photos and Videos). The folder on the computer doesn't change, and the backup carries on."
+  "pcBackupRenameHint": "The folder takes this name in your SafeBox (its album in Albums, and the source folder in Photos and Videos). The folder on the computer doesn't change, and the backup carries on.",
+  "pcBackupTooLarge": "{n, plural, =1{1 file is over {max}, the SafeBox limit for one file: it stays on the computer} other{{n} files are over {max}, the SafeBox limit for one file: they stay on the computer}}",
+  "trayOpen": "Open Alanya SafeBox",
+  "trayBackupNow": "Back up now",
+  "trayQuit": "Quit",
+  "settingsKeepRunning": "Keep running near the clock when the window is closed",
+  "settingsKeepRunningHint": "The PC backup and uploads carry on. To really quit: Alanya icon near the clock › Quit.",
+  "settingsAutostart": "Start when the computer starts",
+  "settingsAutostartHint": "Alanya SafeBox opens hidden near the clock when you sign in to the computer, so the PC backup runs without you thinking about it.",
+  "settingsTrayUnavailable": "The icon near the clock isn't available on this system: closing the window quits the app."
 }

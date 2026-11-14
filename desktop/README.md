@@ -10,7 +10,7 @@ commun `../packages/alanya_safebox`, partagé avec l'application mobile.
 
 Une fois sur le poste :
 
-    sudo apt install pkg-config clang cmake ninja-build libgtk-3-dev libsecret-1-dev
+    sudo apt install pkg-config clang cmake ninja-build libgtk-3-dev libsecret-1-dev libayatana-appindicator3-dev libmpv-dev
 
 Puis :
 

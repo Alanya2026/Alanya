@@ -1247,7 +1247,7 @@ abstract class AppLocalizations {
   /// No description provided for @pcBackupOpenOnly.
   ///
   /// In fr, this message translates to:
-  /// **'Tant que l\'application est ouverte : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.'**
+  /// **'Tant que l\'application tourne, fenêtre ouverte ou icône près de l\'horloge : un passage au démarrage, après chaque changement dans les dossiers, et toutes les 15 minutes. En Original.'**
   String get pcBackupOpenOnly;
 
   /// No description provided for @pcBackupFolders.
@@ -1531,6 +1531,60 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Le dossier garde ce nom dans le coffre (son album dans Albums, et le dossier d\'origine dans Photos et Vidéos). Le dossier de l\'ordinateur ne change pas, et la sauvegarde continue.'**
   String get pcBackupRenameHint;
+
+  /// No description provided for @pcBackupTooLarge.
+  ///
+  /// In fr, this message translates to:
+  /// **'{n, plural, =1{1 fichier dépasse {max}, la limite d\'un fichier du coffre : il reste sur l\'ordinateur} other{{n} fichiers dépassent {max}, la limite d\'un fichier du coffre : ils restent sur l\'ordinateur}}'**
+  String pcBackupTooLarge(int n, String max);
+
+  /// No description provided for @trayOpen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir Alanya Coffre-fort'**
+  String get trayOpen;
+
+  /// No description provided for @trayBackupNow.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sauvegarder maintenant'**
+  String get trayBackupNow;
+
+  /// No description provided for @trayQuit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quitter'**
+  String get trayQuit;
+
+  /// No description provided for @settingsKeepRunning.
+  ///
+  /// In fr, this message translates to:
+  /// **'Continuer près de l\'horloge quand la fenêtre est fermée'**
+  String get settingsKeepRunning;
+
+  /// No description provided for @settingsKeepRunningHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'La sauvegarde du PC et les envois continuent. Pour quitter vraiment : icône Alanya près de l\'horloge › Quitter.'**
+  String get settingsKeepRunningHint;
+
+  /// No description provided for @settingsAutostart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lancer au démarrage de l\'ordinateur'**
+  String get settingsAutostart;
+
+  /// No description provided for @settingsAutostartHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Alanya Coffre-fort s\'ouvre caché près de l\'horloge à l\'ouverture de votre session : la sauvegarde du PC tourne sans y penser.'**
+  String get settingsAutostartHint;
+
+  /// No description provided for @settingsTrayUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'icône près de l\'horloge n\'est pas disponible sur ce système : fermer la fenêtre quitte l\'application.'**
+  String get settingsTrayUnavailable;
 }
 
 class _AppLocalizationsDelegate

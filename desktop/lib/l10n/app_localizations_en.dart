@@ -813,7 +813,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pcBackupOpenOnly =>
-      'While the app is open: a pass at startup, after each change in the folders, and every 15 minutes. In Original quality.';
+      'While the app is running, window open or icon near the clock: a pass at startup, after each change in the folders, and every 15 minutes. In Original quality.';
 
   @override
   String get pcBackupFolders => 'Backed-up folders';
@@ -1047,4 +1047,45 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pcBackupRenameHint =>
       'The folder takes this name in your SafeBox (its album in Albums, and the source folder in Photos and Videos). The folder on the computer doesn\'t change, and the backup carries on.';
+
+  @override
+  String pcBackupTooLarge(int n, String max) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other:
+          '$n files are over $max, the SafeBox limit for one file: they stay on the computer',
+      one:
+          '1 file is over $max, the SafeBox limit for one file: it stays on the computer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trayOpen => 'Open Alanya SafeBox';
+
+  @override
+  String get trayBackupNow => 'Back up now';
+
+  @override
+  String get trayQuit => 'Quit';
+
+  @override
+  String get settingsKeepRunning =>
+      'Keep running near the clock when the window is closed';
+
+  @override
+  String get settingsKeepRunningHint =>
+      'The PC backup and uploads carry on. To really quit: Alanya icon near the clock › Quit.';
+
+  @override
+  String get settingsAutostart => 'Start when the computer starts';
+
+  @override
+  String get settingsAutostartHint =>
+      'Alanya SafeBox opens hidden near the clock when you sign in to the computer, so the PC backup runs without you thinking about it.';
+
+  @override
+  String get settingsTrayUnavailable =>
+      'The icon near the clock isn\'t available on this system: closing the window quits the app.';
 }

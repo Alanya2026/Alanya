@@ -277,6 +277,7 @@ class _Etat extends StatelessWidget {
           if (p != null && p.unreadable > 0) l.pcBackupUnreadable(p.unreadable),
           if (b.lastRemoval case final rt?) l.pcRemoved(rt.count, formatBytes(context, rt.bytes)),
         ];
+        final max = context.vault.overview?.limits.maxFileBytes ?? 0;
         final locale = Localizations.localeOf(context).toLanguageTag();
         return Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
@@ -307,6 +308,12 @@ class _Etat extends StatelessWidget {
               style: t.bodySmall,
             ),
             if (details.isNotEmpty) Text(details.join(' · '), style: t.bodySmall),
+            if (b.tooLarge > 0 && max > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(l.pcBackupTooLarge(b.tooLarge, formatBytes(context, max)),
+                    style: t.bodySmall?.copyWith(color: Palette.warning)),
+              ),
             if (b.lastError != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
