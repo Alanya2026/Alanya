@@ -1,4 +1,4 @@
 {
-  "fr": "Première version : parcourir et regarder son coffre, ajouter par glisser-déposer, télécharger, ranger (dossiers, albums, corbeille), et sauvegarder des dossiers du PC, recréés dans Albums. Option pour retirer de l'ordinateur les photos et vidéos sauvegardées.",
-  "en": "First release: browse and view your SafeBox, add files by drag and drop, download, organise (folders, albums, trash), and back up PC folders, recreated in Albums. Option to remove backed-up photos and videos from the computer."
+  "fr": "Nouveau : la sauvegarde du PC continue quand la fenêtre est fermée (icône près de l'horloge) et peut démarrer avec l'ordinateur ; les vidéos et les audios se lisent dans l'application, sans attendre la fin du téléchargement ; les petits fichiers partent plusieurs à la fois ; les envois tiennent mieux sur les connexions lentes ; la sauvegarde du PC est rangée dans Albums, sous le nom du dossier.",
+  "en": "New: the PC backup keeps running when the window is closed (icon near the clock) and can start with the computer; videos and audio play in the app without waiting for the whole download; small files upload several at a time; uploads hold up better on slow connections; the PC backup is kept in Albums, under the folder's name."
 }
