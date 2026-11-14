@@ -10567,4 +10567,44 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get e2eeBanniereDebut =>
       'À partir d\'ici, les messages de cette discussion sont chiffrés de bout en bout. Les photos et les fichiers ne le sont pas encore.';
+
+  @override
+  String get e2eeCodeSecuriteTitre => 'Code de sécurité';
+
+  @override
+  String get e2eeCodeSecuriteMenu => 'Code de sécurité';
+
+  @override
+  String e2eeCodeSecuriteExplication(String nom) {
+    return 'Comparez ces chiffres avec ceux affichés sur le téléphone de $nom, de vive voix ou en personne. S\'ils sont identiques, vos messages ne peuvent être lus que par vous deux.';
+  }
+
+  @override
+  String get e2eeCodeSecuriteManquants =>
+      'Certains appareils n\'ont pas encore publié leurs clés : ce code peut différer de celui de votre correspondant. Réessayez plus tard.';
+
+  @override
+  String get e2eeCodeIndisponible =>
+      'Le code de sécurité n\'est pas disponible pour cette discussion.';
+
+  @override
+  String get e2eeMarquerVerifie => 'Marquer comme vérifié';
+
+  @override
+  String get e2eeRetirerVerification => 'Retirer la vérification';
+
+  @override
+  String get e2eeVerifie => 'Vérifié';
+
+  @override
+  String get e2eeVerifieExplication =>
+      'Vous avez comparé ce code. La marque disparaît d\'elle-même si une clé change.';
+
+  @override
+  String e2eeAlerteCleChangee(String nom) {
+    return 'Le code de sécurité de $nom a changé : nouvel appareil ou réinstallation.';
+  }
+
+  @override
+  String get e2eeAlerteVerifier => 'Vérifier';
 }

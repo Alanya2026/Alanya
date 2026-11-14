@@ -9847,4 +9847,41 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get e2eeBanniereDebut => '从这里开始，此对话中的消息已端到端加密。照片和文件暂未加密。';
+
+  @override
+  String get e2eeCodeSecuriteTitre => '安全码';
+
+  @override
+  String get e2eeCodeSecuriteMenu => '安全码';
+
+  @override
+  String e2eeCodeSecuriteExplication(String nom) {
+    return '请通过语音或当面，将这些数字与 $nom 手机上显示的数字进行比对。如果一致，你们的消息只有你们两人能读取。';
+  }
+
+  @override
+  String get e2eeCodeSecuriteManquants => '部分设备尚未发布密钥：此安全码可能与对方的不同。请稍后再试。';
+
+  @override
+  String get e2eeCodeIndisponible => '此对话的安全码不可用。';
+
+  @override
+  String get e2eeMarquerVerifie => '标记为已验证';
+
+  @override
+  String get e2eeRetirerVerification => '取消验证';
+
+  @override
+  String get e2eeVerifie => '已验证';
+
+  @override
+  String get e2eeVerifieExplication => '你已比对过此安全码。如果密钥变化，该标记会自动消失。';
+
+  @override
+  String e2eeAlerteCleChangee(String nom) {
+    return '$nom 的安全码已更改：新设备或重新安装。';
+  }
+
+  @override
+  String get e2eeAlerteVerifier => '验证';
 }

@@ -17481,6 +17481,72 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'À partir d\'ici, les messages de cette discussion sont chiffrés de bout en bout. Les photos et les fichiers ne le sont pas encore.'**
   String get e2eeBanniereDebut;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de sécurité'**
+  String get e2eeCodeSecuriteTitre;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de sécurité'**
+  String get e2eeCodeSecuriteMenu;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Comparez ces chiffres avec ceux affichés sur le téléphone de {nom}, de vive voix ou en personne. S\'ils sont identiques, vos messages ne peuvent être lus que par vous deux.'**
+  String e2eeCodeSecuriteExplication(String nom);
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Certains appareils n\'ont pas encore publié leurs clés : ce code peut différer de celui de votre correspondant. Réessayez plus tard.'**
+  String get e2eeCodeSecuriteManquants;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code de sécurité n\'est pas disponible pour cette discussion.'**
+  String get e2eeCodeIndisponible;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Marquer comme vérifié'**
+  String get e2eeMarquerVerifie;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Retirer la vérification'**
+  String get e2eeRetirerVerification;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifié'**
+  String get e2eeVerifie;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez comparé ce code. La marque disparaît d\'elle-même si une clé change.'**
+  String get e2eeVerifieExplication;
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code de sécurité de {nom} a changé : nouvel appareil ou réinstallation.'**
+  String e2eeAlerteCleChangee(String nom);
+
+  /// Code de sécurité E2EE (étape 3).
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérifier'**
+  String get e2eeAlerteVerifier;
 }
 
 class _AppLocalizationsDelegate

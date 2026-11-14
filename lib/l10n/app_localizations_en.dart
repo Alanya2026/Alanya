@@ -10452,4 +10452,44 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get e2eeBanniereDebut =>
       'From here on, messages in this chat are end-to-end encrypted. Photos and files are not yet.';
+
+  @override
+  String get e2eeCodeSecuriteTitre => 'Security code';
+
+  @override
+  String get e2eeCodeSecuriteMenu => 'Security code';
+
+  @override
+  String e2eeCodeSecuriteExplication(String nom) {
+    return 'Compare these numbers with the ones shown on $nom\'s phone, by voice or in person. If they match, your messages can only be read by the two of you.';
+  }
+
+  @override
+  String get e2eeCodeSecuriteManquants =>
+      'Some devices have not published their keys yet: this code may differ from your contact\'s. Try again later.';
+
+  @override
+  String get e2eeCodeIndisponible =>
+      'The security code is not available for this chat.';
+
+  @override
+  String get e2eeMarquerVerifie => 'Mark as verified';
+
+  @override
+  String get e2eeRetirerVerification => 'Remove verification';
+
+  @override
+  String get e2eeVerifie => 'Verified';
+
+  @override
+  String get e2eeVerifieExplication =>
+      'You compared this code. The mark disappears by itself if a key changes.';
+
+  @override
+  String e2eeAlerteCleChangee(String nom) {
+    return '$nom\'s security code changed: new device or reinstall.';
+  }
+
+  @override
+  String get e2eeAlerteVerifier => 'Verify';
 }

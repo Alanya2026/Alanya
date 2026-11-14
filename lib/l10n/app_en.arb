@@ -4156,5 +4156,16 @@
   "e2eeMessageEnAttente": "🔒 Waiting for this message…",
   "e2eeApercuChiffre": "🔒 Encrypted message",
   "e2eeMediaNonChiffre": "In this conversation, texts are end-to-end encrypted; photos and files are not yet.",
-  "e2eeBanniereDebut": "From here on, messages in this chat are end-to-end encrypted. Photos and files are not yet."
+  "e2eeBanniereDebut": "From here on, messages in this chat are end-to-end encrypted. Photos and files are not yet.",
+  "e2eeCodeSecuriteTitre": "Security code",
+  "e2eeCodeSecuriteMenu": "Security code",
+  "e2eeCodeSecuriteExplication": "Compare these numbers with the ones shown on {nom}'s phone, by voice or in person. If they match, your messages can only be read by the two of you.",
+  "e2eeCodeSecuriteManquants": "Some devices have not published their keys yet: this code may differ from your contact's. Try again later.",
+  "e2eeCodeIndisponible": "The security code is not available for this chat.",
+  "e2eeMarquerVerifie": "Mark as verified",
+  "e2eeRetirerVerification": "Remove verification",
+  "e2eeVerifie": "Verified",
+  "e2eeVerifieExplication": "You compared this code. The mark disappears by itself if a key changes.",
+  "e2eeAlerteCleChangee": "{nom}'s security code changed: new device or reinstall.",
+  "e2eeAlerteVerifier": "Verify"
 }

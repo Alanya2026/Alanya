@@ -17,6 +17,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/db/app_database.dart';
 import '../../core/e2ee/e2ee_affichage.dart';
 import '../../core/e2ee/e2ee_service.dart';
+import 'e2ee_code_securite_screen.dart';
 import '../../core/call_limits.dart';
 import '../../core/db/chat_dao.dart' show decodeParticipants, mentionsUser;
 import '../../core/navigation/app_navigator.dart';
@@ -442,6 +443,38 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     if (mounted) setState(() {});
   }
 
+  /// Le code de sécurité est proposé dans une discussion chiffrée à deux.
+  bool get _codeSecuriteDisponible =>
+      _e2eeDepuis != null &&
+      !widget.isGroup &&
+      !_isSelfChat &&
+      widget.userId != null &&
+      _myId != null;
+
+  /// Une clé du correspondant a changé et l'utilisateur ne l'a pas encore vu.
+  bool get _alerteCleAffichee =>
+      _codeSecuriteDisponible &&
+      (E2eeService.maybeInstance?.comptesAvecAlerte.value.contains('${widget.userId}') ?? false);
+
+  void _ouvrirCodeSecurite() {
+    final convId = _convId;
+    final moi = _myId;
+    if (convId == null || moi == null) return;
+    if (widget.userId != null) {
+      unawaited(E2eeService.maybeInstance?.marquerAlertesVues(widget.userId!));
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => E2eeCodeSecuriteScreen(
+          conversationID: convId,
+          moi: moi,
+          nom: widget.userName,
+        ),
+      ),
+    );
+  }
+
   final ScreenshotWatcher _screenshotWatcher = ScreenshotWatcher();
   final ScreenshotAlertGate _screenshotGate = ScreenshotAlertGate();
   final ScreenshotAlertGate _screenRecordingGate = ScreenshotAlertGate();
@@ -486,6 +519,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
         onScreenRecording: _onScreenRecordingDetected);
     WidgetsBinding.instance.addObserver(this);
     E2eeService.maybeInstance?.conversationsChiffrees.addListener(_onE2eeChange);
+    E2eeService.maybeInstance?.comptesAvecAlerte.addListener(_onE2eeChange);
     _init();
   }
 
@@ -1176,6 +1210,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
     _screenshotWatcher.stop();
     WidgetsBinding.instance.removeObserver(this);
     E2eeService.maybeInstance?.conversationsChiffrees.removeListener(_onE2eeChange);
+    E2eeService.maybeInstance?.comptesAvecAlerte.removeListener(_onE2eeChange);
     if (_observedRoute is PageRoute) appRouteObserver.unsubscribe(this);
     _typingTimer?.cancel();
     _recordTimer?.cancel();
@@ -1253,6 +1288,14 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
               const OfflineBanner(wrapSafeArea: false),
               _buildSearchNoResultBanner(),
               _buildPinnedBanner(),
+              if (_alerteCleAffichee)
+                E2eeAlerteCleBandeau(
+                  nom: widget.userName,
+                  onVerifier: _ouvrirCodeSecurite,
+                  onFermer: () => unawaited(
+                    E2eeService.maybeInstance?.marquerAlertesVues(widget.userId!),
+                  ),
+                ),
               if (widget.isGroup && _myPendingJoinMsgID != null)
                 GroupJoinBanner(
                   actorName: _joinBannerActor.isNotEmpty
@@ -1730,6 +1773,8 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                       conversationId: _convId!,
                     ));
                   }
+                case 'securite':
+                  _ouvrirCodeSecurite();
                 case 'translation':
                   Navigator.push(
                     context,
@@ -1767,6 +1812,16 @@ class _ChatDetailScreenState extends State<ChatDetailScreen>
                   title: Text(context.l10n.mediaLinksAndDocs),
                 ),
               ),
+              if (_codeSecuriteDisponible && _convId != null)
+                PopupMenuItem(
+                  value: 'securite',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.lock_outline),
+                    title: Text(context.l10n.e2eeCodeSecuriteMenu),
+                  ),
+                ),
               PopupMenuItem(
                 value: 'translation',
                 child: ListTile(
