@@ -94,11 +94,35 @@ extension CallSession on CallService {
   Future<void> _markCallSessionConnected() async {
     if (kIsWeb) return;
     await CallSessionGuard.instance.markConnected();
+    unawaited(_activerConnexionTelecom(_callKitCallId));
     // `_initAudioRoute` a choisi la sortie d'ouverture avant que Telecom ne
     // tienne l'appel : cette première demande est partie dans le vide, on la
     // repose ici.
     final parTelecom = await _demanderRoute(_audioRoute);
     unawaited(_tenirRouteAudio(demandeDejaPrise: parTelecom));
+  }
+
+  /// Garantit que Telecom tient l'appel pour actif.
+  ///
+  /// L'ordre « connecté » de `markConnected` part souvent avant que la
+  /// connexion Telecom n'existe — `placeCall` est asynchrone — et le plugin le
+  /// jette alors sans rien dire : l'appel restait « en numérotation », et
+  /// Android 14+ le coupait à 2 min. On attend donc la connexion, puis on la
+  /// passe active nous-mêmes si besoin.
+  Future<void> _activerConnexionTelecom(String? callId) async {
+    try {
+      final prete = await audio.AudioHelper.waitForTelecomConnection(
+        callId,
+        timeout: const Duration(seconds: 6),
+      );
+      if (!prete || _callKitCallId != callId) return;
+      final change = await audio.AudioHelper.activateTelecomCall(callId);
+      if (change == true) {
+        debugPrint('[CallService] ☎ connexion Telecom passée active ($callId)');
+      }
+    } catch (e) {
+      debugPrint('[CallService] ** activation Telecom: $e');
+    }
   }
 
   /// Amène Telecom sur la sortie voulue, puis aligne l'interface sur ce qu'il

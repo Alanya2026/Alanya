@@ -60,6 +60,12 @@ object CallAudioBridge {
                     }, RELECTURE_MS)
                 }
 
+                "activate" -> {
+                    result.success(
+                        if (callId.isEmpty()) null else TelecomAudioRouter.activate(callId),
+                    )
+                }
+
                 "readRoute" -> {
                     result.success(
                         if (callId.isEmpty()) null else TelecomAudioRouter.read(callId),

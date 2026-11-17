@@ -683,6 +683,7 @@ extension CallOneToOne on CallService {
     _callEndedByUs = false;
     _autoAnswerOnNextIncoming = false;
     _autoAnswerCallerId = null;
+    _entrantCroiseEnAttente = null;
     _isAutoAnsweringFromPush = false;
     _isRestoringOutgoing = false;
     _cancelOutgoingRestoreTimeout();

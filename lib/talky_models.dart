@@ -2325,6 +2325,11 @@ class SocketEvents {
   /// message vocal dans la conversation transmise.
   static const callVoicemail = 'call_voicemail';
   static const callNoAnswer = 'call_no_answer'; // timeout serveur sans réponse
+  /// Appels croisés : nous appelions { peerId } pendant qu'il nous appelait.
+  /// Le serveur garde SON appel ({ callId }) et n'a pas créé le nôtre : on
+  /// abandonne le sortant et on décroche l'entrant — les deux voulaient se
+  /// parler.
+  static const callGlare = 'call_glare';
   static const callResume = 'call_resume';
   static const callRejoinOffer = 'call_rejoin_offer';
   static const callVideoUpgradeOffer = 'call_video_upgrade_offer';

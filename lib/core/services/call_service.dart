@@ -314,6 +314,10 @@ class CallService extends ChangeNotifier {
   // Auto-réponse (CallKit pré-accepté)
   bool _autoAnswerOnNextIncoming = false;
   String? _autoAnswerCallerId;
+  /// Appel entrant reçu pendant notre propre appel sortant vers la même
+  /// personne, et laissé de côté par le départage (voir `call_signaling.dart`).
+  /// Rejoué si le serveur tranche ensuite en sa faveur (`call_glare`).
+  Map<dynamic, dynamic>? _entrantCroiseEnAttente;
   final Map<String, DateTime> _recentIncomingCallIds = {};
 
   // Auto-réponse depuis une notification/CallKit : on saute l'écran d'appel

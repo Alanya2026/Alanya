@@ -283,6 +283,24 @@ class AudioHelper {
     }
   }
 
+  /// Passe la connexion Telecom de [callId] à l'état actif si elle ne l'est pas.
+  ///
+  /// Rend `null` sans connexion (ou sans pont natif), `true` si l'état a dû être
+  /// changé — c'est-à-dire que l'ordre « connecté » du plugin avait été perdu.
+  static Future<bool?> activateTelecomCall(String? callId) async {
+    final id = callId?.trim() ?? '';
+    if (id.isEmpty || !_isAndroid) return null;
+    try {
+      return await _callAudioChannel
+          .invokeMethod<bool>('activate', {'callId': id});
+    } on MissingPluginException {
+      return null;
+    } catch (e) {
+      debugPrint('[AudioHelper] ** activation Telecom: $e');
+      return null;
+    }
+  }
+
   static Future<void> setSpeakerphoneOn(bool on) async {
     if (kIsWeb) return;
     try {

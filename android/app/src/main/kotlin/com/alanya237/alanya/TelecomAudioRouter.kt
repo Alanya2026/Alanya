@@ -2,6 +2,7 @@ package com.alanya237.alanya
 
 import android.os.Build
 import android.telecom.CallAudioState
+import android.telecom.Connection
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.hiennv.flutter_callkit_incoming.CallkitConnection
@@ -39,6 +40,36 @@ object TelecomAudioRouter {
     fun apply(callId: String, route: String): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
         return appliquer(callId, route)
+    }
+
+    /**
+     * Passe la connexion Telecom de [callId] à l'état actif si elle ne l'est pas.
+     *
+     * Le plugin déclare l'appel décroché par `placeCall`, qui est asynchrone :
+     * la connexion naît ~200 ms plus tard. L'ordre « connecté » envoyé entre-
+     * temps est jeté sans un mot (`driveTelecomConnection` : `find() ?: return`)
+     * et l'appel reste DIALING. Sous Android 14+, le chien de garde de Telecom
+     * le coupe alors à 120 s (`STATE_TIMEOUT`) : l'audio continue, mais Android
+     * ne tient plus l'appel — plus de pastille, plus de mise en attente sur un
+     * appel GSM, plus de route système. Mesuré sur un Xiaomi sous Android 16.
+     *
+     * Rend `null` sans connexion, sinon `true` si l'état a été changé.
+     */
+    fun activate(callId: String): Boolean? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
+        val connexion = CallkitConnection.find(callId) ?: return null
+        return try {
+            if (connexion.state == Connection.STATE_ACTIVE) {
+                false
+            } else {
+                Log.i(TAG, "connexion $callId en état ${connexion.state} → active")
+                connexion.markAccepted()
+                true
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "activation impossible pour $callId: ${e.message}")
+            null
+        }
     }
 
     /** État réel de la sortie audio, ou `null` si Telecom ne tient pas l'appel. */

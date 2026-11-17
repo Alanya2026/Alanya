@@ -6,7 +6,7 @@ extension CallSignaling on CallService {
     // Appels 1-à-1
 
     // Appel entrant
-    _apiClient.onSocketEvent(SocketEvents.incomingCall, (data) async {
+    Future<void> surAppelEntrant(dynamic data) async {
       debugPrint('[CallService] 📞 Appel entrant reçu: $data');
       if (data is! Map) {
         debugPrint('[CallService] ** Données invalides pour incoming_call');
@@ -35,16 +35,22 @@ extension CallSignaling on CallService {
         return;
       }
       if (outgoingGlare) {
-        debugPrint(
-          '[CallService] 🔀 Glare: abandon sortant vers $incomingCallerId → entrant',
-        );
-        _cancelOutgoingTimeout();
-        await _ringtone.stop();
-        await _releaseCallSession();
-        await _webrtc.dispose();
-        await _callKit.endAll();
-        _resetCallState();
-        _status = CallStatus.idle;
+        // Départage déterministe. Les deux téléphones voyaient le même
+        // croisement et abandonnaient chacun leur sortant : personne n'était
+        // relié, et le serveur — que rien ne prévenait — continuait de faire
+        // sonner l'appel abandonné. Désormais le serveur sérialise et tranche
+        // (`call_glare`) ; à défaut, seul le plus grand identifiant cède.
+        final moi = _localUserId;
+        final pair = int.tryParse(incomingCallerId);
+        if (moi != null && pair != null && moi < pair) {
+          debugPrint(
+            '[CallService] 🔀 Croisement avec $incomingCallerId : on garde notre '
+            'sortant (départage), entrant mis de côté',
+          );
+          _entrantCroiseEnAttente = data;
+          return;
+        }
+        await _abandonnerSortantCroise(incomingCallerId);
       }
       if (_isMeetingActive()) {
         debugPrint('[CallService] 🛡 incoming_call ignoré: réunion active');
@@ -181,6 +187,50 @@ extension CallSignaling on CallService {
         debugPrint(
           '[CallService] 🔇 Sonnerie entrante ignorée (présentation=$presentation)',
         );
+      }
+    }
+
+    _apiClient.onSocketEvent(SocketEvents.incomingCall, surAppelEntrant);
+
+    // Appels croisés tranchés par le serveur : il garde l'appel de l'autre et
+    // n'a pas créé le nôtre. On abandonne le sortant et on décroche l'entrant,
+    // qu'il soit déjà là, mis de côté, ou encore en route.
+    _apiClient.onSocketEvent(SocketEvents.callGlare, (data) async {
+      if (data is! Map) return;
+      final pair = data['peerId']?.toString() ?? '';
+      if (pair.isEmpty) return;
+      debugPrint('[CallService] 🔀 call_glare: on décroche l’appel de $pair');
+      // Lu avant l'abandon, qui remet tout l'état d'appel à zéro.
+      final misDeCote = _entrantCroiseEnAttente;
+      _entrantCroiseEnAttente = null;
+
+      if (_status == CallStatus.incoming && _remoteUserId?.toString() == pair) {
+        try {
+          await answerCall();
+        } catch (e) {
+          debugPrint('[CallService] ** décrochage après croisement: $e');
+        }
+        return;
+      }
+
+      final enCours =
+          (_status == CallStatus.outgoing || _status == CallStatus.connecting) &&
+          _remoteUserId?.toString() == pair;
+      if (!enCours && _status != CallStatus.idle) return;
+      if (enCours) await _abandonnerSortantCroise(pair);
+
+      _autoAnswerOnNextIncoming = true;
+      _autoAnswerCallerId = pair;
+      // Borne : si l'entrant ne vient jamais (appel déjà fini en face), le
+      // prochain appel de cette personne ne doit pas être décroché tout seul.
+      Timer(const Duration(seconds: 10), () {
+        if (_status == CallStatus.idle && _autoAnswerCallerId == pair) {
+          _autoAnswerOnNextIncoming = false;
+          _autoAnswerCallerId = null;
+        }
+      });
+      if (misDeCote != null && misDeCote['callerId']?.toString() == pair) {
+        await surAppelEntrant(misDeCote);
       }
     });
 
@@ -1463,5 +1513,18 @@ extension CallSignaling on CallService {
     }
     if (etat.isVideoOn != null) info.isVideoOn = etat.isVideoOn!;
     if (etat.isMuted != null || etat.isVideoOn != null) notify();
+  }
+
+  /// Démonte notre appel sortant vers [pairId] au profit de son appel entrant.
+  Future<void> _abandonnerSortantCroise(String pairId) async {
+    debugPrint('[CallService] 🔀 Croisement: abandon sortant vers $pairId → entrant');
+    _cancelOutgoingTimeout();
+    await _ringtone.stop();
+    await _releaseCallSession();
+    await _webrtc.dispose();
+    await _callKit.endAll();
+    _resetCallState();
+    _entrantCroiseEnAttente = null;
+    _status = CallStatus.idle;
   }
 }
