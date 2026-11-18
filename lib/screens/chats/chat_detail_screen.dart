@@ -143,6 +143,8 @@ import '../../core/services/documents_sensibles/detecteur_copie_signee.dart';
 import '../../widgets/documents_sensibles/dialogue_protection_pdf.dart';
 import '../../widgets/documents_sensibles/infos_protection_pdf.dart';
 import '../../core/services/documents_sensibles/signature_document.dart' show ProtectionImpossible;
+import '../../core/services/groups/group_invite_link.dart';
+import 'chat/group_invite_card.dart';
 
 // Écran réparti par responsabilité (même librairie / membres privés partagés) :
 part 'chat/chat_actions.dart';  // handlers : envoi, médias, vocal, appels

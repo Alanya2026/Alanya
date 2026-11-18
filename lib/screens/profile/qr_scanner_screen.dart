@@ -25,6 +25,8 @@ import '../../talky_models.dart';
 import 'qr_login_confirm_screen.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_presenter.dart';
+import '../../models/group_invite_models.dart';
+import '../chats/group_invite/group_invite_preview_sheet.dart';
 
 /// Scanner de code QR plein écran : identité d'un contact ou demande de
 /// connexion d'un nouvel appareil. La résolution du payload est faite par le
@@ -130,6 +132,10 @@ class _QrScannerScreenState extends State<QrScannerScreen>
         await _handleLogin(result.session, result.scanSecret);
         return;
       }
+      if (result.isGroup) {
+        await _handleGroup(result.group!);
+        return;
+      }
       await _handleContact(result);
     } on TalkyException catch (e) {
       if (!mounted) return;
@@ -230,9 +236,29 @@ class _QrScannerScreenState extends State<QrScannerScreen>
     if (uri == null || !uri.hasScheme) return false;
     if (uri.scheme != 'https' && uri.scheme != 'http') return false;
     final segments = uri.pathSegments;
+    // Lien d'invitation de groupe : `…/g/<jeton>`.
+    if (segments.length == 2 && segments[0] == 'g') return true;
     if (segments.length < 3) return false;
     return segments[0] == 'q' &&
         (segments[1] == 'u' || segments[1] == 'l' || segments[1] == 'c');
+  }
+
+  /// QR d'invitation de groupe : l'aperçu s'ouvre par-dessus la caméra ; à la
+  /// fermeture, on reprend le scan (sauf si la discussion s'est ouverte).
+  Future<void> _handleGroup(GroupInvitePreview preview) async {
+    _playScanSuccessFeedback();
+    if (!mounted) return;
+    setState(() => _isBusy = false);
+    final nav = Navigator.of(context, rootNavigator: true);
+    final resultat = await GroupInviteFlow.open(context, preview.token,
+        preview: preview, openChat: false);
+    if (!mounted) return;
+    if (resultat != null && resultat.isMember) {
+      Navigator.of(context).pop();
+      await GroupInviteFlow.openConversation(nav, resultat);
+      return;
+    }
+    _isHandling = false;
   }
 
   Future<void> _handleContact(QrResolveResult result) async {

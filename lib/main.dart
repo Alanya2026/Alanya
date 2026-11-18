@@ -91,6 +91,7 @@ import 'talky_api_client.dart';
 import 'talky_models.dart';
 import 'widgets/session/biometric_lock_overlay.dart';
 import 'widgets/session/active_session_banner.dart';
+import 'screens/chats/group_invite/group_invite_preview_sheet.dart';
 
 /// Clé globale exposée à PushService pour naviguer depuis les notifications.
 @Deprecated('Use appNavigatorKey from core/navigation/app_navigator.dart')
@@ -608,6 +609,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
   /// que ceux reçus pendant qu'elle tourne.
   StreamSubscription<({String kind, String token})>? _qrLinkSub;
   StreamSubscription<String>? _stickerShareSub;
+  StreamSubscription<String>? _groupInviteSub;
 
   /// Quelqu'un vient d'utiliser mon code QR : invitation à l'ajouter en
   /// retour. L'abonnement vit ici et non sur l'écran « Mon code » — le code a
@@ -632,6 +634,8 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
         .listen((scan) => unawaited(_onQrContactScanned(scan)));
     _stickerShareSub = QrDeepLinkService.instance.stickerShareTokens
         .listen((token) => unawaited(_handleStickerShareLink(token)));
+    _groupInviteSub = QrDeepLinkService.instance.groupInviteTokens
+        .listen((token) => unawaited(_handleGroupInviteLink(token)));
     unawaited(QrDeepLinkService.instance.start());
     Future.microtask(_bootstrap);
   }
@@ -643,6 +647,7 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     _deviceRevokedSub?.cancel();
     _qrLinkSub?.cancel();
     _stickerShareSub?.cancel();
+    _groupInviteSub?.cancel();
     _qrScanSub?.cancel();
     _clearCallLogBindings();
     if (_onBackOnline != null && _connectivityForListener != null) {
@@ -1359,12 +1364,29 @@ class _AuthWrapperState extends State<AuthWrapper> with WidgetsBindingObserver {
     )));
   }
 
+  /// Ouvre l'aperçu d'un groupe reçu par lien d'invitation. Hors session, le
+  /// jeton est mis de côté et rejoué par [_replayPendingQrLink].
+  Future<void> _handleGroupInviteLink(String token) async {
+    if (!mounted) return;
+    final auth = _authProvider;
+    if (auth == null || !auth.isLoggedIn) {
+      QrDeepLinkService.instance.stashGroupInviteToken(token);
+      return;
+    }
+    final nav = appNavigator;
+    if (nav == null) return;
+    unawaited(GroupInviteFlow.openWith(nav, token));
+  }
+
   /// Rejoue un lien d'identité reçu avant l'ouverture de session.
   Future<void> _replayPendingQrLink() async {
     final apiClient = Provider.of<TalkyApiClient>(context, listen: false);
 
     final stickerToken = QrDeepLinkService.instance.consumePendingStickerShareToken();
     if (stickerToken != null) await _handleStickerShareLink(stickerToken);
+
+    final groupToken = QrDeepLinkService.instance.consumePendingGroupInviteToken();
+    if (groupToken != null) await _handleGroupInviteLink(groupToken);
 
     final token = QrDeepLinkService.instance.consumePendingToken();
     if (token != null) await _handleQrIdentityLink(token);

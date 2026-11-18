@@ -265,6 +265,8 @@ extension _ChatBubbles on _ChatDetailScreenState {
       final source = _captionText(msg);
       if (source != null) linkUrl = firstUrlIn(source);
     }
+    final groupInviteToken =
+        linkUrl == null ? null : GroupInviteLink.fromUri(Uri.tryParse(linkUrl));
 
     // Sticker seul dans son message : ni fond ni queue, il flotte sur le
     // papier peint (~150 dp). Avec une citation ou un « transféré », la bulle
@@ -410,10 +412,14 @@ extension _ChatBubbles on _ChatDetailScreenState {
                       if (linkUrl != null)
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 260),
-                          child: LinkPreviewCard(
-                            url: linkUrl,
-                            isMe: isMe,
-                          ),
+                          // Lien d'invitation de groupe : carte dédiée, ouverte
+                          // dans l'app, plutôt que l'aperçu web générique.
+                          child: groupInviteToken != null
+                              ? GroupInviteCard(token: groupInviteToken, isMe: isMe)
+                              : LinkPreviewCard(
+                                  url: linkUrl,
+                                  isMe: isMe,
+                                ),
                         ),
                     ],
                   ],

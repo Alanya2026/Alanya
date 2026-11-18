@@ -17469,6 +17469,402 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Ouvrez votre coffre sur Windows ou Linux : la page de téléchargement s\'ouvre dans le navigateur.'**
   String get safeboxDesktopHint;
+
+  /// No description provided for @groupInviteViaLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Inviter via lien ou QR code'**
+  String get groupInviteViaLink;
+
+  /// No description provided for @groupInviteViaLinkSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toute personne qui a le lien peut rejoindre'**
+  String get groupInviteViaLinkSubtitle;
+
+  /// No description provided for @groupInviteViaLinkSubtitleApproval.
+  ///
+  /// In fr, this message translates to:
+  /// **'Toute personne qui a le lien peut demander à entrer'**
+  String get groupInviteViaLinkSubtitleApproval;
+
+  /// No description provided for @groupJoinRequestsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandes d\'adhésion'**
+  String get groupJoinRequestsTitle;
+
+  /// No description provided for @groupInviteLinkTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien d\'invitation'**
+  String get groupInviteLinkTitle;
+
+  /// No description provided for @onlyAdminsCanShareLinkLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les admins partagent le lien'**
+  String get onlyAdminsCanShareLinkLabel;
+
+  /// No description provided for @onlyAdminsCanShareLinkSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Coupé : tout membre voit le lien et le QR code. La réinitialisation reste réservée aux admins.'**
+  String get onlyAdminsCanShareLinkSubtitle;
+
+  /// No description provided for @approveNewMembersLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Approuver les nouveaux membres'**
+  String get approveNewMembersLabel;
+
+  /// No description provided for @approveNewMembersSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les arrivées par lien ou QR code deviennent des demandes qu\'un admin accepte ou refuse.'**
+  String get approveNewMembersSubtitle;
+
+  /// No description provided for @groupInviteScanHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Scannez ce code avec Alanya pour rejoindre le groupe'**
+  String get groupInviteScanHint;
+
+  /// No description provided for @groupInviteApprovalNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Approbation activée : chaque arrivée attend l\'accord d\'un admin.'**
+  String get groupInviteApprovalNote;
+
+  /// No description provided for @groupInviteTrustNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partagez ce lien uniquement avec des personnes de confiance : quiconque le reçoit peut le transmettre.'**
+  String get groupInviteTrustNote;
+
+  /// No description provided for @groupInviteShareSheetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Partager l\'invitation'**
+  String get groupInviteShareSheetTitle;
+
+  /// No description provided for @groupInviteShareLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le lien'**
+  String get groupInviteShareLink;
+
+  /// No description provided for @groupInviteShareLinkHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le destinataire touche le lien pour rejoindre'**
+  String get groupInviteShareLinkHint;
+
+  /// No description provided for @groupInviteShareImage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoyer le QR code en image'**
+  String get groupInviteShareImage;
+
+  /// No description provided for @groupInviteShareImageHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'À scanner depuis Alanya'**
+  String get groupInviteShareImageHint;
+
+  /// No description provided for @groupInviteShareText.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoignez le groupe « {name} » sur Alanya :'**
+  String groupInviteShareText(String name);
+
+  /// No description provided for @groupInviteCopy.
+  ///
+  /// In fr, this message translates to:
+  /// **'Copier le lien'**
+  String get groupInviteCopy;
+
+  /// No description provided for @groupInviteCopied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lien copié'**
+  String get groupInviteCopied;
+
+  /// No description provided for @groupInviteReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser le lien'**
+  String get groupInviteReset;
+
+  /// No description provided for @groupInviteResetTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réinitialiser le lien ?'**
+  String get groupInviteResetTitle;
+
+  /// No description provided for @groupInviteResetBody.
+  ///
+  /// In fr, this message translates to:
+  /// **'L\'ancien lien et l\'ancien QR code cesseront de fonctionner tout de suite, y compris s\'ils sont imprimés. Un nouveau lien sera créé.'**
+  String get groupInviteResetBody;
+
+  /// No description provided for @groupInviteResetDone.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouveau lien créé'**
+  String get groupInviteResetDone;
+
+  /// No description provided for @groupInviteAdminOnly.
+  ///
+  /// In fr, this message translates to:
+  /// **'Seuls les admins peuvent partager le lien de ce groupe.'**
+  String get groupInviteAdminOnly;
+
+  /// No description provided for @groupInviteHistoryNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous verrez les messages envoyés après votre arrivée.'**
+  String get groupInviteHistoryNote;
+
+  /// No description provided for @groupInviteProfileNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les membres verront votre nom et votre photo de profil.'**
+  String get groupInviteProfileNote;
+
+  /// No description provided for @groupInviteApprovalInfo.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un admin doit approuver votre demande. Il verra votre nom et votre photo de profil.'**
+  String get groupInviteApprovalInfo;
+
+  /// No description provided for @groupInviteJoin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Rejoindre le groupe'**
+  String get groupInviteJoin;
+
+  /// No description provided for @groupInviteAskToJoin.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demander à rejoindre'**
+  String get groupInviteAskToJoin;
+
+  /// No description provided for @groupInviteRequestSent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande envoyée. Vous serez prévenu dès qu\'un admin aura répondu.'**
+  String get groupInviteRequestSent;
+
+  /// No description provided for @groupInviteCancelRequest.
+  ///
+  /// In fr, this message translates to:
+  /// **'Annuler la demande'**
+  String get groupInviteCancelRequest;
+
+  /// No description provided for @groupInviteAlreadyMember.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous faites déjà partie de ce groupe.'**
+  String get groupInviteAlreadyMember;
+
+  /// No description provided for @groupInviteOpenChat.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir la discussion'**
+  String get groupInviteOpenChat;
+
+  /// No description provided for @groupInviteRemoved.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un admin vous a retiré de ce groupe. Seul un admin peut vous ajouter à nouveau.'**
+  String get groupInviteRemoved;
+
+  /// No description provided for @groupInviteFull.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce groupe a atteint le nombre maximal de membres.'**
+  String get groupInviteFull;
+
+  /// No description provided for @groupInviteInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce lien ne fonctionne plus. Il a peut-être été réinitialisé : demandez un nouveau lien à un membre du groupe.'**
+  String get groupInviteInvalid;
+
+  /// No description provided for @groupInviteJoined.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez rejoint « {name} »'**
+  String groupInviteJoined(String name);
+
+  /// No description provided for @groupJoinRequestsEmpty.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucune demande en attente'**
+  String get groupJoinRequestsEmpty;
+
+  /// No description provided for @groupJoinApproveAll.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tout approuver'**
+  String get groupJoinApproveAll;
+
+  /// No description provided for @groupJoinApprove.
+  ///
+  /// In fr, this message translates to:
+  /// **'Approuver'**
+  String get groupJoinApprove;
+
+  /// No description provided for @groupJoinReject.
+  ///
+  /// In fr, this message translates to:
+  /// **'Refuser'**
+  String get groupJoinReject;
+
+  /// No description provided for @groupJoinInContacts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans vos contacts'**
+  String get groupJoinInContacts;
+
+  /// No description provided for @groupJoinNotInContacts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors contacts'**
+  String get groupJoinNotInContacts;
+
+  /// No description provided for @groupJoinAlreadyHandled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cette demande a déjà été traitée'**
+  String get groupJoinAlreadyHandled;
+
+  /// No description provided for @groupJoinRequestsNote.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les admins voient les mêmes demandes : la première réponse l\'emporte.'**
+  String get groupJoinRequestsNote;
+
+  /// No description provided for @groupInviteCardLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Invitation à un groupe'**
+  String get groupInviteCardLabel;
+
+  /// No description provided for @groupInviteCardView.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir le groupe'**
+  String get groupInviteCardView;
+
+  /// No description provided for @sysMemberJoinedLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a rejoint via le lien d\'invitation'**
+  String sysMemberJoinedLink(String actor);
+
+  /// No description provided for @sysMemberJoinedLinkByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez rejoint via le lien d\'invitation'**
+  String get sysMemberJoinedLinkByMe;
+
+  /// No description provided for @sysJoinApproved.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a approuvé {targets}'**
+  String sysJoinApproved(String actor, String targets);
+
+  /// No description provided for @sysJoinApprovedByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez approuvé {targets}'**
+  String sysJoinApprovedByMe(String targets);
+
+  /// No description provided for @sysInviteLinkReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a réinitialisé le lien d\'invitation'**
+  String sysInviteLinkReset(String actor);
+
+  /// No description provided for @sysInviteLinkResetByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez réinitialisé le lien d\'invitation'**
+  String get sysInviteLinkResetByMe;
+
+  /// No description provided for @sysOnlyAdminsShareLinkOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a réservé le lien d\'invitation aux administrateurs'**
+  String sysOnlyAdminsShareLinkOn(String actor);
+
+  /// No description provided for @sysOnlyAdminsShareLinkOnByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez réservé le lien d\'invitation aux administrateurs'**
+  String get sysOnlyAdminsShareLinkOnByMe;
+
+  /// No description provided for @sysOnlyAdminsShareLinkOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a ouvert le lien d\'invitation à tous les membres'**
+  String sysOnlyAdminsShareLinkOff(String actor);
+
+  /// No description provided for @sysOnlyAdminsShareLinkOffByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez ouvert le lien d\'invitation à tous les membres'**
+  String get sysOnlyAdminsShareLinkOffByMe;
+
+  /// No description provided for @sysApproveMembersOn.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a activé l\'approbation des nouveaux membres'**
+  String sysApproveMembersOn(String actor);
+
+  /// No description provided for @sysApproveMembersOnByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez activé l\'approbation des nouveaux membres'**
+  String get sysApproveMembersOnByMe;
+
+  /// No description provided for @sysApproveMembersOff.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a désactivé l\'approbation des nouveaux membres'**
+  String sysApproveMembersOff(String actor);
+
+  /// No description provided for @sysApproveMembersOffByMe.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous avez désactivé l\'approbation des nouveaux membres'**
+  String get sysApproveMembersOffByMe;
+
+  /// No description provided for @sysPreviewMemberJoinedLink.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a rejoint via le lien d\'invitation'**
+  String sysPreviewMemberJoinedLink(String actor);
+
+  /// No description provided for @sysPreviewJoinApproved.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a accepté un nouveau membre'**
+  String sysPreviewJoinApproved(String actor);
+
+  /// No description provided for @sysPreviewInviteLinkReset.
+  ///
+  /// In fr, this message translates to:
+  /// **'{actor} a réinitialisé le lien d\'invitation'**
+  String sysPreviewInviteLinkReset(String actor);
+
+  /// No description provided for @notifGroupJoinRequestChannel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandes d\'adhésion'**
+  String get notifGroupJoinRequestChannel;
 }
 
 class _AppLocalizationsDelegate

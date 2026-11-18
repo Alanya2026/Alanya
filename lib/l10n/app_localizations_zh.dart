@@ -9841,4 +9841,228 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get safeboxDesktopHint => '在 Windows 或 Linux 上打开您的保险箱：下载页面将在浏览器中打开。';
+
+  @override
+  String get groupInviteViaLink => '通过链接或二维码邀请';
+
+  @override
+  String get groupInviteViaLinkSubtitle => '任何拥有链接的人都可以加入';
+
+  @override
+  String get groupInviteViaLinkSubtitleApproval => '任何拥有链接的人都可以申请加入';
+
+  @override
+  String get groupJoinRequestsTitle => '入群申请';
+
+  @override
+  String get groupInviteLinkTitle => '邀请链接';
+
+  @override
+  String get onlyAdminsCanShareLinkLabel => '仅管理员可分享链接';
+
+  @override
+  String get onlyAdminsCanShareLinkSubtitle => '关闭后：所有成员都能看到链接和二维码。只有管理员可以重置。';
+
+  @override
+  String get approveNewMembersLabel => '审核新成员';
+
+  @override
+  String get approveNewMembersSubtitle => '通过链接或二维码加入的人需提交申请，由管理员批准或拒绝。';
+
+  @override
+  String get groupInviteScanHint => '用 Alanya 扫描此码即可加入群组';
+
+  @override
+  String get groupInviteApprovalNote => '已开启审核：每位新成员都需管理员同意。';
+
+  @override
+  String get groupInviteTrustNote => '请仅与信任的人分享此链接：收到的人都可以转发。';
+
+  @override
+  String get groupInviteShareSheetTitle => '分享邀请';
+
+  @override
+  String get groupInviteShareLink => '发送链接';
+
+  @override
+  String get groupInviteShareLinkHint => '对方点击链接即可加入';
+
+  @override
+  String get groupInviteShareImage => '以图片发送二维码';
+
+  @override
+  String get groupInviteShareImageHint => '可在 Alanya 中扫描';
+
+  @override
+  String groupInviteShareText(String name) {
+    return '在 Alanya 上加入群组「$name」：';
+  }
+
+  @override
+  String get groupInviteCopy => '复制链接';
+
+  @override
+  String get groupInviteCopied => '链接已复制';
+
+  @override
+  String get groupInviteReset => '重置链接';
+
+  @override
+  String get groupInviteResetTitle => '要重置链接吗？';
+
+  @override
+  String get groupInviteResetBody => '旧链接和旧二维码将立即失效，即使已打印。系统将创建新链接。';
+
+  @override
+  String get groupInviteResetDone => '已创建新链接';
+
+  @override
+  String get groupInviteAdminOnly => '只有管理员可以分享此群组的链接。';
+
+  @override
+  String get groupInviteHistoryNote => '您将看到加入后发送的消息。';
+
+  @override
+  String get groupInviteProfileNote => '成员将看到您的名字和头像。';
+
+  @override
+  String get groupInviteApprovalInfo => '需要管理员批准您的申请。管理员将看到您的名字和头像。';
+
+  @override
+  String get groupInviteJoin => '加入群组';
+
+  @override
+  String get groupInviteAskToJoin => '申请加入';
+
+  @override
+  String get groupInviteRequestSent => '申请已发送。管理员回复后会通知您。';
+
+  @override
+  String get groupInviteCancelRequest => '取消申请';
+
+  @override
+  String get groupInviteAlreadyMember => '您已在此群组中。';
+
+  @override
+  String get groupInviteOpenChat => '打开聊天';
+
+  @override
+  String get groupInviteRemoved => '管理员已将您移出此群组。只有管理员可以重新添加您。';
+
+  @override
+  String get groupInviteFull => '此群组已达到成员上限。';
+
+  @override
+  String get groupInviteInvalid => '此链接已失效，可能已被重置：请向群成员索取新链接。';
+
+  @override
+  String groupInviteJoined(String name) {
+    return '您已加入「$name」';
+  }
+
+  @override
+  String get groupJoinRequestsEmpty => '没有待处理的申请';
+
+  @override
+  String get groupJoinApproveAll => '全部批准';
+
+  @override
+  String get groupJoinApprove => '批准';
+
+  @override
+  String get groupJoinReject => '拒绝';
+
+  @override
+  String get groupJoinInContacts => '在您的联系人中';
+
+  @override
+  String get groupJoinNotInContacts => '不在联系人中';
+
+  @override
+  String get groupJoinAlreadyHandled => '此申请已被处理';
+
+  @override
+  String get groupJoinRequestsNote => '所有管理员看到相同的申请：以第一个回复为准。';
+
+  @override
+  String get groupInviteCardLabel => '群组邀请';
+
+  @override
+  String get groupInviteCardView => '查看群组';
+
+  @override
+  String sysMemberJoinedLink(String actor) {
+    return '$actor 通过邀请链接加入';
+  }
+
+  @override
+  String get sysMemberJoinedLinkByMe => '您通过邀请链接加入';
+
+  @override
+  String sysJoinApproved(String actor, String targets) {
+    return '$actor 批准了 $targets';
+  }
+
+  @override
+  String sysJoinApprovedByMe(String targets) {
+    return '您批准了 $targets';
+  }
+
+  @override
+  String sysInviteLinkReset(String actor) {
+    return '$actor 重置了邀请链接';
+  }
+
+  @override
+  String get sysInviteLinkResetByMe => '您重置了邀请链接';
+
+  @override
+  String sysOnlyAdminsShareLinkOn(String actor) {
+    return '$actor 将邀请链接限定为管理员';
+  }
+
+  @override
+  String get sysOnlyAdminsShareLinkOnByMe => '您将邀请链接限定为管理员';
+
+  @override
+  String sysOnlyAdminsShareLinkOff(String actor) {
+    return '$actor 允许所有成员分享邀请链接';
+  }
+
+  @override
+  String get sysOnlyAdminsShareLinkOffByMe => '您允许所有成员分享邀请链接';
+
+  @override
+  String sysApproveMembersOn(String actor) {
+    return '$actor 开启了新成员审核';
+  }
+
+  @override
+  String get sysApproveMembersOnByMe => '您开启了新成员审核';
+
+  @override
+  String sysApproveMembersOff(String actor) {
+    return '$actor 关闭了新成员审核';
+  }
+
+  @override
+  String get sysApproveMembersOffByMe => '您关闭了新成员审核';
+
+  @override
+  String sysPreviewMemberJoinedLink(String actor) {
+    return '$actor 通过邀请链接加入';
+  }
+
+  @override
+  String sysPreviewJoinApproved(String actor) {
+    return '$actor 接受了新成员';
+  }
+
+  @override
+  String sysPreviewInviteLinkReset(String actor) {
+    return '$actor 重置了邀请链接';
+  }
+
+  @override
+  String get notifGroupJoinRequestChannel => '入群申请';
 }

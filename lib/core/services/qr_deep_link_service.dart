@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 
 import '../utils/app_log.dart';
+import 'groups/group_invite_link.dart';
 import 'stickers/sticker_share_link.dart';
 
 /// Réception des liens `…/q/u/<jeton>` — partagés par lien ou ouverts depuis
@@ -38,6 +39,37 @@ class QrDeepLinkService {
   Stream<String> get stickerShareTokens => _stickerTokens.stream;
 
   String? _pendingSticker;
+
+  final StreamController<String> _groupTokens =
+      StreamController<String>.broadcast();
+
+  /// Jetons de liens d'invitation de groupe (`alanya://group/<jeton>` ou
+  /// `https://www.alanya237.com/g/<jeton>`), envoyés à l'aperçu du groupe.
+  /// Même régime que [stickerShareTokens] : rien n'est résolu ici, et rien
+  /// n'entre dans un groupe sans un appui sur « Rejoindre ».
+  Stream<String> get groupInviteTokens => _groupTokens.stream;
+
+  String? _pendingGroup;
+
+  /// Met un jeton de groupe de côté faute de session ouverte.
+  void stashGroupInviteToken(String token) => _pendingGroup = token;
+
+  /// Récupère et efface le jeton de groupe en attente.
+  String? consumePendingGroupInviteToken() {
+    final t = _pendingGroup;
+    _pendingGroup = null;
+    return t;
+  }
+
+  /// Fait entrer un jeton de groupe dans le flux, d'où qu'il vienne : lien
+  /// système, lien touché dans un message, carte d'invitation.
+  void openGroupInvite(String token) {
+    if (_groupTokens.hasListener) {
+      _groupTokens.add(token);
+    } else {
+      _pendingGroup = token;
+    }
+  }
 
   /// Met un jeton de pack de côté faute de session ouverte.
   void stashStickerShareToken(String token) => _pendingSticker = token;
@@ -93,6 +125,11 @@ class QrDeepLinkService {
   }
 
   void _handle(Uri uri) {
+    final group = GroupInviteLink.fromUri(uri);
+    if (group != null) {
+      openGroupInvite(group);
+      return;
+    }
     final sticker = StickerShareLink.fromUri(uri);
     if (sticker != null) {
       if (_stickerTokens.hasListener) {

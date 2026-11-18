@@ -40,6 +40,7 @@ import '../billing/subscription_screen.dart';
 import '../../core/services/safebox/safebox_controller.dart';
 import '../../providers/connectivity_provider.dart';
 import '../safebox/safebox_free_up_screen.dart';
+import '../chats/group_invite/group_join_requests_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.initialTab = 0});
@@ -372,6 +373,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         unawaited(Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SafeboxFreeUpScreen()),
         ));
+      }
+    } else if (type == 'group_join_request') {
+      // Quelqu'un demande à entrer : l'admin va droit aux demandes.
+      final convId = int.tryParse(action.data['conversationId'] ?? '') ?? 0;
+      if (action.fromTap && convId > 0) {
+        unawaited(Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => GroupJoinRequestsScreen(
+            conversationId: convId,
+            groupName: action.data['title'] ?? '',
+          ),
+        )));
+      }
+    } else if (type == 'group_join_approved') {
+      // Demande acceptée : la discussion du groupe.
+      if (action.fromTap) {
+        NotificationNavigation.openConversation(context, {
+          ...action.data,
+          'isGroup': '1',
+        });
       }
     } else if (type == 'verification_update') {
       // La coche a changé (abonnement ou révocation admin) : relire les droits.

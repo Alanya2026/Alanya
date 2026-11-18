@@ -22,6 +22,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../services/groups/group_invite_link.dart';
+import '../services/qr_deep_link_service.dart';
+
 import 'alanya_phone_formatter.dart';
 
 /// Détecte les URLs (http, https, ou commençant par www.).
@@ -76,6 +79,13 @@ Future<void> _openUrl(String raw) async {
     url = 'https://$url';
   }
   final uri = Uri.tryParse(url);
+  // Lien d'invitation de groupe : ouvert dans l'app (aperçu du groupe), pas
+  // dans le navigateur — même chemin qu'un lien reçu par le système.
+  final groupe = GroupInviteLink.fromUri(uri);
+  if (groupe != null) {
+    QrDeepLinkService.instance.openGroupInvite(groupe);
+    return;
+  }
   if (uri == null) return;
   try {
     await launchUrl(uri, mode: LaunchMode.externalApplication);

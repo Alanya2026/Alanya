@@ -5,6 +5,8 @@
 // modèles tels quels. Le parsing du payload reste l'affaire du serveur — ici on
 // ne fait que transporter ce qu'il renvoie.
 
+import 'group_invite_models.dart';
+
 /// Code QR d'identité de l'utilisateur connecté (`GET /api/qr/me`).
 class QrIdentity {
   final String qrPublicId;
@@ -67,7 +69,7 @@ class QrLoginSessionInfo {
 /// connexion. Le champ [scanSecret] n'est jamais renvoyé par le serveur ; il est
 /// rempli côté client depuis la chaîne scannée pour l'appel d'approbation.
 class QrResolveResult {
-  /// 'contact' | 'login'
+  /// 'contact' | 'login' | 'group'
   final String type;
   final bool isSelf;
   final bool added;
@@ -75,6 +77,9 @@ class QrResolveResult {
   final Map<String, dynamic>? contact;
   final QrLoginSessionInfo? session;
   final String? scanSecret;
+
+  /// Lien d'invitation de groupe scanné (`type == 'group'`).
+  final GroupInvitePreview? group;
 
   const QrResolveResult({
     required this.type,
@@ -84,6 +89,7 @@ class QrResolveResult {
     this.contact,
     this.session,
     this.scanSecret,
+    this.group,
   });
 
   factory QrResolveResult.fromJson(
@@ -104,9 +110,13 @@ class QrResolveResult {
           ? QrLoginSessionInfo.fromJson(Map<String, dynamic>.from(rawSession))
           : null,
       scanSecret: scanSecret,
+      group: json['type'] == 'group'
+          ? GroupInvitePreview.fromJson(json['token']?.toString() ?? '', json)
+          : null,
     );
   }
 
+  bool get isGroup => type == 'group' && group != null;
   bool get isContact => type == 'contact';
   bool get isLogin => type == 'login';
 }

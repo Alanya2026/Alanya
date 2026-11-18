@@ -22,6 +22,11 @@ abstract final class SystemEvent {
   static const roleChanged = 'role_changed';
   static const settingsChanged = 'settings_changed';
 
+  /// Lien d'invitation (migration serveur 116).
+  static const memberJoinedLink = 'member_joined_link';
+  static const joinApproved = 'join_approved';
+  static const inviteLinkReset = 'invite_link_reset';
+
   /// Lignes d'incident d'un trajet de confiance.
   ///
   /// Elles ne sont pas des événements de groupe et ne s'affichent pas dans un
@@ -50,6 +55,9 @@ abstract final class SystemEvent {
     groupDescriptionChanged,
     roleChanged,
     settingsChanged,
+    memberJoinedLink,
+    joinApproved,
+    inviteLinkReset,
     screenshot,
     screenRecording,
     tripAlert,
@@ -244,6 +252,18 @@ class SystemEventPayload {
             ? l10n.sysRoleDemotedByMe(targets)
             : l10n.sysRoleDemoted(actor, targets);
 
+      case SystemEvent.memberJoinedLink:
+        return byMe ? l10n.sysMemberJoinedLinkByMe : l10n.sysMemberJoinedLink(actor);
+
+      case SystemEvent.joinApproved:
+        if (!hasTargetNames) return l10n.sysGroupEventFallback;
+        return byMe
+            ? l10n.sysJoinApprovedByMe(targets)
+            : l10n.sysJoinApproved(actor, targets);
+
+      case SystemEvent.inviteLinkReset:
+        return byMe ? l10n.sysInviteLinkResetByMe : l10n.sysInviteLinkReset(actor);
+
       case SystemEvent.settingsChanged:
         if (lock == 'send') {
           if (lockEnabled) {
@@ -274,6 +294,26 @@ class SystemEventPayload {
           return byMe
               ? l10n.sysHideHistoryOffByMe
               : l10n.sysHideHistoryOff(actor);
+        }
+        if (lock == 'link') {
+          if (lockEnabled) {
+            return byMe
+                ? l10n.sysOnlyAdminsShareLinkOnByMe
+                : l10n.sysOnlyAdminsShareLinkOn(actor);
+          }
+          return byMe
+              ? l10n.sysOnlyAdminsShareLinkOffByMe
+              : l10n.sysOnlyAdminsShareLinkOff(actor);
+        }
+        if (lock == 'approve') {
+          if (lockEnabled) {
+            return byMe
+                ? l10n.sysApproveMembersOnByMe
+                : l10n.sysApproveMembersOn(actor);
+          }
+          return byMe
+              ? l10n.sysApproveMembersOffByMe
+              : l10n.sysApproveMembersOff(actor);
         }
         if (lock == 'add') {
           if (lockEnabled) {
@@ -321,6 +361,12 @@ class SystemEventPayload {
             : l10n.sysPreviewRoleDemoted(actor);
       case SystemEvent.settingsChanged:
         return l10n.sysPreviewSettingsChanged(actor);
+      case SystemEvent.memberJoinedLink:
+        return l10n.sysPreviewMemberJoinedLink(actor);
+      case SystemEvent.joinApproved:
+        return l10n.sysPreviewJoinApproved(actor);
+      case SystemEvent.inviteLinkReset:
+        return l10n.sysPreviewInviteLinkReset(actor);
       // On réutilise les libellés de la carte de trajet : ils disent déjà
       // exactement le fait. Sans ces deux cas, l'aperçu tomberait sur le repli
       // générique — « Le groupe a été mis à jour » pour une alerte reçue d'un

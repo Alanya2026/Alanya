@@ -10560,4 +10560,254 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get safeboxDesktopHint =>
       'Ouvrez votre coffre sur Windows ou Linux : la page de téléchargement s\'ouvre dans le navigateur.';
+
+  @override
+  String get groupInviteViaLink => 'Inviter via lien ou QR code';
+
+  @override
+  String get groupInviteViaLinkSubtitle =>
+      'Toute personne qui a le lien peut rejoindre';
+
+  @override
+  String get groupInviteViaLinkSubtitleApproval =>
+      'Toute personne qui a le lien peut demander à entrer';
+
+  @override
+  String get groupJoinRequestsTitle => 'Demandes d\'adhésion';
+
+  @override
+  String get groupInviteLinkTitle => 'Lien d\'invitation';
+
+  @override
+  String get onlyAdminsCanShareLinkLabel =>
+      'Seuls les admins partagent le lien';
+
+  @override
+  String get onlyAdminsCanShareLinkSubtitle =>
+      'Coupé : tout membre voit le lien et le QR code. La réinitialisation reste réservée aux admins.';
+
+  @override
+  String get approveNewMembersLabel => 'Approuver les nouveaux membres';
+
+  @override
+  String get approveNewMembersSubtitle =>
+      'Les arrivées par lien ou QR code deviennent des demandes qu\'un admin accepte ou refuse.';
+
+  @override
+  String get groupInviteScanHint =>
+      'Scannez ce code avec Alanya pour rejoindre le groupe';
+
+  @override
+  String get groupInviteApprovalNote =>
+      'Approbation activée : chaque arrivée attend l\'accord d\'un admin.';
+
+  @override
+  String get groupInviteTrustNote =>
+      'Partagez ce lien uniquement avec des personnes de confiance : quiconque le reçoit peut le transmettre.';
+
+  @override
+  String get groupInviteShareSheetTitle => 'Partager l\'invitation';
+
+  @override
+  String get groupInviteShareLink => 'Envoyer le lien';
+
+  @override
+  String get groupInviteShareLinkHint =>
+      'Le destinataire touche le lien pour rejoindre';
+
+  @override
+  String get groupInviteShareImage => 'Envoyer le QR code en image';
+
+  @override
+  String get groupInviteShareImageHint => 'À scanner depuis Alanya';
+
+  @override
+  String groupInviteShareText(String name) {
+    return 'Rejoignez le groupe « $name » sur Alanya :';
+  }
+
+  @override
+  String get groupInviteCopy => 'Copier le lien';
+
+  @override
+  String get groupInviteCopied => 'Lien copié';
+
+  @override
+  String get groupInviteReset => 'Réinitialiser le lien';
+
+  @override
+  String get groupInviteResetTitle => 'Réinitialiser le lien ?';
+
+  @override
+  String get groupInviteResetBody =>
+      'L\'ancien lien et l\'ancien QR code cesseront de fonctionner tout de suite, y compris s\'ils sont imprimés. Un nouveau lien sera créé.';
+
+  @override
+  String get groupInviteResetDone => 'Nouveau lien créé';
+
+  @override
+  String get groupInviteAdminOnly =>
+      'Seuls les admins peuvent partager le lien de ce groupe.';
+
+  @override
+  String get groupInviteHistoryNote =>
+      'Vous verrez les messages envoyés après votre arrivée.';
+
+  @override
+  String get groupInviteProfileNote =>
+      'Les membres verront votre nom et votre photo de profil.';
+
+  @override
+  String get groupInviteApprovalInfo =>
+      'Un admin doit approuver votre demande. Il verra votre nom et votre photo de profil.';
+
+  @override
+  String get groupInviteJoin => 'Rejoindre le groupe';
+
+  @override
+  String get groupInviteAskToJoin => 'Demander à rejoindre';
+
+  @override
+  String get groupInviteRequestSent =>
+      'Demande envoyée. Vous serez prévenu dès qu\'un admin aura répondu.';
+
+  @override
+  String get groupInviteCancelRequest => 'Annuler la demande';
+
+  @override
+  String get groupInviteAlreadyMember =>
+      'Vous faites déjà partie de ce groupe.';
+
+  @override
+  String get groupInviteOpenChat => 'Ouvrir la discussion';
+
+  @override
+  String get groupInviteRemoved =>
+      'Un admin vous a retiré de ce groupe. Seul un admin peut vous ajouter à nouveau.';
+
+  @override
+  String get groupInviteFull =>
+      'Ce groupe a atteint le nombre maximal de membres.';
+
+  @override
+  String get groupInviteInvalid =>
+      'Ce lien ne fonctionne plus. Il a peut-être été réinitialisé : demandez un nouveau lien à un membre du groupe.';
+
+  @override
+  String groupInviteJoined(String name) {
+    return 'Vous avez rejoint « $name »';
+  }
+
+  @override
+  String get groupJoinRequestsEmpty => 'Aucune demande en attente';
+
+  @override
+  String get groupJoinApproveAll => 'Tout approuver';
+
+  @override
+  String get groupJoinApprove => 'Approuver';
+
+  @override
+  String get groupJoinReject => 'Refuser';
+
+  @override
+  String get groupJoinInContacts => 'Dans vos contacts';
+
+  @override
+  String get groupJoinNotInContacts => 'Hors contacts';
+
+  @override
+  String get groupJoinAlreadyHandled => 'Cette demande a déjà été traitée';
+
+  @override
+  String get groupJoinRequestsNote =>
+      'Tous les admins voient les mêmes demandes : la première réponse l\'emporte.';
+
+  @override
+  String get groupInviteCardLabel => 'Invitation à un groupe';
+
+  @override
+  String get groupInviteCardView => 'Voir le groupe';
+
+  @override
+  String sysMemberJoinedLink(String actor) {
+    return '$actor a rejoint via le lien d\'invitation';
+  }
+
+  @override
+  String get sysMemberJoinedLinkByMe =>
+      'Vous avez rejoint via le lien d\'invitation';
+
+  @override
+  String sysJoinApproved(String actor, String targets) {
+    return '$actor a approuvé $targets';
+  }
+
+  @override
+  String sysJoinApprovedByMe(String targets) {
+    return 'Vous avez approuvé $targets';
+  }
+
+  @override
+  String sysInviteLinkReset(String actor) {
+    return '$actor a réinitialisé le lien d\'invitation';
+  }
+
+  @override
+  String get sysInviteLinkResetByMe =>
+      'Vous avez réinitialisé le lien d\'invitation';
+
+  @override
+  String sysOnlyAdminsShareLinkOn(String actor) {
+    return '$actor a réservé le lien d\'invitation aux administrateurs';
+  }
+
+  @override
+  String get sysOnlyAdminsShareLinkOnByMe =>
+      'Vous avez réservé le lien d\'invitation aux administrateurs';
+
+  @override
+  String sysOnlyAdminsShareLinkOff(String actor) {
+    return '$actor a ouvert le lien d\'invitation à tous les membres';
+  }
+
+  @override
+  String get sysOnlyAdminsShareLinkOffByMe =>
+      'Vous avez ouvert le lien d\'invitation à tous les membres';
+
+  @override
+  String sysApproveMembersOn(String actor) {
+    return '$actor a activé l\'approbation des nouveaux membres';
+  }
+
+  @override
+  String get sysApproveMembersOnByMe =>
+      'Vous avez activé l\'approbation des nouveaux membres';
+
+  @override
+  String sysApproveMembersOff(String actor) {
+    return '$actor a désactivé l\'approbation des nouveaux membres';
+  }
+
+  @override
+  String get sysApproveMembersOffByMe =>
+      'Vous avez désactivé l\'approbation des nouveaux membres';
+
+  @override
+  String sysPreviewMemberJoinedLink(String actor) {
+    return '$actor a rejoint via le lien d\'invitation';
+  }
+
+  @override
+  String sysPreviewJoinApproved(String actor) {
+    return '$actor a accepté un nouveau membre';
+  }
+
+  @override
+  String sysPreviewInviteLinkReset(String actor) {
+    return '$actor a réinitialisé le lien d\'invitation';
+  }
+
+  @override
+  String get notifGroupJoinRequestChannel => 'Demandes d\'adhésion';
 }

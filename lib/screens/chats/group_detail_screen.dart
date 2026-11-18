@@ -30,6 +30,9 @@ import 'conversation_media_screen.dart';
 import 'media_viewer_screen.dart';
 import '../../widgets/conversation_mute_sheet.dart';
 import '../../widgets/conversation_translate_sheet.dart';
+import '../../models/group_invite_models.dart';
+import 'group_invite/group_invite_link_screen.dart';
+import 'group_invite/group_join_requests_screen.dart';
 
 class GroupDetailScreen extends StatefulWidget {
   final int conversationId;
@@ -65,6 +68,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   /// `pop` à chaque frame quand le stream continue d'émettre `null`.
   bool _leaving = false;
 
+  /// Réglages du lien d'invitation et droits (route dédiée : ces champs ne
+  /// sont pas dans le cache Drift). Null tant qu'ils ne sont pas lus, ou hors
+  /// ligne : la section reste alors masquée.
+  GroupInviteSettings? _invite;
+  late final TalkyApiClient _api =
+      Provider.of<TalkyApiClient>(context, listen: false);
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +82,82 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     // rôle absent d'une version antérieure) : on redemande au serveur sans
     // bloquer l'affichage, qui part de Drift.
     unawaited(_refresh());
+    unawaited(_loadInvite());
+    // Une demande arrive ou un autre admin répond : la pastille suit.
+    // Un réglage changé ailleurs arrive par conversation:updated.
+    _api.onSocketEvent('group:join_requests', _onInviteEvent);
+    _api.onSocketEvent('conversation:updated', _onInviteEvent);
+  }
+
+  @override
+  void dispose() {
+    _api.removeSocketListener('group:join_requests', _onInviteEvent);
+    _api.removeSocketListener('conversation:updated', _onInviteEvent);
+    super.dispose();
+  }
+
+  void _onInviteEvent(dynamic data) {
+    if (data is! Map) return;
+    final id = int.tryParse('${data['conversID']}') ?? 0;
+    if (id == widget.conversationId && mounted) unawaited(_loadInvite());
+  }
+
+  Future<void> _loadInvite() async {
+    try {
+      final r = await _api.getGroupInviteSettings(widget.conversationId);
+      if (mounted) setState(() => _invite = r);
+    } catch (e) {
+      // Hors ligne, ou serveur sans la migration 116 : section masquée.
+      AppLog.w('GroupDetail', 'réglages du lien illisibles: $e');
+    }
+  }
+
+  Future<void> _setInviteSettings({bool? onlyAdmins, bool? approve}) async {
+    final avant = _invite;
+    if (avant != null) {
+      // Bascule immédiate, rattrapée par la relecture.
+      setState(() => _invite = GroupInviteSettings(
+            onlyAdminsCanShareLink: onlyAdmins ?? avant.onlyAdminsCanShareLink,
+            approveNewMembers: approve ?? avant.approveNewMembers,
+            isAdmin: avant.isAdmin,
+            canShare: avant.canShare,
+            pendingJoinRequests: avant.pendingJoinRequests,
+          ));
+    }
+    await _runGroupAction(() => _api.updateGroupInviteSettings(
+          widget.conversationId,
+          onlyAdminsCanShareLink: onlyAdmins,
+          approveNewMembers: approve,
+        ));
+    await _loadInvite();
+  }
+
+  void _openInviteLink(Conversation group) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GroupInviteLinkScreen(
+          conversationId: widget.conversationId,
+          groupName: group.groupName ?? widget.groupName,
+          groupPhoto: group.groupPhoto ?? widget.groupAvatar,
+          memberCount: group.participants.length,
+          isAdmin: _invite?.isAdmin ?? canChangeSettings(group.myRole),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openJoinRequests(Conversation group) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GroupJoinRequestsScreen(
+          conversationId: widget.conversationId,
+          groupName: group.groupName ?? widget.groupName,
+        ),
+      ),
+    );
+    unawaited(_loadInvite());
   }
 
   Future<void> _refresh() async {
@@ -538,6 +624,20 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                 canEdit: peutEditer,
                 onEdit: _editDescription,
               ),
+              if (_invite != null &&
+                  (_invite!.canShare || _invite!.isAdmin)) ...[
+                AppSpacing.vGapLg,
+                _InviteCard(
+                  settings: _invite!,
+                  onOpenLink:
+                      _invite!.canShare ? () => _openInviteLink(group) : null,
+                  onOpenRequests: _invite!.isAdmin &&
+                          (_invite!.approveNewMembers ||
+                              _invite!.pendingJoinRequests > 0)
+                      ? () => _openJoinRequests(group)
+                      : null,
+                ),
+              ],
               AppSpacing.vGapLg,
               _MediaCard(
                 conversationId: widget.conversationId,
@@ -569,6 +669,15 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       onlyAdminsCanAddMembers: addMembers,
                     ),
                   ),
+                ),
+              ],
+              if (canChangeSettings(group.myRole) && _invite != null) ...[
+                AppSpacing.vGapLg,
+                _InviteSettingsCard(
+                  onlyAdminsCanShareLink: _invite!.onlyAdminsCanShareLink,
+                  approveNewMembers: _invite!.approveNewMembers,
+                  onOnlyAdminsChanged: (v) => _setInviteSettings(onlyAdmins: v),
+                  onApproveChanged: (v) => _setInviteSettings(approve: v),
                 ),
               ],
               AppSpacing.vGapLg,
@@ -856,6 +965,123 @@ class _SettingsCard extends StatelessWidget {
             title: Text(context.l10n.onlyAdminsCanAddMembersLabel,
                 style: context.text.bodyMedium),
             subtitle: Text(context.l10n.onlyAdminsCanAddMembersSubtitle,
+                style: context.text.bodySmall),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── LIEN D'INVITATION ─────────────────────────────────────────────────
+
+/// « Inviter via lien ou QR code » et « Demandes d'adhésion ».
+class _InviteCard extends StatelessWidget {
+  final GroupInviteSettings settings;
+  final VoidCallback? onOpenLink;
+  final VoidCallback? onOpenRequests;
+
+  const _InviteCard({
+    required this.settings,
+    required this.onOpenLink,
+    required this.onOpenRequests,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (onOpenLink == null && onOpenRequests == null) {
+      return const SizedBox.shrink();
+    }
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          if (onOpenLink != null)
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: context.colors.primary,
+                foregroundColor: context.colors.onPrimary,
+                child: const Icon(Icons.link),
+              ),
+              title: Text(l10n.groupInviteViaLink,
+                  style: context.text.titleSmall),
+              subtitle: Text(
+                settings.approveNewMembers
+                    ? l10n.groupInviteViaLinkSubtitleApproval
+                    : l10n.groupInviteViaLinkSubtitle,
+                style: context.text.bodySmall,
+              ),
+              trailing: const Icon(Icons.qr_code_2),
+              onTap: onOpenLink,
+            ),
+          if (onOpenRequests != null)
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: context.semantic.brandContainer,
+                foregroundColor: context.semantic.onBrandContainer,
+                child: const Icon(Icons.how_to_reg_outlined),
+              ),
+              title: Text(l10n.groupJoinRequestsTitle,
+                  style: context.text.titleSmall),
+              trailing: settings.pendingJoinRequests > 0
+                  ? Badge.count(
+                      count: settings.pendingJoinRequests,
+                      backgroundColor: context.colors.primary,
+                      textColor: context.colors.onPrimary,
+                      largeSize: 22,
+                    )
+                  : const Icon(Icons.chevron_right),
+              onTap: onOpenRequests,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Réglages du lien, visibles des seuls administrateurs. Le serveur fait foi.
+class _InviteSettingsCard extends StatelessWidget {
+  final bool onlyAdminsCanShareLink;
+  final bool approveNewMembers;
+  final ValueChanged<bool> onOnlyAdminsChanged;
+  final ValueChanged<bool> onApproveChanged;
+
+  const _InviteSettingsCard({
+    required this.onlyAdminsCanShareLink,
+    required this.approveNewMembers,
+    required this.onOnlyAdminsChanged,
+    required this.onApproveChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _Card(
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.md,
+                AppSpacing.lg, AppSpacing.xs),
+            child: Text(l10n.groupInviteLinkTitle,
+                style: context.text.titleSmall),
+          ),
+          SwitchListTile(
+            value: onlyAdminsCanShareLink,
+            onChanged: onOnlyAdminsChanged,
+            title: Text(l10n.onlyAdminsCanShareLinkLabel,
+                style: context.text.bodyMedium),
+            subtitle: Text(l10n.onlyAdminsCanShareLinkSubtitle,
+                style: context.text.bodySmall),
+          ),
+          SwitchListTile(
+            value: approveNewMembers,
+            onChanged: onApproveChanged,
+            title: Text(l10n.approveNewMembersLabel,
+                style: context.text.bodyMedium),
+            subtitle: Text(l10n.approveNewMembersSubtitle,
                 style: context.text.bodySmall),
           ),
         ],

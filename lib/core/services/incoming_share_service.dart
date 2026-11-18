@@ -7,6 +7,7 @@ import '../navigation/app_navigator.dart';
 import '../utils/incoming_share_payload.dart';
 import 'qr_deep_link_service.dart';
 import 'stickers/sticker_share_link.dart';
+import 'groups/group_invite_link.dart';
 import '../../screens/chats/share_to_conversation_screen.dart';
 
 /// Reçoit les partages entrants (Galerie, Fichiers, navigateur…) et ouvre
@@ -95,7 +96,8 @@ class IncomingShareService {
     final uri = Uri.tryParse(path.trim());
     if (uri == null) return false;
     return QrDeepLinkService.extractIdentityToken(uri) != null ||
-        StickerShareLink.fromUri(uri) != null;
+        StickerShareLink.fromUri(uri) != null ||
+        GroupInviteLink.fromUri(uri) != null;
   }
 
   void _tryPresentPending() {
