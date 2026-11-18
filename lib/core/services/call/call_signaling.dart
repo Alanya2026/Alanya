@@ -1518,11 +1518,27 @@ extension CallSignaling on CallService {
   /// Démonte notre appel sortant vers [pairId] au profit de son appel entrant.
   Future<void> _abandonnerSortantCroise(String pairId) async {
     debugPrint('[CallService] 🔀 Croisement: abandon sortant vers $pairId → entrant');
+    // Enregistrés AVANT tout démontage : l'événement « terminé » que CallKit
+    // renvoie pour cet appel peut arriver pendant l'abandon comme après
+    // l'adoption de l'entrant, et ne doit ni réémettre `end_call` (qui
+    // solderait côté serveur l'appel qu'on s'apprête à décrocher) ni démonter
+    // l'entrant.
+    final abandonnes = <String>{
+      if (_callKitCallId != null && _callKitCallId!.isNotEmpty) _callKitCallId!,
+      if (_currentCallId != null &&
+          _currentCallId!.isNotEmpty &&
+          !_serverCallIdKnown)
+        _currentCallId!,
+    };
+    _sortantsAbandonnes.addAll(abandonnes);
+    _markTerminalCallId(_callKitCallId);
     _cancelOutgoingTimeout();
     await _ringtone.stop();
     await _releaseCallSession();
     await _webrtc.dispose();
-    await _callKit.endAll();
+    for (final id in abandonnes) {
+      await _callKit.endAll(callId: id);
+    }
     _resetCallState();
     _entrantCroiseEnAttente = null;
     _status = CallStatus.idle;

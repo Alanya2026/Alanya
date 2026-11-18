@@ -665,6 +665,15 @@ extension CallIncoming on CallService {
       await EndedCallRegistry.markEnded(id);
     }
 
+    // Écho de l'abandon d'un sortant croisé (voir `_abandonnerSortantCroise`) :
+    // cet appel-là est déjà démonté, et l'appel en cours est l'entrant adopté.
+    if (id.isNotEmpty && _sortantsAbandonnes.remove(id)) {
+      debugPrint(
+        '[CallService] 🛡 fin de l’appel sortant abandonné ($id) ignorée',
+      );
+      return;
+    }
+
     // Hangup local déjà en cours (CallKit `ended` pendant endAll) : ne pas
     // réémettre end_call — en conf ça coupait à tort l'inviteur via le
     // fallback 1-à-1 serveur.

@@ -318,6 +318,10 @@ class CallService extends ChangeNotifier {
   /// personne, et laissé de côté par le départage (voir `call_signaling.dart`).
   /// Rejoué si le serveur tranche ensuite en sa faveur (`call_glare`).
   Map<dynamic, dynamic>? _entrantCroiseEnAttente;
+  /// Identifiants CallKit des sortants abandonnés au profit d'un appel croisé.
+  /// Leur événement « terminé » revient de CallKit en différé ; sans ce
+  /// registre il était pris pour la fin de l'appel adopté et le démontait.
+  final Set<String> _sortantsAbandonnes = <String>{};
   final Map<String, DateTime> _recentIncomingCallIds = {};
 
   // Auto-réponse depuis une notification/CallKit : on saute l'écran d'appel
