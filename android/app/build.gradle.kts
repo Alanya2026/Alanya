@@ -25,9 +25,10 @@ val keystoreProperties = Properties().apply {
 }
 val hasSharedKey = keystorePropertiesFile.exists()
 
-// La CI de publication (android-release.yml) signe avec son propre keystore,
-// celui des APK déjà installées, qu'elle désigne par ALANYA_DEBUG_KEYSTORE.
-// Deux clés coexistent en attendant que l'équipe en choisisse une (28/10/2026).
+// La CI de publication (android-release.yml) signe elle aussi avec la clé
+// commune depuis le 19/11/2026, et y ajoute la rotation depuis l'ancienne clé
+// (android/signing/alanya-rotation.lineage). ALANYA_DEBUG_KEYSTORE n'est plus
+// fournie ; la variable reste lue pour un build ponctuel avec l'ancienne clé.
 val ciKeystore = System.getenv("ALANYA_DEBUG_KEYSTORE")
 
 // Une release sans aucune des deux clés serait signée par une clé que Google

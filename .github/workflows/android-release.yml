@@ -24,8 +24,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      # Certificat des APK déjà installées (debug.keystore du poste de dev).
-      EXPECTED_CERT_SHA256: 2AA03CED2F5FC2537029D7F68CC235F54C17B282FB99542C2E62AE37A19DC30D
+      # Clé commune d'Alanya (alanya-release.jks) : celle des builds de toute
+      # l'équipe et celle que Google connaît pour la connexion Drive.
+      EXPECTED_CERT_SHA256: 4F07EBA9AE15A3707B7DA87AF69142327D44787BF5E2706C91A805F517CD3A6C
+      # Ancienne clé (debug.keystore d'un poste de dev), qui a signé les APK
+      # publiées ici jusqu'au 19/11/2026. Elle ne sert plus qu'à la rotation :
+      # elle atteste, dans android/signing/alanya-rotation.lineage, que la clé
+      # commune lui succède — sans quoi Android refuserait la mise à jour aux
+      # téléphones qui ont installé une APK de cette release.
+      PREVIOUS_CERT_SHA256: 2AA03CED2F5FC2537029D7F68CC235F54C17B282FB99542C2E62AE37A19DC30D
     steps:
       - uses: actions/checkout@v4
 
@@ -50,31 +57,35 @@ jobs:
           channel: stable
           cache: true
 
-      # Le build release signe avec ~/.android/debug.keystore. Celui du runner
-      # serait généré à neuf : les APK déjà installées refuseraient la mise à
-      # jour. On y dépose donc la clé du poste qui a produit les versions
-      # actuelles — et on échoue plutôt que de signer avec une clé jetable.
+      # La clé commune, déposée là où les postes de l'équipe l'ont :
+      # android/app/alanya-release.jks et android/key.properties (jamais
+      # commités). On échoue plutôt que de signer avec une autre clé.
       #
-      # L'empreinte attendue est celle du certificat (publique, pas un secret).
-      # Le premier build a publié une APK signée par une autre clé : on vérifie
-      # donc le keystore décodé ici, puis chaque APK après le build.
-      - name: Clé de signature
+      # `storeFile` est réécrit : le secret a été copié d'un poste, où le chemin
+      # pouvait être celui de ce poste.
+      - name: Clés de signature
         env:
-          DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_PROPERTIES: ${{ secrets.KEY_PROPERTIES }}
+          PREVIOUS_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
         run: |
-          [[ -n "$DEBUG_KEYSTORE_BASE64" ]] || { echo "::error::Secret ANDROID_DEBUG_KEYSTORE_BASE64 manquant"; exit 1; }
-          echo "ANDROID_USER_HOME=${ANDROID_USER_HOME:-} ANDROID_SDK_HOME=${ANDROID_SDK_HOME:-} ANDROID_PREFS_ROOT=${ANDROID_PREFS_ROOT:-}"
-          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/debug.keystore"
-          found=$(keytool -list -v -keystore "$RUNNER_TEMP/debug.keystore" -storepass android -alias androiddebugkey \
+          [[ -n "$KEYSTORE_BASE64" && -n "$KEY_PROPERTIES" ]] || { echo "::error::Secrets KEYSTORE_BASE64 / KEY_PROPERTIES manquants"; exit 1; }
+          [[ -n "$PREVIOUS_KEYSTORE_BASE64" ]] || { echo "::error::Secret ANDROID_DEBUG_KEYSTORE_BASE64 manquant (rotation)"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/alanya-release.jks
+          printf '%s\n' "$KEY_PROPERTIES" | tr -d '\r' | grep -v '^storeFile=' > android/key.properties
+          echo 'storeFile=alanya-release.jks' >> android/key.properties
+          prop() { grep -m1 "^$1=" android/key.properties | cut -d= -f2-; }
+          alias=$(prop keyAlias); sp=$(prop storePassword); kp=$(prop keyPassword)
+          echo "::add-mask::$sp"; echo "::add-mask::$kp"
+          found=$(keytool -list -v -keystore android/app/alanya-release.jks -storepass "$sp" -alias "$alias" \
             | grep -oE 'SHA256: [0-9A-F:]+' | cut -d' ' -f2 | tr -d ':')
-          echo "Empreinte du keystore du secret : $found"
-          [[ "$found" == "$EXPECTED_CERT_SHA256" ]] || { echo "::error::Le secret ne contient pas le keystore attendu"; exit 1; }
-          # Gradle cherche la clé debug dans le premier dossier défini parmi
-          # ces variables, sinon dans ~/.android : on la dépose partout.
-          for dir in "$HOME/.android" ${ANDROID_USER_HOME:+"$ANDROID_USER_HOME"} \
-                     ${ANDROID_SDK_HOME:+"$ANDROID_SDK_HOME/.android"} ${ANDROID_PREFS_ROOT:+"$ANDROID_PREFS_ROOT/.android"}; do
-            mkdir -p "$dir" && cp "$RUNNER_TEMP/debug.keystore" "$dir/debug.keystore"
-          done
+          echo "Empreinte de la clé commune : $found"
+          [[ "$found" == "$EXPECTED_CERT_SHA256" ]] || { echo "::error::Le secret KEYSTORE_BASE64 ne contient pas la clé commune attendue"; exit 1; }
+          echo "$PREVIOUS_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/previous.keystore"
+          old=$(keytool -list -v -keystore "$RUNNER_TEMP/previous.keystore" -storepass android -alias androiddebugkey \
+            | grep -oE 'SHA256: [0-9A-F:]+' | cut -d' ' -f2 | tr -d ':')
+          [[ "$old" == "$PREVIOUS_CERT_SHA256" ]] || { echo "::error::Le secret ANDROID_DEBUG_KEYSTORE_BASE64 ne contient pas l'ancienne clé"; exit 1; }
+          { echo "NEW_ALIAS=$alias"; echo "NEW_SP=$sp"; echo "NEW_KP=$kp"; } >> "$GITHUB_ENV"
 
       # Pas de `flutter test` ici tant que la suite n'est pas au vert sur main :
       # elle bloquerait toutes les publications.
@@ -85,11 +96,8 @@ jobs:
       # les bibliothèques natives de tous. Flutter décale le versionCode des
       # secondes de 1000 × ABI : on ne peut pas repasser de l'une à
       # l'universelle sans désinstaller, d'où l'avertissement dans les notes.
+      # Gradle signe avec la clé commune (android/key.properties).
       - name: Build APK
-        env:
-          # Lu par android/app/build.gradle.kts : sans lui, Gradle signe avec
-          # une clé jetable au lieu de celle déposée ci-dessus.
-          ALANYA_DEBUG_KEYSTORE: ${{ runner.temp }}/debug.keystore
         run: |
           args="--release --build-name=${{ steps.version.outputs.name }} --build-number=${{ steps.version.outputs.code }}"
           mkdir -p dist
@@ -99,15 +107,36 @@ jobs:
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/alanya-arm64.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/alanya-armv7.apk
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/alanya-x86_64.apk
-          (cd dist && sha256sum *.apk > SHA256SUMS && ls -lh)
 
-      - name: Vérification de la signature
+      # Rotation de clé : chaque APK est re-signée avec l'ancienne clé puis la
+      # clé commune et la preuve qui les relie. Android 9+ (API 28) retient la
+      # clé commune et accepte la mise à jour d'une app installée avec
+      # l'ancienne ; Android 7 et 8 ne connaissent pas la rotation et voient
+      # l'ancienne clé, comme avant.
+      - name: Rotation de clé
         run: |
           apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
           for apk in dist/*.apk; do
-            found=$("$apksigner" verify --print-certs "$apk" | grep -m1 'SHA-256 digest' | awk '{print toupper($NF)}')
-            echo "$apk : $found"
-            [[ "$found" == "$EXPECTED_CERT_SHA256" ]] || { echo "::error::$apk n'est pas signée avec la clé attendue"; exit 1; }
+            "$apksigner" sign \
+              --ks "$RUNNER_TEMP/previous.keystore" --ks-pass pass:android --ks-key-alias androiddebugkey \
+              --next-signer --ks android/app/alanya-release.jks --ks-pass env:NEW_SP --ks-key-alias "$NEW_ALIAS" --key-pass env:NEW_KP \
+              --lineage android/signing/alanya-rotation.lineage --rotation-min-sdk-version 28 \
+              --v4-signing-enabled false \
+              "$apk"
+          done
+          (cd dist && sha256sum *.apk > SHA256SUMS && ls -lh)
+
+      # Android 9+ doit voir la clé commune, Android 7 et 8 l'ancienne.
+      - name: Vérification de la signature
+        run: |
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          signer() { "$apksigner" verify --print-certs --min-sdk-version "$2" --max-sdk-version "$2" "$1" \
+            | grep -m1 'SHA-256 digest' | awk '{print toupper($NF)}'; }
+          for apk in dist/*.apk; do
+            recent=$(signer "$apk" 28); ancien=$(signer "$apk" 24)
+            echo "$apk : Android 9+ $recent / Android 7-8 $ancien"
+            [[ "$recent" == "$EXPECTED_CERT_SHA256" ]] || { echo "::error::$apk : Android 9+ ne voit pas la clé commune"; exit 1; }
+            [[ "$ancien" == "$PREVIOUS_CERT_SHA256" ]] || { echo "::error::$apk : Android 7-8 ne voient pas l'ancienne clé"; exit 1; }
           done
 
       # Le tag « apk » est déplacé sur le commit construit ; la release qui le
@@ -138,10 +167,6 @@ jobs:
           fi
           gh release upload apk dist/* --clobber
 
-      - name: Nettoyage de la clé
+      - name: Nettoyage des clés
         if: always()
-        run: |
-          rm -f "$RUNNER_TEMP/debug.keystore" ~/.android/debug.keystore \
-            ${ANDROID_USER_HOME:+"$ANDROID_USER_HOME/debug.keystore"} \
-            ${ANDROID_SDK_HOME:+"$ANDROID_SDK_HOME/.android/debug.keystore"} \
-            ${ANDROID_PREFS_ROOT:+"$ANDROID_PREFS_ROOT/.android/debug.keystore"}
+        run: rm -f "$RUNNER_TEMP/previous.keystore" android/app/alanya-release.jks android/key.properties
