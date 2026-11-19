@@ -22,8 +22,14 @@ extension CallSignaling on CallService {
           (incomingCallerId == _remoteUserId?.toString() ||
               (_autoAnswerOnNextIncoming &&
                   _autoAnswerCallerId == incomingCallerId));
-      // Glare : les deux correspondent se appellent — basculer sortant → entrant.
+      // Glare : les deux correspondants s'appellent — basculer sortant → entrant.
+      //
+      // `connecting` vaut aussi pour un DÉCROCHAGE en cours : sans
+      // `_isOutgoingCaller`, le rejeu de l'entrant que le serveur envoie avec
+      // `call_glare` était pris pour un nouveau croisement, et l'appel qu'on
+      // venait de décrocher était abandonné (essai du 19/11).
       final outgoingGlare =
+          _isOutgoingCaller &&
           (_status == CallStatus.outgoing ||
               _status == CallStatus.connecting) &&
           incomingCallerId.isNotEmpty &&
@@ -214,6 +220,7 @@ extension CallSignaling on CallService {
       }
 
       final enCours =
+          _isOutgoingCaller &&
           (_status == CallStatus.outgoing || _status == CallStatus.connecting) &&
           _remoteUserId?.toString() == pair;
       if (!enCours && _status != CallStatus.idle) return;
